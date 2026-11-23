@@ -151,7 +151,7 @@ export async function startWorkflowRun(deps: StartRunDeps, start: StartRun): Pro
       conversationId,
       runId: sent.run.id,
       message,
-      continues: false,
+      continues: start.kind === 'run',
       ...(start.trigger
         ? { triggerKind: start.trigger.kind, diffHash: start.trigger.diffHash }
         : {}),

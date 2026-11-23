@@ -74,7 +74,9 @@ test('@ opens a keyboard picker of Sparks and inserts the mention', async ({ pag
   const options = sparkList(page).getByRole('option');
   await expect(options).toHaveText([/Pip.*Code reviewer/, /Wren.*Docs writer/]);
   await expect(options.nth(0)).toHaveAttribute('aria-selected', 'true');
-  await expect(page.locator('.mentionpop')).toContainText('hands this one job to that Spark');
+  await expect(page.locator('.mentionpop .athint')).toContainText(
+    'hands this one job to that Spark',
+  );
   expect((await scan(page, '.mentionpop')).violations).toEqual([]);
   await page.screenshot({ path: shot('picker') });
 
@@ -189,12 +191,12 @@ test('@ lists workflows too, inserts the id and starts the run when sent', async
     await input.pressSequentially('@');
     const flows = page.getByRole('listbox', { name: 'Workflows' }).getByRole('option');
     await expect(flows).toHaveText([/Review flow.*@review-flow/]);
-    await expect(page.locator('.mentionpop')).toContainText('runs that workflow in this chat');
     expect((await scan(page, '.mentionpop')).violations).toEqual([]);
 
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await expect(flows.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.mentionpop .athint')).toHaveText(/runs that workflow in this chat/);
     await expect(input).toHaveAttribute(
       'aria-activedescendant',
       (await flows.nth(0).getAttribute('id'))!,
@@ -216,6 +218,11 @@ test('@ lists workflows too, inserts the id and starts the run when sent', async
 
     const turn = page.locator('section[data-turn]').first();
     await expect(turn.locator('.wfc-line')).toContainText('Review flow', { timeout: 30_000 });
+    await expect(turn.locator('.wfc-line')).toContainText('Done', { timeout: 30_000 });
+    await expect(turn).toContainText('handed to you, the chat’s main agent', { timeout: 30_000 });
+    await turn.getByRole('button', { name: /^Steps \(1\)$/ }).click();
+    await expect(turn.locator('.spark-jobs .fold-text')).not.toHaveText('');
+    await page.screenshot({ path: shot('workflow-report') });
   } finally {
     await page.request.delete('/api/workflows/review-flow', { data: {} });
   }

@@ -13,7 +13,7 @@ summary: What changed in recent releases and what to do next.
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |
-| `@` lists all workflows, Sparks                 | [Run one](workflow-runs.md#run-one).                       |
+| `@` menu grouped; agent reads reports           | [Workflows](workflow-in-chat.md).                          |
 | Code Mode combines any Spark tool, cards kept   | [Code Mode](settings.md#code-mode).                        |
 | Island recording wave, left bar; fast commands  | [Take meeting notes](meetings.md#record).                  |
 | Steps know their branch, PR; may merge base     | [Workflow steps](modes-and-levels.md#workflow-steps).      |

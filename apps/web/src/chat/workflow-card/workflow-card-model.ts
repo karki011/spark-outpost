@@ -129,3 +129,12 @@ export function currentStep(run: WorkflowRun, members: readonly CrewMember[]): s
 export function findingQuote(finding: Finding): string {
   return `[${SEVERITY_WORDS[finding.severity]}] ${finding.text}`;
 }
+
+export function stepReplies(run: WorkflowRun): ReadonlyMap<string, string> {
+  const replies = new Map<string, string>();
+  for (const step of run.steps) {
+    const note = step.note?.trim();
+    if (step.runId && note && step.state !== 'failed') replies.set(step.runId, note);
+  }
+  return replies;
+}

@@ -31,6 +31,10 @@ describe('publishReason', () => {
     expect(publishReason({ ...asked, assistant: true })).toBeNull();
   });
 
+  it('never publishes from a turn a workflow started, even at Full auto → PR', () => {
+    expect(publishReason({ ...turn, level: 'full-auto', workflowStarted: true })).toBeNull();
+  });
+
   it('does not count a request that came from another chat as the user asking', () => {
     const request = { ...turn, userRequest: 'push it', assistantSent: true };
     expect(publishReason(request)).toBeNull();

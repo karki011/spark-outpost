@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WORKFLOW_NOTE_HEADER, WORKFLOW_STEP_HEADER } from '../src/crew-flows/step-prompt.ts';
-import { WORKFLOW_STOPPED } from '../src/crew-flows/workflow-turn.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
@@ -118,7 +117,7 @@ describe('a workflow started by @id in a chat', () => {
     expect(more).toEqual([]);
     expect(note).toContain(WORKFLOW_NOTE_HEADER);
     expect(note).toContain('summary (Pip · Code reviewer) replied:');
-    expect(note).toContain('The main agent did not run for this message.');
+    expect(note).toContain('If the user’s message asks for more than the steps did');
     expect((await loadOrchestration(t.db, runId))?.crew).toHaveLength(3);
   }, 90_000);
 
@@ -134,7 +133,7 @@ describe('a workflow started by @id in a chat', () => {
     const prompt = reply!.slice(reply!.indexOf('prompt='));
     expect(prompt).toContain(WORKFLOW_NOTE_HEADER);
     expect(prompt).toContain('look (Pip · Code reviewer) replied:');
-    expect(prompt).toContain('do not redo the steps');
+    expect(prompt).toContain('Do not redo the steps.');
   }, 90_000);
 
   it('starts a step that joins on any parent as soon as one finishes, and stops with the turn', async () => {
@@ -208,7 +207,7 @@ describe('a workflow started by @id in a chat', () => {
     expect(statesOf(record)).toEqual({ gate: 'failed', after: 'skipped', last: 'skipped' });
     expect(record).toMatchObject({ status: 'failed', stoppedBy: 'gate' });
     expect(await childCount(runId)).toBe(1);
-    expect(await getRun(t.db, runId)).toMatchObject({ status: 'failed', error: WORKFLOW_STOPPED });
+    expect((await getRun(t.db, runId))?.status).toBe('succeeded');
     const [note] = await repliesOf(t, runId);
     expect(note).toContain('It stopped because step gate failed.');
     expect(note).toContain('after (Pip · Code reviewer) was skipped.');

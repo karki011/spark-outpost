@@ -50,8 +50,8 @@ export async function chatPromptFacts(
   ]);
   return {
     project,
-    subChatsTool,
-    level: input.level,
+    subChatsTool: subChatsTool && input.workflowStarted !== true,
+    level: input.workflowStarted ? 'hands-off' : input.level,
     asksWithTool: input.mode === 'do' && input.plansFirst !== true,
     ...(builderChat ? { builderChat } : {}),
     customInstructions: prefs.agentInstructions ?? null,

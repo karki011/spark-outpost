@@ -1,7 +1,7 @@
 import { modeKind, modePosture, type AgentModeOption } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import type { PublishGrant } from '../approvals/publish-policy.ts';
-import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
+import { saveSnapshot, savedSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { backupBeforeEdit, snapshotRun } from '../projects/run-changes.ts';
 import type { QuestionGate } from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
@@ -129,7 +129,10 @@ export async function prepareDoRun(options: DoRunOptions): Promise<ApprovalGate 
   const root = options.projectRoots[0];
   if (!root) return undefined;
   if (options.keepsCopies === false) return createApprovalGate(doGate(options, async () => {}));
-  const snapshot = options.snapshot ?? (await takeSnapshot(options.db, options.runId, root));
+  const snapshot =
+    options.snapshot ??
+    (await savedSnapshot(options.db, options.runId, root)) ??
+    (await takeSnapshot(options.db, options.runId, root));
   return createApprovalGate(
     doGate(options, async (paths) => {
       await backupBeforeEdit(options.db, options.runId, snapshot, paths);
