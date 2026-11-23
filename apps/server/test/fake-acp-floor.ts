@@ -3,7 +3,6 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, posix, resolve } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { runCommand } from './fake-acp-floor-commands.ts';
-import { toGatePath } from '../src/approvals/gate-path.ts';
 
 interface FloorTurn {
   text: string;
@@ -14,6 +13,13 @@ interface FloorTurn {
 }
 
 const EDIT_RULE = /^Edit\((.+)\)$/;
+const WINDOWS_DRIVE = /^([A-Za-z]):[\\/]?(.*)$/s;
+
+function toGatePath(native: string): string {
+  const drive = process.platform === 'win32' ? WINDOWS_DRIVE.exec(native) : null;
+  if (!drive) return native;
+  return posix.join(`/${drive[1]!.toLowerCase()}`, drive[2]!.replaceAll('\\', '/'));
+}
 
 function fieldsOf(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
