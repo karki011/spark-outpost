@@ -1,8 +1,8 @@
 import { homedir } from 'node:os';
-import path from 'node:path';
 import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { RailKind, RailOriginal } from '@spark-outpost/contracts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
+import { gatePaths } from '../../approvals/gate-path.ts';
 import { railCrossings, type RailCrossing } from '../../approvals/rail-crossings.ts';
 import { observedSecretReads } from '../../approvals/secret-reads.ts';
 import { outsideRoots } from '../../approvals/request-place.ts';
@@ -49,9 +49,9 @@ const ORIGINAL_MAX_CHARS = 64 * 1024;
 const TOOL_FIELDS = ['title', 'kind', 'rawInput', 'locations', 'content', '_meta'] as const;
 
 function shown(target: string, home: string): string {
-  if (!path.isAbsolute(target)) return target;
-  const relative = path.relative(home, target);
-  return relative && !relative.startsWith('..') && !path.isAbsolute(relative)
+  if (!gatePaths.isAbsolute(target)) return target;
+  const relative = gatePaths.relative(home, target);
+  return relative && !relative.startsWith('..') && !gatePaths.isAbsolute(relative)
     ? `~/${relative}`
     : target;
 }
@@ -116,9 +116,9 @@ export function createRailWatch(context: RailWatchContext): RailWatch {
       const rails = (await railCrossings(request, { shell, rules })).map((crossing) => ({
         toolCallId: ran.toolCallId,
         rail: crossing.rail,
-        paths: crossing.paths.map((target) => shown(target, home)),
+        paths: crossing.paths.map((target) => shown(target, request.home)),
         inside: changesInside(crossing, request),
-        originals: originalsOf(crossing, request, home),
+        originals: originalsOf(crossing, request, request.home),
         stopped: stoppedByAgent(
           context.cli ?? null,
           crossing.rail,

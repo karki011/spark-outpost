@@ -37,6 +37,7 @@ import { publishContext } from './publish-context.ts';
 import { ownRepoFor } from './send-context.ts';
 import { ruleSettingReason } from '../approvals/gh-rules.ts';
 import { sparkRulesForRun } from '../persistence/spark-rules.ts';
+import { toNativePath } from '../approvals/gate-path.ts';
 
 export interface SparkCommandScope {
   db: Queryable;
@@ -145,7 +146,7 @@ function auditOf(
 ): SparkCommandAudit {
   return {
     command: auditCommand(request.command ?? ''),
-    cwd: request.cwd,
+    cwd: request.cwd === null ? null : toNativePath(request.cwd),
     mode: scope.agentMode,
     decision,
     reason,

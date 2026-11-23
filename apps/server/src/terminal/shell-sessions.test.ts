@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TerminalServerMessage } from '@spark-outpost/contracts';
 import { isAlive } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
+import { TEST_SHELL } from './test-shell.fixture.ts';
 import type { OpenShell } from '../persistence/terminal-shells.ts';
 import type { ShellAlert } from '../persistence/shell-alerts.ts';
 import { defaultLimits, TerminalLimitError, TerminalSessions } from './sessions.ts';
@@ -45,7 +46,7 @@ async function until(check: () => boolean | Promise<boolean>, timeoutMs = 4000) 
 }
 
 function useLimits(limits = defaultLimits) {
-  sessions = new TerminalSessions(loginShellSpawner('/bin/sh'), limits);
+  sessions = new TerminalSessions(loginShellSpawner(TEST_SHELL), limits);
 }
 
 function openShell(conversationId: string | null, cwd = folder) {
@@ -125,7 +126,7 @@ describe('chat shells', () => {
   it('tells the watcher when a shell starts and ends, but not about setup terminals', async () => {
     const opened: OpenShell[] = [];
     const ended: string[] = [];
-    sessions = new TerminalSessions(loginShellSpawner('/bin/sh'), defaultLimits, {
+    sessions = new TerminalSessions(loginShellSpawner(TEST_SHELL), defaultLimits, {
       opened: (shell) => opened.push(shell),
       ended: (id) => ended.push(id),
     });
@@ -154,7 +155,7 @@ describe('chat shells', () => {
   it('turns a notify sequence a shell prints into an alert for its chat', async () => {
     const alerts: ShellAlert[] = [];
     sessions = new TerminalSessions(
-      loginShellSpawner('/bin/sh'),
+      loginShellSpawner(TEST_SHELL),
       defaultLimits,
       shellAlerts((alert) => alerts.push(alert)),
     );

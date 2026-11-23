@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { TerminalServerMessage } from '@spark-outpost/contracts';
 import { isAlive } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
+import { TEST_SHELL } from './test-shell.fixture.ts';
 import {
   defaultLimits,
   TerminalAuthError,
@@ -15,7 +16,7 @@ let sessions: TerminalSessions;
 afterEach(() => sessions?.killAll());
 
 function start(limits = defaultLimits) {
-  sessions = new TerminalSessions(loginShellSpawner('/bin/sh'), limits);
+  sessions = new TerminalSessions(loginShellSpawner(TEST_SHELL), limits);
   const created = sessions.create('claude');
   const messages: TerminalServerMessage[] = [];
   const screen = { text: '' };
@@ -88,7 +89,7 @@ describe('terminal sessions', () => {
   });
 
   it('starts with the login command when the CLI is installed but logged out', async () => {
-    sessions = new TerminalSessions(loginShellSpawner('/bin/sh'));
+    sessions = new TerminalSessions(loginShellSpawner(TEST_SHELL));
     const created = sessions.create('codex', 'login');
     expect(created.command).toBe('codex login');
   });
@@ -123,7 +124,7 @@ describe('terminal sessions', () => {
     await until(() => idle.messages.some((message) => message.type === 'ended'));
     expect(idle.messages.at(-1)).toMatchObject({ reason: 'idle' });
 
-    sessions = new TerminalSessions(loginShellSpawner('/bin/sh'), {
+    sessions = new TerminalSessions(loginShellSpawner(TEST_SHELL), {
       ...defaultLimits,
       tokenTtlMs: 50,
     });
