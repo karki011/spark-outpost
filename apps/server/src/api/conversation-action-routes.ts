@@ -101,7 +101,7 @@ export function conversationActionRoutes({
     await nativeTerminals?.stop(id);
     await stopConversationWork(db, id, deleteSettleMs);
     const workdirs = await conversationWorkdirs(db, id);
-    terminals.endChat(id);
+    await terminals.endChat(id);
     await releaseConversation(db, id, 'deleted');
     await deleteConversation(db, workspaceId, id);
     void sweepShares?.();

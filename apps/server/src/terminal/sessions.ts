@@ -324,11 +324,11 @@ export class TerminalSessions {
     return runningCommand(session.pty.pid, await processTable());
   }
 
-  endChat(conversationId: string): number {
+  async endChat(conversationId: string): Promise<number> {
     const shells = [...this.sessions.values()].filter(
       (session) => session.kind.type === 'shell' && session.kind.conversationId === conversationId,
     );
-    for (const session of shells) this.end(session, 'chat_removed', null);
+    await Promise.all(shells.map((session) => this.end(session, 'chat_removed', null)));
     return shells.length;
   }
 
@@ -439,33 +439,32 @@ export class TerminalSessions {
     reason: TerminalEndReason,
     exitCode: number | null,
     keepRunning = false,
-  ) {
-    if (!this.sessions.delete(session.id)) return;
+  ): Promise<void> {
+    if (!this.sessions.delete(session.id)) return Promise.resolve();
     if (isAgent(session.kind)) session.kind.agent.observer?.ended();
     session.timers.forEach(clearTimeout);
     if (session.idleTimer) clearTimeout(session.idleTimer);
     if (session.quietTimer) clearTimeout(session.quietTimer);
     session.view?.detach();
     session.view = null;
+    let stopped = Promise.resolve();
     if (keepRunning) session.pty?.detach?.();
-    else if (session.pty) this.stopPty(session.pty);
+    else if (session.pty) stopped = this.stopPty(session.pty);
     if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
     if (!keepRunning) session.client?.send({ type: 'ended', reason, exitCode });
     session.client?.close();
     session.client = null;
+    return stopped;
   }
 
-  private stopPty(pty: PtyProcess) {
-    if (!pty.kill) {
-      void killProcessTree(pty.pid);
-      return;
-    }
+  private stopPty(pty: PtyProcess): Promise<void> {
+    if (!pty.kill) return killProcessTree(pty.pid);
     if (process.platform !== 'win32') {
       pty.kill();
-      return;
+      return Promise.resolve();
     }
     const kill = pty.kill.bind(pty);
-    void killProcessTree(pty.pid).finally(() => {
+    return killProcessTree(pty.pid).finally(() => {
       try {
         kill();
       } catch {

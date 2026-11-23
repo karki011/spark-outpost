@@ -90,7 +90,7 @@ describe('chat shells', () => {
     await until(() => /PID=\d+/.test(first.screen.text));
     const pid = Number(/PID=(\d+)/.exec(first.screen.text)![1]);
 
-    expect(sessions.endChat('chat-a')).toBe(2);
+    expect(await sessions.endChat('chat-a')).toBe(2);
 
     expect(first.messages.at(-1)).toEqual({
       type: 'ended',
