@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { parseAppEvent, type AppEvent } from '@spark-outpost/contracts';
 import { runStreamClient } from '../../chat/use-run-stream.ts';
-import { LIVE_ROOTS, isLiveQueryKey, isStepEvent, mergeInvalidations } from './app-event-keys.ts';
+import {
+  LIVE_ROOTS,
+  isLiveQueryKey,
+  isStepEvent,
+  mergeInvalidations,
+  usageChats,
+} from './app-event-keys.ts';
+import { refreshChatRuns } from './runs-patch.ts';
 import { invalidateLive } from './invalidate-live.ts';
 import { patchRunStep } from './step-patch.ts';
 import { useStableCallback } from '../../ui/use-stable-callback.ts';
@@ -63,9 +70,9 @@ export function useAppEvents(stepDetailCovered: StepDetailCovered = NOT_COVERED)
       for (const event of events) patchRunStep(queryClient, event);
       const streamed = (runId: string, conversationId: string) =>
         stream.watching(runId) || covered(conversationId);
-      for (const invalidation of mergeInvalidations(events, streamed)) {
-        invalidateLive(queryClient, invalidation);
-      }
+      const invalidations = mergeInvalidations(events, streamed);
+      for (const invalidation of invalidations) invalidateLive(queryClient, invalidation);
+      for (const id of usageChats(events, invalidations)) refreshChatRuns(queryClient, id);
     };
 
     const markDown = () => {

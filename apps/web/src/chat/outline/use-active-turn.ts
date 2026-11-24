@@ -16,6 +16,7 @@ function landedOn(root: Element, anchor: string): boolean {
 export function useActiveAnchor(
   scroller: RefObject<HTMLElement | null>,
   anchors: readonly string[],
+  mountedTurns: number,
 ) {
   const [active, setActive] = useState<string | null>(null);
   const state = useRef(NO_ANCHOR);
@@ -70,7 +71,7 @@ export function useActiveAnchor(
       root.removeEventListener('wheel', takenOver);
       root.removeEventListener('touchmove', takenOver);
     };
-  }, [scroller, key, inView, send]);
+  }, [scroller, key, inView, send, mountedTurns]);
 
   useEffect(() => () => window.clearTimeout(timeout.current), []);
 

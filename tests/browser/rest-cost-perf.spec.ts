@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import type { ConversationDetail, Message } from '../../packages/contracts/src/conversations.ts';
@@ -52,7 +53,7 @@ function inflate(detail: ConversationDetail, chat: number): ConversationDetail {
 async function growTranscripts(page: Page, titles: readonly string[]): Promise<void> {
   await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch();
+    const response = await fetchFresh(route);
     const detail = (await response.json()) as ConversationDetail;
     const chat = titles.indexOf(detail.conversation.title);
     await route.fulfill({ response, json: chat < 0 ? detail : inflate(detail, chat) });
