@@ -26,6 +26,6 @@ interface AgentMarkProps {
 
 export function AgentMark({ provider, size }: AgentMarkProps) {
   const known = providerIdSchema.safeParse(provider);
-  if (!known.success) return <MarkTile letters={provider.slice(0, 1).toUpperCase()} size={size} />;
+  if (!known.success) return <MarkTile letters="" size={size} />;
   return <ProviderMark providerId={known.data} size={size} />;
 }
