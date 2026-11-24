@@ -194,6 +194,27 @@ describe('Voice', () => {
     scene.voice.dispose();
   });
 
+  it('loads the speech model at start when Voice is on, before any press', async () => {
+    const scene = await setup({ enabled: true });
+    const asked = vi.spyOn(scene.helper, 'ask');
+    await scene.voice.start();
+    await settle();
+    expect(asked.mock.calls.filter(([request]) => request.op === 'load')).toHaveLength(1);
+    await scene.voice.listen(1, 'command', '', undefined);
+    await settle();
+    expect(asked.mock.calls.filter(([request]) => request.op === 'load')).toHaveLength(1);
+    scene.voice.dispose();
+  });
+
+  it('leaves the speech model unloaded at start while Voice is off', async () => {
+    const scene = await setup();
+    const asked = vi.spyOn(scene.helper, 'ask');
+    await scene.voice.start();
+    await settle();
+    expect(asked.mock.calls.filter(([request]) => request.op === 'load')).toHaveLength(0);
+    scene.voice.dispose();
+  });
+
   it('a press goes to the focused Spark window when it has an input, else to the island', async () => {
     const scene = await setup({ enabled: true });
     await scene.voice.start();

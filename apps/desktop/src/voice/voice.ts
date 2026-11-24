@@ -271,7 +271,8 @@ export function createVoice(effects: VoiceEffects) {
       await store.refresh();
       if (!settings.enabled) return;
       await applyKeys();
-      if (!(await store.present(settings.model))) fetchModel();
+      if (await store.present(settings.model)) void ensureLoaded();
+      else fetchModel();
     },
 
     async turnOn(): Promise<VoiceStatus> {

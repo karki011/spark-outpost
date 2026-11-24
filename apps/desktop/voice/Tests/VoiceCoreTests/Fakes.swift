@@ -30,6 +30,7 @@ final class FakeModel: SpeechModel {
     var deferred: [() -> Void] = []
     var holdTranscripts = false
     var resets = 0
+    var lines: [String] = []
 
     func resetDetector() { resets += 1 }
 
@@ -45,7 +46,7 @@ final class FakeModel: SpeechModel {
             text = draftText ?? "draft\(drafted.count)"
         } else {
             transcribed.append(samples.count)
-            text = "part\(transcribed.count)"
+            text = lines.isEmpty ? "part\(transcribed.count)" : lines.removeFirst()
         }
         if holdTranscripts { deferred.append { done(text) } } else { done(text) }
     }

@@ -152,3 +152,95 @@ private let stop = #"{"id":"m","op":"meeting.stop"}"#
         #expect(encode(id: "m", .meetingEnded) == #"{"event":"meeting_ended","id":"m"}"#)
     }
 }
+
+@Suite struct MeetingEchoTests {
+    @Test func aYouLineThatRepeatsWhatOthersSaidIsDropped() {
+        let scene = Scene().loaded()
+        scene.send(start)
+        scene.platform.model.lines = ["Let's ship it on Friday.", "lets ship it on friday"]
+        scene.playOthers(frames(seconds: 2, speech: true))
+        scene.playOthers(frames(seconds: 1, speech: false))
+        scene.play(frames(seconds: 0.2, speech: false))
+        scene.play(frames(seconds: 2, speech: true))
+        scene.play(frames(seconds: 1, speech: false))
+        #expect(scene.events.count == 2)
+        guard case .meetingLine(let source, _, _, _) = scene.events[1] else {
+            Issue.record("expected one meeting line")
+            return
+        }
+        #expect(source == .others)
+    }
+
+    @Test func aYouLineWaitsForOthersStillSpeakingThenIsJudged() {
+        let scene = Scene().loaded()
+        scene.send(start)
+        scene.platform.model.lines = ["the budget is approved", "The budget is approved."]
+        scene.playOthers(frames(seconds: 1, speech: true))
+        scene.play(frames(seconds: 1, speech: true))
+        scene.play(frames(seconds: 1, speech: false))
+        #expect(scene.events == [.meetingStarted])
+        scene.playOthers(frames(seconds: 1, speech: true))
+        scene.playOthers(frames(seconds: 1, speech: false))
+        #expect(scene.events.count == 2)
+    }
+
+    @Test func whatYouSayOverOthersIsKept() {
+        let scene = Scene().loaded()
+        scene.send(start)
+        scene.platform.model.lines = ["I disagree with that plan", "The budget is approved."]
+        scene.playOthers(frames(seconds: 1, speech: true))
+        scene.play(frames(seconds: 1, speech: true))
+        scene.play(frames(seconds: 1, speech: false))
+        scene.playOthers(frames(seconds: 1, speech: true))
+        scene.playOthers(frames(seconds: 1, speech: false))
+        let sources = scene.events.compactMap { event -> MeetingSource? in
+            if case .meetingLine(let source, _, _, _) = event { return source }
+            return nil
+        }
+        #expect(sources == [.others, .you])
+    }
+
+    @Test func theSameWordsLaterAreNotEcho() {
+        let later = HeardLine(text: "sounds good", startMs: 60_000, endMs: 61_000)
+        let earlier = [HeardLine(text: "Sounds good.", startMs: 1_000, endMs: 2_000)]
+        #expect(!isEcho(later, of: earlier))
+        #expect(isEcho(HeardLine(text: "sounds good", startMs: 2_500, endMs: 3_200), of: earlier))
+    }
+
+    @Test func stoppingJudgesParkedLinesBeforeTheMeetingEnds() {
+        let scene = Scene().loaded()
+        scene.send(start)
+        scene.platform.model.lines = ["my own point", "something else entirely"]
+        scene.playOthers(frames(seconds: 1, speech: true))
+        scene.play(frames(seconds: 1, speech: true))
+        scene.play(frames(seconds: 1, speech: false))
+        scene.send(stop)
+        #expect(scene.events.count == 4)
+        #expect(scene.events.last == .meetingEnded)
+    }
+
+    @Test func onlyTheEchoedSentencesOfAYouLineAreDropped() {
+        let others = [
+            HeardLine(text: "Please add the new customer to the pilot program.", startMs: 0, endMs: 3_000)
+        ]
+        let mixed = HeardLine(
+            text: "Please add the new customer to the program. Exactly.", startMs: 100, endMs: 3_500)
+        #expect(withoutEcho(mixed, of: others) == "Exactly.")
+        let talkedOver = HeardLine(
+            text: "Please add the customer to the program. I disagree. Friday is too early for that.",
+            startMs: 100, endMs: 6_000)
+        #expect(withoutEcho(talkedOver, of: others) == "I disagree. Friday is too early for that.")
+    }
+
+    @Test func theSameWordsInAnotherOrderAreNotEcho() {
+        let others = [HeardLine(text: "Is the release ready for Friday?", startMs: 0, endMs: 2_000)]
+        let answer = HeardLine(text: "Friday the release is ready.", startMs: 2_200, endMs: 4_000)
+        #expect(withoutEcho(answer, of: others) == "Friday the release is ready.")
+    }
+
+    @Test func aShortReplyIsDroppedOnlyWhenEveryWordWasPlayed() {
+        let others = [HeardLine(text: "That sounds right to me.", startMs: 0, endMs: 2_000)]
+        #expect(withoutEcho(HeardLine(text: "Yeah, right.", startMs: 500, endMs: 1_500), of: others) != nil)
+        #expect(withoutEcho(HeardLine(text: "Sounds right.", startMs: 500, endMs: 1_500), of: others) == nil)
+    }
+}

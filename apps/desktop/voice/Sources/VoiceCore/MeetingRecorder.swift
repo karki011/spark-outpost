@@ -23,7 +23,10 @@ final class MeetingRecorder {
         let generation: Int
         let lanes: [MeetingSource: Lane]
         var pending = 0
+        var pendingOthers = 0
         var stopping = false
+        var played: [HeardLine] = []
+        var parked: [HeardLine] = []
 
         init(id: String, language: String, model: SpeechModel, generation: Int, lanes: [Lane]) {
             self.id = id
@@ -37,6 +40,7 @@ final class MeetingRecorder {
     private let platform: Platform
     private let rules: ListenRules
     private let emit: Emit
+    private let echo = EchoRules()
     private var recording: Recording?
     private var generation = 0
 
@@ -125,19 +129,56 @@ final class MeetingRecorder {
 
     private func transcribe(_ segment: MeetingSegment, from source: MeetingSource, for current: Recording) {
         current.pending += 1
+        if source == .others { current.pendingOthers += 1 }
         current.model.transcribe(segment.samples, language: current.language, hint: "", draft: false) {
             [weak self] text in
             guard let self, current.generation == self.generation, self.recording === current else { return }
             current.pending -= 1
+            if source == .others { current.pendingOthers -= 1 }
             let cleaned = cleanTranscript(text)
             if !cleaned.isEmpty {
-                self.emit(
-                    current.id,
-                    .meetingLine(
-                        source: source, text: cleaned, startMs: segment.startMs, endMs: segment.endMs))
+                let line = HeardLine(text: cleaned, startMs: segment.startMs, endMs: segment.endMs)
+                self.keep(line, from: source, for: current)
             }
+            self.settleParked(current)
             self.finishIfDone(current)
         }
+    }
+
+    private func keep(_ line: HeardLine, from source: MeetingSource, for current: Recording) {
+        guard source == .others else {
+            current.parked.append(line)
+            return
+        }
+        current.played.append(line)
+        if current.played.count > echo.remembered {
+            current.played.removeFirst(current.played.count - echo.remembered)
+        }
+        send(line, from: .others, for: current)
+    }
+
+    private func send(_ line: HeardLine, from source: MeetingSource, for current: Recording) {
+        emit(
+            current.id,
+            .meetingLine(source: source, text: line.text, startMs: line.startMs, endMs: line.endMs))
+    }
+
+    private func othersStillSpeaking(over line: HeardLine, in current: Recording) -> Bool {
+        if current.pendingOthers > 0 { return true }
+        guard !current.stopping, let open = current.lanes[.others]?.stream.openStartMs else { return false }
+        return open <= line.endMs + echo.slackMs
+    }
+
+    private func settleParked(_ current: Recording) {
+        var waiting: [HeardLine] = []
+        for line in current.parked {
+            if othersStillSpeaking(over: line, in: current) {
+                waiting.append(line)
+            } else if let own = withoutEcho(line, of: current.played, rules: echo) {
+                send(HeardLine(text: own, startMs: line.startMs, endMs: line.endMs), from: .you, for: current)
+            }
+        }
+        current.parked = waiting
     }
 
     private func finishIfDone(_ current: Recording) {
