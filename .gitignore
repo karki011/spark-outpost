@@ -17,3 +17,5 @@ apps/desktop/mac-control/.swiftpm/
 .claude/settings.local.json
 windows-smoke.md
 vitest-windows.json
+apps/desktop/native/win-helper/*/bin/
+apps/desktop/native/win-helper/*/obj/

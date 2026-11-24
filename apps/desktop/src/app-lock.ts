@@ -23,10 +23,11 @@ export interface AppLockEffects {
   save(record: AppLockRecord): Promise<void>;
   hash(code: string): Promise<StoredCode>;
   matches(code: string, stored: StoredCode): Promise<boolean>;
+  unlockName: string;
   touchIdAvailable(): boolean;
-  promptTouchId(): Promise<void>;
+  promptTouchId(windowHandle: string | null): Promise<void>;
   ownerAuthAvailable(): boolean;
-  authenticateOwner(): Promise<OwnerAuthOutcome>;
+  authenticateOwner(windowHandle: string | null): Promise<OwnerAuthOutcome>;
   now(): number;
   later(run: () => void, ms: number): () => void;
   changed(status: AppLockStatus): void;
@@ -48,11 +49,11 @@ export interface AppLock {
   lockNow(): void;
   lockForSleep(): void;
   idleFor(seconds: number): void;
-  unlockWithTouchId(): Promise<boolean>;
+  unlockWithTouchId(windowHandle?: string | null): Promise<boolean>;
   unlockWithCode(code: unknown): Promise<CodeUnlock>;
   setCode(input: unknown): Promise<{ ok: boolean }>;
   set(patch: unknown): Promise<AppLockStatus>;
-  recover(): Promise<Recovery>;
+  recover(windowHandle?: string | null): Promise<Recovery>;
   dispose(): void;
 }
 
@@ -114,13 +115,13 @@ export function createAppLock(record: AppLockRecord, effects: AppLockEffects): A
       effects.log(`Could not save the privacy screen settings: ${(error as Error).message}`);
       return { ok: false, reason: 'failed' };
     }
-    move(recoveredState(state), 'Privacy code removed after macOS confirmed the Mac owner.');
+    move(recoveredState(state), 'Privacy code removed after the system confirmed the owner.');
     return { ok: true };
   };
 
-  const recover = async (): Promise<Recovery> => {
+  const recover = async (windowHandle: string | null): Promise<Recovery> => {
     if (!effects.ownerAuthAvailable()) return { ok: false, reason: 'unavailable' };
-    const outcome = await effects.authenticateOwner();
+    const outcome = await effects.authenticateOwner(windowHandle);
     if (outcome !== 'ok') return { ok: false, reason: outcome };
     return inTurn(forget);
   };
@@ -171,15 +172,15 @@ export function createAppLock(record: AppLockRecord, effects: AppLockEffects): A
     idleFor: (seconds) => {
       if (locksWhenIdle(state, seconds)) move(lockedState(state), 'Locked after idle time.');
     },
-    unlockWithTouchId: async () => {
+    unlockWithTouchId: async (windowHandle = null) => {
       if (!state.locked) return true;
       if (!state.settings.touchId || !effects.touchIdAvailable()) return false;
       try {
-        await effects.promptTouchId();
+        await effects.promptTouchId(windowHandle);
       } catch {
         return false;
       }
-      if (state.locked) move(unlockedState(state), 'Unlocked with Touch ID.');
+      if (state.locked) move(unlockedState(state), `Unlocked with ${effects.unlockName}.`);
       return true;
     },
     unlockWithCode: (code) => inTurn(() => tryCode(code)),
@@ -190,8 +191,8 @@ export function createAppLock(record: AppLockRecord, effects: AppLockEffects): A
         if (patch && !state.locked) await keep({ settings: patchedSettings(state, patch) });
         return status();
       }),
-    recover: () => {
-      recovering ??= recover().finally(() => {
+    recover: (windowHandle = null) => {
+      recovering ??= recover(windowHandle).finally(() => {
         recovering = null;
       });
       return recovering;
