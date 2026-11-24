@@ -46,4 +46,17 @@ describe('terminal seed after adoption', () => {
     const link = '\x1b]8;;https://example.com\x1b\\docs\x1b]8;;\x1b\\';
     expect(seedText([['0 0 0 0 0 [25]'], [], [], [link]])).toContain(link);
   });
+
+  it('drops the oldest history first to stay within a byte budget and always keeps the screen', () => {
+    const history = Array.from({ length: 50 }, (_, index) => `old ${index} ${'x'.repeat(100)}`);
+    const replies = [['50 0 0 0 0 [25]'], history, [], ['now 1', 'now 2']];
+    const whole = seedText(replies);
+    const cut = seedText(replies, 2000);
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(2000);
+    expect(cut).toContain('old 49 ');
+    expect(cut).not.toContain('old 0 ');
+    expect(cut.endsWith(whole.slice(whole.indexOf('now 1') - 4))).toBe(true);
+    expect(seedText(replies, 10)).toContain('now 2');
+    expect(seedText(replies, 10)).not.toContain('old');
+  });
 });

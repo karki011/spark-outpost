@@ -278,10 +278,13 @@ export async function branchSafeToDelete(
   return (await pushed(root, tip)) || (await mergedInto(root, tip));
 }
 
-export async function branchMerged(root: string, branch: string, baseCommit: string) {
-  const tip = await branchTipOf(root, branch);
+export async function tipMerged(root: string, tip: string | null, baseCommit: string) {
   if (!tip || tip === baseCommit) return false;
   return mergedInto(root, tip);
+}
+
+export async function branchMerged(root: string, branch: string, baseCommit: string) {
+  return tipMerged(root, await branchTipOf(root, branch), baseCommit);
 }
 
 export async function saveWorktreeWork(copy: string, branch: string, message: string) {

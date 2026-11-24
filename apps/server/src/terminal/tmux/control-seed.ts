@@ -44,21 +44,40 @@ export function modeSequences(modes: PaneModes): string {
   ].join('');
 }
 
-export function seedText(replies: readonly (readonly string[])[]): string {
+function newestWithin(lines: readonly string[], maxBytes: number): readonly string[] {
+  let bytes = 0;
+  let from = lines.length;
+  while (from > 0) {
+    bytes += Buffer.byteLength(lines[from - 1]!, 'utf8') + RESET.length + 2;
+    if (bytes > maxBytes) break;
+    from -= 1;
+  }
+  return from === 0 ? lines : lines.slice(from);
+}
+
+export function seedText(
+  replies: readonly (readonly string[])[],
+  maxBytes = Number.POSITIVE_INFINITY,
+): string {
   const [modeLines = [], scrolled = [], saved = [], visible = []] = replies;
   const modes = parseModes(modeLines[0] ?? '');
   const history = modes.historySize === 0 ? [] : scrolled;
-  const before = modes.alternate ? [...history, ...saved] : history;
   const rows = (lines: readonly string[]) => lines.map((line) => `${RESET}${line}`).join('\r\n');
-  const earlier = before.length > 0 ? `${rows(before)}\r\n` : '';
   const screen = modes.alternate ? `${ENTER_ALTERNATE}${rows(visible)}` : rows(visible);
-  return `${earlier}${screen}${RESET}${modeSequences(modes)}`;
+  const after = `${screen}${RESET}${modeSequences(modes)}`;
+  const before = newestWithin(
+    modes.alternate ? [...history, ...saved] : history,
+    maxBytes - Buffer.byteLength(after, 'utf8'),
+  );
+  const earlier = before.length > 0 ? `${rows(before)}\r\n` : '';
+  return `${earlier}${after}`;
 }
 
 export function requestSeed(
   client: ControlClient,
   paneId: string,
   onSeed: (seed: string) => void,
+  maxBytes = Number.POSITIVE_INFINITY,
 ): void {
   const replies: string[][] = [];
   const collect = (lines: string[] | null) => replies.push(lines ?? []);
@@ -68,6 +87,6 @@ export function requestSeed(
   client.command(capture('-a -q'), collect);
   client.command(capture(''), (lines) => {
     collect(lines);
-    onSeed(seedText(replies));
+    onSeed(seedText(replies, maxBytes));
   });
 }

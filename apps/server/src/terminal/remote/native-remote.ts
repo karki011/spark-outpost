@@ -162,7 +162,7 @@ export function nativeRemote(deps: NativeRemoteDeps) {
     if (cached?.path === path && cached.size === file.size && cached.modified === file.mtimeMs)
       return cached;
     const grown =
-      cached?.path === path && file.size >= cached.offset && cached.all.length < KEPT_ITEMS
+      cached?.path === path && file.size >= cached.size && cached.all.length < KEPT_ITEMS
         ? cached
         : null;
     const tail = await readTail(path, grown?.offset ?? null).catch(() => null);

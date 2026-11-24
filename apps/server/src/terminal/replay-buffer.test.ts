@@ -48,4 +48,16 @@ describe('createReplayBuffer', () => {
     buffer.push('hi');
     expect(buffer.text()).toBe('efghi');
   });
+
+  it('matches the tail of the stream when chunks are longer than the limit', () => {
+    const buffer = createReplayBuffer(16);
+    const expected = naive(16);
+    for (let index = 0; index < 400; index++) {
+      const chunk = String(index).repeat(index % 23);
+      buffer.push(chunk);
+      expected.push(chunk);
+      if (index % 37 === 0) expect(buffer.text()).toBe(expected.text());
+    }
+    expect(buffer.text()).toBe(expected.text());
+  });
 });

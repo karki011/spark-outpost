@@ -125,8 +125,15 @@ describe('terminal websocket', () => {
         ),
         { binary: true },
       );
+      const flooded = Date.now() + 8000;
+      while (received <= 1024 * 1024) {
+        if (Date.now() > flooded) throw new Error('The flood never passed the high mark.');
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      const held = Date.now() + 8000;
       let last = -1;
       while (received !== last) {
+        if (Date.now() > held) throw new Error('The flood never stopped.');
         last = received;
         await new Promise((resolve) => setTimeout(resolve, 300));
       }

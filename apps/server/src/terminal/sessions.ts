@@ -23,6 +23,7 @@ export * from './session-types.ts';
 
 const OUTPUT_TAIL_BYTES = 8_000;
 const REPLAY_BYTES = 256_000;
+const VIEW_RESYNC = '\x1b[0m\r\n';
 
 interface SetupKind {
   type: 'setup';
@@ -281,9 +282,12 @@ export class TerminalSessions {
     kind: ViewKind,
     size: { cols: number; rows: number },
   ): AttachedTerminal {
+    let held = false;
     const view = kind.open(
       {
-        output: (data) => session.client?.output(data),
+        output: (data) => {
+          if (!held) session.client?.output(data);
+        },
         ended: () => this.end(session, 'exited', null),
       },
       size,
@@ -297,8 +301,14 @@ export class TerminalSessions {
       input: (data) => view.input(data),
       resize: (cols, rows) => view.resize(cols, rows),
       colors: () => undefined,
-      pause: () => undefined,
-      resume: () => undefined,
+      pause: () => {
+        held = true;
+      },
+      resume: () => {
+        if (!held) return;
+        held = false;
+        session.client?.output(VIEW_RESYNC);
+      },
       close: () => this.end(session, 'closed', null),
       disconnect: () => this.end(session, 'disconnected', null),
     };

@@ -1,5 +1,6 @@
 export const FLOW_HIGH_BYTES = 1024 * 1024;
 export const FLOW_LOW_BYTES = 256 * 1024;
+export const FLOW_REDRAW_MAX_BYTES = (FLOW_HIGH_BYTES - FLOW_LOW_BYTES) / 2;
 export const FLOW_CHECK_MS = 100;
 export const FLOW_STALL_MS = 15_000;
 

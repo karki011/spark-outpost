@@ -1,5 +1,6 @@
 import { StringDecoder } from 'node:string_decoder';
 import type { TerminalColors } from '@spark-outpost/contracts';
+import { FLOW_REDRAW_MAX_BYTES } from '../output-flow.ts';
 import type { PtyProcess } from '../pty.ts';
 import { createAnsweredQueryFilter } from './answered-queries.ts';
 import { openControlClient, type ControlClient, type OpenControlClient } from './control-client.ts';
@@ -111,12 +112,17 @@ export function controlPty(
     checkDeath();
   }
 
-  const seed = (prefix: string) =>
-    requestSeed(client, pane.paneId, (text) => {
-      if (paused) return;
-      emit(prefix + text);
-      seeded = true;
-    });
+  const seed = (prefix: string, maxBytes?: number) =>
+    requestSeed(
+      client,
+      pane.paneId,
+      (text) => {
+        if (paused) return;
+        emit(prefix + text);
+        seeded = true;
+      },
+      maxBytes,
+    );
   const pause = () => {
     if (paused || ended) return;
     paused = true;
@@ -127,7 +133,7 @@ export function controlPty(
     if (!paused || ended) return;
     paused = false;
     client.command(`refresh-client -A '${pane.paneId}:continue'`);
-    seed(REDRAW);
+    seed(REDRAW, FLOW_REDRAW_MAX_BYTES - REDRAW.length);
   };
 
   const reportColors = (colors: TerminalColors) => {

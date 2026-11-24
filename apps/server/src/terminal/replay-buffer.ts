@@ -13,6 +13,7 @@ export function createReplayBuffer(limit: number): ReplayBuffer {
   const trim = () => {
     while (head < chunks.length - 1 && length - chunks[head]!.length >= limit) {
       length -= chunks[head]!.length;
+      chunks[head] = '';
       head += 1;
     }
     if (head >= COMPACT_AFTER) {
@@ -24,8 +25,9 @@ export function createReplayBuffer(limit: number): ReplayBuffer {
   return {
     push(data) {
       if (data === '') return;
-      chunks.push(data);
-      length += data.length;
+      const kept = data.length > limit ? data.slice(-limit) : data;
+      chunks.push(kept);
+      length += kept.length;
       trim();
     },
     text() {

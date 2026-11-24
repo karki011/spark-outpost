@@ -55,4 +55,15 @@ describe('compressRemoteJson', () => {
     expect((await raw(`${remote}/file`)).headers.get('content-encoding')).toBeNull();
     expect((await raw(`${remote}/big`, 'identity')).headers.get('content-encoding')).toBeNull();
   });
+
+  it('sends plain JSON to a client that refuses gzip with q=0', async () => {
+    const origin = await serve(true);
+    const refused = await raw(`${origin}/big`, 'gzip;q=0, identity;q=1');
+    expect(refused.headers.get('content-encoding')).toBeNull();
+    expect(((await refused.json()) as { text: string }).text).toHaveLength(12_000);
+    const weighted = await raw(`${origin}/big`, 'br;q=1.0, GZIP; q=0.5');
+    expect(weighted.headers.get('content-encoding')).toBe('gzip');
+    const similar = await raw(`${origin}/big`, 'x-gzip-like');
+    expect(similar.headers.get('content-encoding')).toBeNull();
+  });
 });

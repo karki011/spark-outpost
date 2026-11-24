@@ -201,6 +201,30 @@ describe('two devices reading the same growing transcript', () => {
   });
 });
 
+describe('a transcript rewritten shorter', () => {
+  it('is read again from the start, even past an unfinished last record', async () => {
+    const folder = await mkdtemp(path.join(tmpdir(), 'spark-remote-'));
+    const file = path.join(folder, 'session.jsonl');
+    const reply = (id: string, text: string) =>
+      `${JSON.stringify({
+        type: 'assistant',
+        uuid: id,
+        timestamp: '2026-10-14T10:00:00Z',
+        message: { id, content: [{ type: 'text', text }] },
+      })}\n`;
+    const claude = setup('claude');
+    (claude.row as { usage_file: string | null }).usage_file = file;
+    const first = reply('m1', 'first');
+    await writeFile(file, first + reply('m2', 'unfinished '.repeat(60)).slice(0, -20));
+    expect(JSON.stringify((await claude.remote.view('c1')).items)).toContain('first');
+    await writeFile(file, reply('m3', 'replacement '.repeat(Math.ceil(first.length / 12) + 4)));
+    const items = JSON.stringify((await claude.remote.view('c1')).items);
+    expect(items).toContain('replacement');
+    expect(items).not.toContain('first');
+    await rm(folder, { recursive: true, force: true });
+  });
+});
+
 describe('sending now from a paired device', () => {
   it('stops the turn with Esc, then sends the message', async () => {
     const { remote, sent } = setup('claude', { state: 'working' });

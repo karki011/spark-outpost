@@ -35,6 +35,7 @@ export function watchModeRequests(db: Db, runId: string, pollMs: number): ModeRe
   const listeners = new Set<(mode: string) => void>();
   let last: string | null = null;
   let started = false;
+  let unheard: string | null = null;
   const poll = async () => {
     const mode = await requestedMode(db, runId);
     if (!started) {
@@ -44,6 +45,7 @@ export function watchModeRequests(db: Db, runId: string, pollMs: number): ModeRe
     }
     if (mode === null || mode === last) return;
     last = mode;
+    if (listeners.size === 0) unheard = mode;
     for (const listener of listeners) listener(mode);
   };
   let polling: Promise<void> = Promise.resolve();
@@ -56,6 +58,9 @@ export function watchModeRequests(db: Db, runId: string, pollMs: number): ModeRe
   return {
     subscribe(listener) {
       listeners.add(listener);
+      const missed = unheard;
+      unheard = null;
+      if (missed !== null) listener(missed);
       return () => listeners.delete(listener);
     },
     dispose() {

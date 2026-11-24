@@ -4,8 +4,22 @@ import { isRemote } from '../remote/principal.ts';
 
 export const COMPRESS_FROM_CHARS = 1024;
 
-function acceptsGzip(req: Request): boolean {
-  return /\bgzip\b/i.test(String(req.headers['accept-encoding'] ?? ''));
+function quality(parameters: readonly string[]): number {
+  for (const parameter of parameters) {
+    const [name, value] = parameter.split('=').map((part) => part.trim());
+    if (name?.toLowerCase() !== 'q') continue;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 1;
+}
+
+export function acceptsGzip(header: string): boolean {
+  for (const entry of header.split(',')) {
+    const [coding, ...parameters] = entry.split(';');
+    if (coding?.trim().toLowerCase() === 'gzip') return quality(parameters) > 0;
+  }
+  return false;
 }
 
 function compressible(req: Request, res: Response, body: unknown): body is string {
@@ -14,7 +28,7 @@ function compressible(req: Request, res: Response, body: unknown): body is strin
     body.length >= COMPRESS_FROM_CHARS &&
     req.method !== 'HEAD' &&
     isRemote(res) &&
-    acceptsGzip(req) &&
+    acceptsGzip(String(req.headers['accept-encoding'] ?? '')) &&
     !res.headersSent &&
     !res.getHeader('Content-Encoding') &&
     String(res.getHeader('Content-Type') ?? '').includes('application/json')

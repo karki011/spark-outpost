@@ -147,4 +147,33 @@ describe('terminal sessions', () => {
     start({ ...defaultLimits, maxSessions: 1 });
     expect(() => sessions.create('codex')).toThrow(TerminalLimitError);
   });
+
+  it('holds back output for a paused view and carries on from a clean line when it resumes', () => {
+    sessions = new TerminalSessions(loginShellSpawner(TEST_SHELL));
+    let produce: (data: string) => void = () => undefined;
+    const view = sessions.createView((viewer) => {
+      produce = viewer.output;
+      return { input: () => undefined, resize: () => undefined, detach: () => undefined };
+    });
+    let shown = '';
+    const attached = sessions.attach(
+      view.id,
+      view.token,
+      {
+        output: (data) => {
+          shown += data;
+        },
+        send: () => undefined,
+        close: () => undefined,
+      },
+      size,
+    );
+    produce('one ');
+    attached.pause();
+    produce('dropped ');
+    attached.resume();
+    attached.resume();
+    produce('two');
+    expect(shown).toBe('one \x1b[0m\r\ntwo');
+  });
 });
