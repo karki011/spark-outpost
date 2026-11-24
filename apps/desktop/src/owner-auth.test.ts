@@ -20,6 +20,9 @@ const answering = (outcome: unknown) =>
     },
   });
 
+const macAuth = (addonPath: string, log: (line: string) => void, load: (path: string) => unknown) =>
+  ownerAuth(addonPath, log, load, 'darwin');
+
 describe('macOS owner authentication', () => {
   it('asks macOS with the reason and passes its answer on', async () => {
     const asked: string[] = [];
@@ -30,14 +33,14 @@ describe('macOS owner authentication', () => {
         return 'started';
       },
     });
-    const auth = ownerAuth('/addon.node', vi.fn(), () => addon);
+    const auth = macAuth('/addon.node', vi.fn(), () => addon);
     expect(auth.available()).toBe(true);
     expect(await auth.authenticate('reset the code')).toBe('ok');
     expect(asked).toEqual(['reset the code']);
   });
 
   it('reports a cancel, and treats an answer it does not know as a failure', async () => {
-    const load = (outcome: unknown) => ownerAuth('/a', vi.fn(), () => answering(outcome));
+    const load = (outcome: unknown) => macAuth('/a', vi.fn(), () => answering(outcome));
     expect(await load('cancelled').authenticate('r')).toBe('cancelled');
     expect(await load('unavailable').authenticate('r')).toBe('unavailable');
     expect(await load('granted').authenticate('r')).toBe('failed');
@@ -45,11 +48,9 @@ describe('macOS owner authentication', () => {
   });
 
   it('fails when the prompt could not start or the addon throws', async () => {
-    const refused = ownerAuth('/a', vi.fn(), () =>
-      fakeAddon({ authenticateOwner: () => 'failed' }),
-    );
+    const refused = macAuth('/a', vi.fn(), () => fakeAddon({ authenticateOwner: () => 'failed' }));
     expect(await refused.authenticate('r')).toBe('failed');
-    const broken = ownerAuth('/a', vi.fn(), () =>
+    const broken = macAuth('/a', vi.fn(), () =>
       fakeAddon({
         ownerAuthAvailable: () => {
           throw new Error('boom');
@@ -65,10 +66,10 @@ describe('macOS owner authentication', () => {
 
   it('is unavailable, and says how to build it, when the addon is missing or too old', async () => {
     const log = vi.fn();
-    const missing = ownerAuth('/gone.node', log, () => {
+    const missing = macAuth('/gone.node', log, () => {
       throw new Error('not found');
     });
-    const old = ownerAuth('/old.node', log, () => ({ preventActivation: () => 'applied' }));
+    const old = macAuth('/old.node', log, () => ({ preventActivation: () => 'applied' }));
     for (const auth of [missing, old]) {
       expect(auth.available()).toBe(false);
       expect(await auth.authenticate('r')).toBe('unavailable');
@@ -78,7 +79,19 @@ describe('macOS owner authentication', () => {
   });
 
   it('is unavailable when macOS has no way to authenticate the owner', () => {
-    const auth = ownerAuth('/a', vi.fn(), () => fakeAddon({ ownerAuthAvailable: () => false }));
+    const auth = macAuth('/a', vi.fn(), () => fakeAddon({ ownerAuthAvailable: () => false }));
     expect(auth.available()).toBe(false);
+  });
+});
+
+describe('owner authentication on Windows', () => {
+  it('is unavailable without loading the addon or asking to build it', async () => {
+    const log = vi.fn();
+    const load = vi.fn(() => fakeAddon());
+    const auth = ownerAuth('/addon.node', log, load, 'win32');
+    expect(auth.available()).toBe(false);
+    expect(await auth.authenticate('r')).toBe('unavailable');
+    expect(load).not.toHaveBeenCalled();
+    expect(log).not.toHaveBeenCalled();
   });
 });
