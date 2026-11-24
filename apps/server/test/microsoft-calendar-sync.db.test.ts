@@ -203,24 +203,35 @@ describe('Microsoft sync', () => {
     );
   });
 
-  it('skips a calendar Graph won’t read by delta, and a series it won’t open', async () => {
+  it('skips a calendar Graph refuses (403 or 404), and a series it won’t open', async () => {
     h.fake.addCalendar(OID, { id: 'AAMkShared', name: 'Team', canEdit: false });
-    h.fake.failNext('/graph/v1.0/me/calendars/AAMkShared/calendarView/delta', {
-      status: 400,
-      code: 'ErrorInvalidRequest',
-    });
+    h.fake.addCalendar(OID, { id: 'AAMkGone', name: 'Old', canEdit: false });
+    h.fake.refuseDelta.set('AAMkShared', { status: 403, code: 'ErrorAccessDenied' });
+    h.fake.refuseDelta.set('AAMkGone', { status: 404, code: 'ErrorItemNotFound' });
     h.fake.failNext(`/graph/v1.0/me/calendars/${MS_CALENDAR}/events/AAMkHidden`, {
       status: 403,
       code: 'ErrorAccessDenied',
+    });
+    h.fake.failNext(`/graph/v1.0/me/calendars/${MS_CALENDAR}/events/AAMkOdd`, {
+      status: 400,
+      code: 'ErrorInvalidIdMalformed',
     });
     h.fake.putEvent(
       OID,
       MS_CALENDAR,
       graphMeeting('Shared series', 0, { type: 'occurrence', seriesMasterId: 'AAMkHidden' }),
     );
+    h.fake.putEvent(
+      OID,
+      MS_CALENDAR,
+      graphMeeting('Odd series', 60, { type: 'occurrence', seriesMasterId: 'AAMkOdd' }),
+    );
     await msSignIn(h);
     expect((await msStatus(h)).microsoft.accounts[0]?.state).toBe('ready');
-    expect(await titles()).toEqual(['Shared series']);
+    expect(await titles()).toEqual(['Shared series', 'Odd series']);
+    expect(
+      h.fake.requests.some((request) => request.path.endsWith('/AAMkShared/calendarView')),
+    ).toBe(false);
   });
 
   it('refuses to send the token to a next link on another host', async () => {

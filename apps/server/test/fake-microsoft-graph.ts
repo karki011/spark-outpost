@@ -55,6 +55,7 @@ export interface FakeGraph {
   deny: string | null;
   signInAs: string;
   idTokenEmail: boolean;
+  refuseDelta: Map<string, Failure>;
   addUser(oid: string, email: string): void;
   addCalendar(oid: string, entry: GraphCalendar): void;
   putEvent(oid: string, calendarId: string, event: GraphEvent): void;
@@ -116,6 +117,7 @@ export function fakeMicrosoftGraph(baseUrl = 'http://127.0.0.1:9'): FakeGraph {
     deny: null,
     signInAs: '',
     idTokenEmail: true,
+    refuseDelta: new Map(),
     addUser(oid, email) {
       users.set(oid, { oid, email, calendars: new Map(), masters: new Map() });
       if (!fake.signInAs) fake.signInAs = oid;
@@ -287,6 +289,34 @@ export function fakeMicrosoftGraph(baseUrl = 'http://127.0.0.1:9'): FakeGraph {
     });
   }
 
+  function calendarView(user: FakeUser, calendarId: string, query: URLSearchParams): Response {
+    const calendar = user.calendars.get(calendarId);
+    if (!calendar) return graphError(404, 'ErrorItemNotFound');
+    const from = query.get('startDateTime');
+    const to = query.get('endDateTime');
+    if (!from || !to) return graphError(400, 'ErrorInvalidParameter');
+    const items = [...calendar.events.values()].flatMap(({ event }) =>
+      event && overlaps(event, from, to) ? [event] : [],
+    );
+    const top = Number(query.get('$top') ?? fake.pageSize);
+    const skip = Number(query.get('$skip') ?? 0);
+    const size = Math.min(top, fake.pageSize);
+    const slice = items.slice(skip, skip + size);
+    const next = new URL(
+      `${fake.graphUrl}/me/calendars/${encodeURIComponent(calendarId)}/calendarView`,
+    );
+    next.search = new URLSearchParams({
+      startDateTime: from,
+      endDateTime: to,
+      $top: String(top),
+      $skip: String(skip + size),
+    }).toString();
+    return json(200, {
+      value: slice,
+      ...(skip + size < items.length ? { '@odata.nextLink': next.toString() } : {}),
+    });
+  }
+
   function write(
     user: FakeUser,
     method: FakeGraphWrite['method'],
@@ -339,7 +369,14 @@ export function fakeMicrosoftGraph(baseUrl = 'http://127.0.0.1:9'): FakeGraph {
     if (path === '/me') return json(200, { mail: user.email, userPrincipalName: user.email });
     if (path === '/me/calendars') return calendars(user, query);
     const deltaMatch = /^\/me\/calendars\/([^/]+)\/calendarView\/delta$/.exec(path);
-    if (deltaMatch) return delta(user, decodeURIComponent(deltaMatch[1]!), query);
+    if (deltaMatch) {
+      const calendarId = decodeURIComponent(deltaMatch[1]!);
+      const refusal = fake.refuseDelta.get(calendarId);
+      if (refusal) return graphError(refusal.status, refusal.code ?? 'ErrorInvalidRequest');
+      return delta(user, calendarId, query);
+    }
+    const viewMatch = /^\/me\/calendars\/([^/]+)\/calendarView$/.exec(path);
+    if (viewMatch) return calendarView(user, decodeURIComponent(viewMatch[1]!), query);
     const list = /^\/me\/calendars\/([^/]+)\/events$/.exec(path);
     const single = /^\/me\/calendars\/([^/]+)\/events\/([^/]+)$/.exec(path);
     if (method !== 'GET' && (list || single)) {

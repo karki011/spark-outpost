@@ -20,11 +20,20 @@ export type GraphApiFailure =
 export class GraphApiError extends Error {
   readonly kind: GraphApiFailure;
   readonly retryAfterMs: number | null;
+  readonly status: number | null;
+  readonly code: string;
 
-  constructor(kind: GraphApiFailure, message: string, retryAfterMs: number | null = null) {
+  constructor(
+    kind: GraphApiFailure,
+    message: string,
+    retryAfterMs: number | null = null,
+    answer: { status: number; code: string } | null = null,
+  ) {
     super(message);
     this.kind = kind;
     this.retryAfterMs = retryAfterMs;
+    this.status = answer?.status ?? null;
+    this.code = answer?.code ?? '';
   }
 }
 
@@ -107,33 +116,39 @@ function retryAfter(response: Response): number | null {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : null;
 }
 
+function failureKind(status: number, code: string): GraphApiFailure {
+  if (status === 429) return 'rate_limited';
+  if (status === 410 || GONE_CODES.has(code)) return 'gone';
+  if (status === 401) return 'unauthorized';
+  if (status === 404) return 'not_found';
+  if (status === 403) return 'forbidden';
+  if (status === 400) return 'bad_request';
+  if (status >= 500) return 'server';
+  return 'bad_response';
+}
+
+const FAILURE_MESSAGES: Record<GraphApiFailure, string> = {
+  rate_limited: 'Microsoft asked Spark to slow down.',
+  gone: 'Microsoft asked for a full sync.',
+  unauthorized: 'Microsoft sign-in ran out.',
+  not_found: 'Microsoft lost that calendar.',
+  forbidden: 'Microsoft refused access.',
+  bad_request: 'Microsoft can’t read that calendar this way.',
+  server: 'Microsoft is having trouble.',
+  unreachable: 'Couldn’t reach Microsoft.',
+  bad_response: '',
+};
+
 async function failureOf(response: Response): Promise<GraphApiError> {
   const body = (await response.json().catch(() => null)) as { error?: { code?: string } } | null;
   const code = body?.error?.code ?? '';
-  if (response.status === 429) {
-    return new GraphApiError(
-      'rate_limited',
-      'Microsoft asked Spark to slow down.',
-      retryAfter(response),
-    );
-  }
-  if (response.status === 410 || GONE_CODES.has(code)) {
-    return new GraphApiError('gone', 'Microsoft asked for a full sync.');
-  }
-  if (response.status === 401) {
-    return new GraphApiError('unauthorized', 'Microsoft sign-in ran out.');
-  }
-  if (response.status === 404) {
-    return new GraphApiError('not_found', 'Microsoft lost that calendar.');
-  }
-  if (response.status === 403) return new GraphApiError('forbidden', 'Microsoft refused access.');
-  if (response.status === 400) {
-    return new GraphApiError('bad_request', 'Microsoft can’t read that calendar this way.');
-  }
-  if (response.status >= 500) {
-    return new GraphApiError('server', 'Microsoft is having trouble.', retryAfter(response));
-  }
-  return new GraphApiError('bad_response', `Microsoft answered ${response.status}.`);
+  const kind = failureKind(response.status, code);
+  const message = FAILURE_MESSAGES[kind] || `Microsoft answered ${response.status}.`;
+  const waits = kind === 'rate_limited' || kind === 'server';
+  return new GraphApiError(kind, message, waits ? retryAfter(response) : null, {
+    status: response.status,
+    code,
+  });
 }
 
 interface Send {
@@ -268,6 +283,28 @@ function firstUrl(deps: GraphApiDeps, calendarId: string, request: MicrosoftEven
   if (request.kind === 'changes') return followLink(deps, request.deltaLink);
   const query = new URLSearchParams({ startDateTime: request.start, endDateTime: request.end });
   return at(deps, `/me/calendars/${encodeURIComponent(calendarId)}/calendarView/delta`, query);
+}
+
+export async function listMicrosoftWindow(
+  deps: GraphApiDeps,
+  calendarId: string,
+  window: { start: string; end: string },
+): Promise<MicrosoftEventsAnswer> {
+  const events: GraphEvent[] = [];
+  const query = new URLSearchParams({
+    startDateTime: window.start,
+    endDateTime: window.end,
+    $top: String(GRAPH_PAGE_SIZE),
+  });
+  let url = at(deps, `/me/calendars/${encodeURIComponent(calendarId)}/calendarView`, query);
+  for (let page = 0; page < GRAPH_MAX_PAGES; page += 1) {
+    const data = await pageAt(deps, url);
+    events.push(...validItems(graphEventSchema, data.value));
+    const next = data['@odata.nextLink'];
+    if (!next) return { events, removed: [], deltaLink: null, truncated: false };
+    url = followLink(deps, next);
+  }
+  return { events, removed: [], deltaLink: null, truncated: true };
 }
 
 export async function listMicrosoftEvents(
