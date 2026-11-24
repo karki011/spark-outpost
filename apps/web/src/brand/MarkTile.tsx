@@ -8,16 +8,25 @@ interface MarkTileProps {
   hue?: number;
 }
 
+function firstCharacter(word: string): string {
+  return Array.from(word)[0] ?? '';
+}
+
 export function markLetters(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return '?';
-  const first = words[0]![0]!;
-  const second = words.length > 1 ? words[words.length - 1]![0]! : '';
+  const first = firstCharacter(words[0]!);
+  const second = words.length > 1 ? firstCharacter(words[words.length - 1]!) : '';
   return (first + second).toUpperCase();
 }
 
 export function MarkTile({ letters, size, hue }: MarkTileProps) {
-  const shown = size >= LETTER_MIN_SIZE ? letters.slice(0, size >= 28 ? 2 : 1) : '';
+  const shown =
+    size >= LETTER_MIN_SIZE
+      ? Array.from(letters)
+          .slice(0, size >= 28 ? 2 : 1)
+          .join('')
+      : '';
   return (
     <span
       className="mark-tile"
