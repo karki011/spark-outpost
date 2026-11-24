@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
-import type { SendMessageResponse } from '@spark-outpost/contracts';
-import { api } from '../../api/client.ts';
+import type { ConversationDetail, SendMessageResponse } from '@spark-outpost/contracts';
+import { api, queryKeys } from '../../api/client.ts';
 import { useChatSend } from './use-chat-send.ts';
 
 const accepted = {} as SendMessageResponse;
@@ -145,4 +145,58 @@ it('retains acceptance past cache collection and releases all attempts once the 
   expect(client.getMutationCache().getAll()).toHaveLength(0);
   await act(async () => resolve(accepted));
   expect(client.getMutationCache().getAll()).toHaveLength(0);
+});
+
+it('puts the accepted message and its turn in the chat while the refresh is still loading', async () => {
+  const saved = {
+    message: { id: 'message-1', role: 'user' },
+    run: { id: 'run-1', userMessageId: 'message-1', status: 'queued' },
+  } as SendMessageResponse;
+  vi.spyOn(api, 'sendMessage').mockResolvedValue(saved);
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const key = queryKeys.conversation('chat-a');
+  client.setQueryData(key, { messages: [], runs: [] } as unknown as ConversationDetail);
+  const hook = chat(() => new Promise(() => undefined), client);
+  act(() => hook.result.current.send(content));
+  await waitFor(() =>
+    expect(client.getQueryData<ConversationDetail>(key)).toMatchObject({
+      messages: [saved.message],
+      runs: [saved.run],
+    }),
+  );
+});
+
+it('keeps the accepted turn when a chat fetch that started before the send answers late', async () => {
+  const saved = {
+    message: { id: 'message-1', role: 'user' },
+    run: { id: 'run-1', userMessageId: 'message-1', status: 'queued' },
+  } as SendMessageResponse;
+  vi.spyOn(api, 'sendMessage').mockResolvedValue(saved);
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const key = queryKeys.conversation('chat-a');
+  const before = { messages: [], runs: [] } as unknown as ConversationDetail;
+  client.setQueryData(key, before);
+  let answer = (_detail: ConversationDetail) => {};
+  const stale = client
+    .fetchQuery({
+      queryKey: key,
+      queryFn: () =>
+        new Promise<ConversationDetail>((done) => {
+          answer = done;
+        }),
+    })
+    .catch(() => undefined);
+  const hook = chat(() => new Promise(() => undefined), client);
+  act(() => hook.result.current.send(content));
+  await waitFor(() =>
+    expect(client.getQueryData<ConversationDetail>(key)?.runs).toEqual([saved.run]),
+  );
+  await act(async () => {
+    answer(before);
+    await stale;
+  });
+  expect(client.getQueryData<ConversationDetail>(key)).toMatchObject({
+    messages: [saved.message],
+    runs: [saved.run],
+  });
 });
