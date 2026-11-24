@@ -56,8 +56,8 @@ describe('terminal seed after adoption', () => {
     expect(cut).toContain('old 49 ');
     expect(cut).not.toContain('old 0 ');
     expect(cut.endsWith(whole.slice(whole.indexOf('now 1') - 4))).toBe(true);
-    expect(seedText(replies, 10)).toContain('now 2');
-    expect(seedText(replies, 10)).not.toContain('old');
+    expect(seedText(replies, 60)).toContain('now 2');
+    expect(seedText(replies, 60)).not.toContain('old');
   });
 
   it('keeps only the newest rows of a screen that alone is over the budget', () => {
@@ -66,5 +66,12 @@ describe('terminal seed after adoption', () => {
     expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(1500);
     expect(cut).toContain('row 39 ');
     expect(cut).not.toContain('row 0 ');
+  });
+
+  it('sends no row at all when one row alone is over the budget', () => {
+    const huge = 'z'.repeat(2 * 1024 * 1024);
+    const cut = seedText([['0 0 0 0 0 [25]'], [], [], ['above', huge]], 384 * 1024);
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThan(100);
+    expect(cut).not.toContain('above');
   });
 });

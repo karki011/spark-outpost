@@ -5,6 +5,10 @@ export interface ReplayBuffer {
   text(): string;
 }
 
+function ownCopy(text: string): string {
+  return Buffer.from(text, 'utf16le').toString('utf16le');
+}
+
 export function createReplayBuffer(limit: number): ReplayBuffer {
   let chunks: string[] = [];
   let head = 0;
@@ -25,13 +29,14 @@ export function createReplayBuffer(limit: number): ReplayBuffer {
   return {
     push(data) {
       if (data === '') return;
-      const kept = data.length > limit ? data.slice(-limit) : data;
+      const kept = data.length > limit ? ownCopy(data.slice(-limit)) : data;
       chunks.push(kept);
       length += kept.length;
       trim();
     },
     text() {
-      const joined = chunks.slice(head).join('').slice(-limit);
+      const whole = chunks.slice(head).join('');
+      const joined = whole.length > limit ? ownCopy(whole.slice(-limit)) : whole;
       chunks = joined === '' ? [] : [joined];
       head = 0;
       length = joined.length;
