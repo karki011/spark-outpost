@@ -27,7 +27,7 @@ export const SPLIT_ASK_WITH_TOOL =
   '- When the user should choose, or a detail you need is missing, call AskUserQuestion (Codex: request_user_input) with the options instead of writing them in your reply, and use the answer it returns.';
 
 export const LONG_COMMAND_LINE =
-  "- Start a command that may run longer than about a minute (a full test suite, a build, a server, a watcher) in the background when your shell tool can, and keep working or reply while it runs. Don't wait on it in the foreground or poll it with sleep: you can't read a message from the user while a foreground command runs.";
+  "- Start a command that may run longer than about a minute (a full test suite, a build, a server, a watcher) in the background when your shell tool can, and keep working or reply while it runs. Don't wait on it in the foreground or poll it with sleep: you can't read a message from the user while a foreground command runs. Where your shell tool moves a command that is still running after a minute to the background by itself, carry on and use its completion notice.";
 
 export const ENGINEERING = [
   'Engineering',
