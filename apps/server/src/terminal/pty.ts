@@ -13,6 +13,8 @@ export interface PtyProcess {
   onData(listener: (data: string) => void): void;
   onExit(listener: (exit: { exitCode: number; signal?: number | undefined }) => void): void;
   kill?(): void;
+  pause?(): void;
+  resume?(): void;
   detach?(): void;
   screen?(): Promise<string | null>;
 }
@@ -60,6 +62,8 @@ export function loginShellSpawner(shell = defaultShell()): SpawnPty {
       onExit: (listener) => {
         pty.onExit(listener);
       },
+      pause: () => pty.pause(),
+      resume: () => pty.resume(),
     };
   };
 }

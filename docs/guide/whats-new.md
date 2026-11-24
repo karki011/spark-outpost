@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Faster long chats and terminals                 | Nothing to do.                                             |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |
@@ -42,7 +43,6 @@ summary: What changed in recent releases and what to do next.
 | Round card; top-right toasts                    | —                                                          |
 | Chat rows show steps; plans name chats          | [Chat list](statuses-and-limits.md#chat-list).             |
 | **Cost** by tool; model switch cache note       | [Prompt cache](statuses-and-limits.md#prompt-cache).       |
-| Worktrees holding `.env` or a running tab stay  | [Where](where-spark-works.md#what-to-expect).              |
 
 ## Mid-November 2026
 

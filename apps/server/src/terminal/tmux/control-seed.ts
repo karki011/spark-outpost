@@ -6,6 +6,7 @@ const REPLAYED_MODES = new Set([1, 6, 7, 9, 1000, 1002, 1003, 1004, 1005, 1006, 
 const CURSOR_SHOWN = 25;
 const RESET = '\x1b[0m';
 const ENTER_ALTERNATE = '\x1b[?1049h\x1b[H';
+const SEED_HISTORY_LINES = 2000;
 
 export interface PaneModes {
   historySize: number;
@@ -63,7 +64,7 @@ export function requestSeed(
   const collect = (lines: string[] | null) => replies.push(lines ?? []);
   const capture = (extra: string) => `capture-pane -p -e -N -t ${paneId} ${extra}`.trim();
   client.command(`display-message -p -t ${paneId} '${MODE_FORMAT}'`, collect);
-  client.command(capture('-S - -E -1'), collect);
+  client.command(capture(`-S -${SEED_HISTORY_LINES} -E -1`), collect);
   client.command(capture('-a -q'), collect);
   client.command(capture(''), (lines) => {
     collect(lines);

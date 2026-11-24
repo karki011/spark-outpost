@@ -24,9 +24,11 @@ export function regionPointer(
   let held = false;
   let interactive = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let lastCursor: Point | null = null;
+  let stillTicks = 0;
 
-  const apply = () => {
-    if (window.isDestroyed()) return;
+  const apply = (): { cursor: Point; bounds: Rect } | null => {
+    if (window.isDestroyed()) return null;
     const cursor = screen.getCursorScreenPoint();
     const bounds = window.getBounds();
     const next = held || (window.isVisible() && pointerOnIsland(cursor, bounds, regions));
@@ -35,6 +37,7 @@ export function regionPointer(
       window.setIgnoreMouseEvents(!interactive, { forward: true });
     }
     options.afterApply?.(cursor, bounds, interactive);
+    return { cursor, bounds };
   };
 
   const stop = () => {
@@ -45,8 +48,13 @@ export function regionPointer(
   const tick = () => {
     timer = null;
     if (window.isDestroyed() || !window.isVisible()) return;
-    apply();
-    timer = setTimeout(tick, pollDelay(screen.getCursorScreenPoint(), window.getBounds(), regions));
+    const read = apply();
+    if (!read) return;
+    const moved =
+      lastCursor === null || lastCursor.x !== read.cursor.x || lastCursor.y !== read.cursor.y;
+    stillTicks = moved ? 0 : stillTicks + 1;
+    lastCursor = read.cursor;
+    timer = setTimeout(tick, pollDelay(read.cursor, read.bounds, regions, stillTicks));
   };
 
   return {
@@ -60,7 +68,9 @@ export function regionPointer(
       apply();
       if (timer === null) tick();
     },
-    apply,
+    apply: () => {
+      apply();
+    },
     start: () => {
       if (timer === null) tick();
     },

@@ -224,6 +224,32 @@ export async function branchTipOf(root: string, branch: string): Promise<string 
   return tip.trim() || null;
 }
 
+export interface RepoRefs {
+  head: string | null;
+  remoteDefault: string | null;
+  tips: Map<string, string>;
+}
+
+export async function repoRefsOf(root: string): Promise<RepoRefs | null> {
+  const listed = await git(root, [
+    'for-each-ref',
+    '--format=%(objectname) %(refname)',
+    'refs/heads',
+    'refs/remotes/origin/HEAD',
+  ]).catch(() => null);
+  if (listed === null) return null;
+  const tips = new Map<string, string>();
+  let remoteDefault: string | null = null;
+  for (const line of lines(listed)) {
+    const space = line.indexOf(' ');
+    const commit = line.slice(0, space);
+    const ref = line.slice(space + 1);
+    if (ref === 'refs/remotes/origin/HEAD') remoteDefault = commit;
+    else if (ref.startsWith('refs/heads/')) tips.set(ref.slice('refs/heads/'.length), commit);
+  }
+  return { head: await headCommit(root).catch(() => null), remoteDefault, tips };
+}
+
 async function ancestorOf(root: string, tip: string, ref: string): Promise<boolean> {
   return succeeds(root, ['merge-base', '--is-ancestor', tip, ref]);
 }

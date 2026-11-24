@@ -27,20 +27,23 @@ export function useJoinLeadMs(): number {
 
 export function useCalendarStatus(refetchInterval: number | false = false) {
   const { remote } = useRemoteClient();
-  const query = useQuery({
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (remote) return;
+    const recheck = () =>
+      void queryClient.refetchQueries(
+        { queryKey: calendarKeys.status, exact: true },
+        { cancelRefetch: false },
+      );
+    window.addEventListener('focus', recheck);
+    return () => window.removeEventListener('focus', recheck);
+  }, [remote, queryClient]);
+  return useQuery({
     queryKey: calendarKeys.status,
     queryFn: calendarApi.status,
     enabled: !remote,
     refetchInterval,
   });
-  const { refetch } = query;
-  useEffect(() => {
-    if (remote) return;
-    const recheck = () => void refetch();
-    window.addEventListener('focus', recheck);
-    return () => window.removeEventListener('focus', recheck);
-  }, [remote, refetch]);
-  return query;
 }
 
 export function useCalendarState(): {

@@ -234,6 +234,12 @@ function ChatShell({ entering }: { entering: boolean }) {
     setView('chats');
   });
 
+  const onRailView = useStableCallback((next: AppView) => {
+    setView(next);
+    if (next === view && view === 'chats' && !layout.floating) layout.reveal();
+  });
+  const openSparkSettings = useStableCallback(() => setSettings('spark'));
+
   const classes = [
     'app',
     entering ? 'entering' : '',
@@ -257,12 +263,9 @@ function ChatShell({ entering }: { entering: boolean }) {
           mood={mood}
           onIntent={preloadView}
           onSettingsIntent={preloadSettings}
-          onView={(next) => {
-            setView(next);
-            if (next === view && view === 'chats' && !layout.floating) layout.reveal();
-          }}
-          onSettings={() => setSettings('spark')}
-          onProfile={() => setSettings('spark')}
+          onView={onRailView}
+          onSettings={openSparkSettings}
+          onProfile={openSparkSettings}
         />
         <div className="view" hidden={view !== 'chats'}>
           <FreezeWhileHidden hidden={view !== 'chats'}>

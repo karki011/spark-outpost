@@ -10,6 +10,8 @@ import type { ShellWatcher } from './session-types.ts';
 import { sessionName } from './tmux/tmux-session.ts';
 
 export const CHAT_PORTS_EVERY_MS = 3_000;
+export const CHAT_PORTS_QUIET_EVERY_MS = 15_000;
+export const CHAT_PORTS_QUIET_AFTER_TICKS = 20;
 
 export interface ChatPortWatcherOptions {
   probe: PortProbe;
@@ -17,6 +19,7 @@ export interface ChatPortWatcherOptions {
   excluded: ReadonlySet<number>;
   changed: (ports: ChatPortMap) => void;
   everyMs?: number;
+  quietEveryMs?: number;
   log?: (message: string, error: unknown) => void;
 }
 
@@ -35,6 +38,7 @@ interface WatchedShell {
 export function chatPortWatcher(options: ChatPortWatcherOptions): ChatPortWatcher {
   const { probe, agentRoots, changed } = options;
   const everyMs = options.everyMs ?? CHAT_PORTS_EVERY_MS;
+  const quietEveryMs = Math.max(everyMs, options.quietEveryMs ?? CHAT_PORTS_QUIET_EVERY_MS);
   const log = options.log ?? ((message, error) => console.warn(message, error));
   const shells = new Map<string, WatchedShell>();
   let current: ChatPortMap = {};
@@ -43,12 +47,25 @@ export function chatPortWatcher(options: ChatPortWatcherOptions): ChatPortWatche
   let again = false;
   let stopped = false;
   let reported = false;
+  let unchangedTicks = 0;
+  let lastPids = '';
+  let timerIsQuiet = false;
 
   const schedule = () => {
     if (ticking) again = true;
     if (stopped || ticking || timer !== null) return;
-    timer = setTimeout(() => void tick(), everyMs);
+    timerIsQuiet = unchangedTicks >= CHAT_PORTS_QUIET_AFTER_TICKS;
+    timer = setTimeout(() => void tick(), timerIsQuiet ? quietEveryMs : everyMs);
     timer.unref?.();
+  };
+
+  const hurry = () => {
+    unchangedTicks = 0;
+    if (timer !== null && timerIsQuiet) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    schedule();
   };
 
   const rootsNow = async (): Promise<PortRoot[]> => {
@@ -71,13 +88,19 @@ export function chatPortWatcher(options: ChatPortWatcherOptions): ChatPortWatche
     return roots;
   };
 
-  const measure = async (): Promise<{ map: ChatPortMap; watching: boolean }> => {
+  const measure = async (): Promise<{ map: ChatPortMap; watching: boolean; pids: string }> => {
     const roots = await rootsNow();
-    if (roots.length === 0) return { map: {}, watching: false };
+    if (roots.length === 0) return { map: {}, watching: false, pids: '' };
     const children = await probe.children();
-    const pids = new Set(roots.flatMap((root) => descendantsOf(root.pid, children)));
-    const listening = await probe.listening([...pids].sort((a, b) => a - b));
-    return { map: portsByChat(roots, children, listening, options.excluded), watching: true };
+    const pids = [...new Set(roots.flatMap((root) => descendantsOf(root.pid, children)))].sort(
+      (a, b) => a - b,
+    );
+    const listening = await probe.listening(pids);
+    return {
+      map: portsByChat(roots, children, listening, options.excluded),
+      watching: true,
+      pids: pids.join(','),
+    };
   };
 
   const tick = async () => {
@@ -89,7 +112,10 @@ export function chatPortWatcher(options: ChatPortWatcherOptions): ChatPortWatche
       const measured = await measure();
       watching = measured.watching;
       reported = false;
-      if (!stopped && !samePortMap(current, measured.map)) {
+      const samePorts = samePortMap(current, measured.map);
+      unchangedTicks = samePorts && measured.pids === lastPids ? unchangedTicks + 1 : 0;
+      lastPids = measured.pids;
+      if (!stopped && !samePorts) {
         current = measured.map;
         changed(current);
       }
@@ -110,13 +136,13 @@ export function chatPortWatcher(options: ChatPortWatcherOptions): ChatPortWatche
         pid: shell.pid,
         agent: shell.agent === true,
       });
-      schedule();
+      hurry();
     },
     ended(id) {
-      if (shells.delete(id)) schedule();
+      if (shells.delete(id)) hurry();
     },
     ports: () => current,
-    wake: schedule,
+    wake: hurry,
     stop() {
       stopped = true;
       if (timer !== null) clearTimeout(timer);

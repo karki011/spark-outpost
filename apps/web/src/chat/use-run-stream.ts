@@ -18,17 +18,59 @@ interface StreamState {
   projection: RunProjection;
 }
 
+const COALESCE_MS = 150;
+
+interface PendingRefresh {
+  detail: boolean;
+  tasks: boolean;
+}
+
 const clients = new WeakMap<QueryClient, RunStreamClient>();
+const pendingRefreshes = new WeakMap<QueryClient, Map<string, PendingRefresh>>();
+
+function refreshNow(queryClient: QueryClient, conversationId: string, due: PendingRefresh): void {
+  if (due.detail) void invalidateChatDetail(queryClient, conversationId);
+  if (due.tasks) void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+}
+
+function takePending(queryClient: QueryClient, conversationId: string): PendingRefresh | null {
+  const waiting = pendingRefreshes.get(queryClient);
+  const due = waiting?.get(conversationId) ?? null;
+  waiting?.delete(conversationId);
+  return due;
+}
+
+function refreshSoon(queryClient: QueryClient, conversationId: string, add: PendingRefresh): void {
+  const waiting = pendingRefreshes.get(queryClient) ?? new Map<string, PendingRefresh>();
+  pendingRefreshes.set(queryClient, waiting);
+  const queued = waiting.get(conversationId);
+  if (queued) {
+    queued.detail ||= add.detail;
+    queued.tasks ||= add.tasks;
+    return;
+  }
+  waiting.set(conversationId, { ...add });
+  setTimeout(() => {
+    const due = takePending(queryClient, conversationId);
+    if (due) refreshNow(queryClient, conversationId, due);
+  }, COALESCE_MS);
+}
+
 export function refreshAfter(
   queryClient: QueryClient,
   conversationId: string,
   event: RunEvent,
 ): void {
-  if (refreshesChat(event)) {
-    void invalidateChatDetail(queryClient, conversationId);
-  }
-  if (isTaskActivity(event) || isTerminalRunEvent(event) || isApprovalEvent(event)) {
-    void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+  const urgent = isApprovalEvent(event) || isTerminalRunEvent(event);
+  const wanted = {
+    detail: refreshesChat(event),
+    tasks: isTaskActivity(event) || urgent,
+  };
+  if (urgent) {
+    takePending(queryClient, conversationId);
+    refreshNow(queryClient, conversationId, wanted);
+  } else if (wanted.detail || wanted.tasks) {
+    refreshSoon(queryClient, conversationId, wanted);
   }
   if (isApprovalEvent(event)) {
     void queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true });

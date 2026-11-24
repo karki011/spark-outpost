@@ -65,22 +65,61 @@ export function anchorIndex(text: string, shot: TextAnchor): number | null {
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 
-export function outsideFence(text: string, index: number): number {
+interface FenceSpan {
+  start: number;
+  end: number | null;
+}
+
+function fenceSpans(text: string): FenceSpan[] {
+  const spans: FenceSpan[] = [];
   let open: string | null = null;
+  let openedAt = 0;
   let lineStart = 0;
-  for (const line of text.split('\n')) {
-    if (open === null && lineStart >= index) return index;
-    const lineEnd = lineStart + line.length;
-    const marker = FENCE.exec(line)?.[1]?.[0] ?? null;
+  while (lineStart <= text.length) {
+    const newline = text.indexOf('\n', lineStart);
+    const lineEnd = newline === -1 ? text.length : newline;
+    const marker = FENCE.exec(text.slice(lineStart, lineEnd))?.[1]?.[0] ?? null;
     if (marker !== null && open === null) {
       open = marker;
+      openedAt = lineStart;
     } else if (marker !== null && marker === open) {
       open = null;
-      if (lineEnd >= index) return lineEnd;
+      spans.push({ start: openedAt, end: lineEnd });
     }
     lineStart = lineEnd + 1;
   }
-  return open === null ? index : text.length;
+  if (open !== null) spans.push({ start: openedAt, end: null });
+  return spans;
+}
+
+const SPAN_CACHE_SIZE = 16;
+const spanCache = new Map<string, FenceSpan[]>();
+
+function cachedFenceSpans(text: string): FenceSpan[] {
+  const cached = spanCache.get(text);
+  if (cached) return cached;
+  const spans = fenceSpans(text);
+  if (spanCache.size >= SPAN_CACHE_SIZE) spanCache.delete(spanCache.keys().next().value!);
+  spanCache.set(text, spans);
+  return spans;
+}
+
+function spanStartingBefore(spans: readonly FenceSpan[], index: number): FenceSpan | null {
+  let low = 0;
+  let high = spans.length;
+  while (low < high) {
+    const middle = (low + high) >> 1;
+    if (spans[middle]!.start < index) low = middle + 1;
+    else high = middle;
+  }
+  return spans[low - 1] ?? null;
+}
+
+export function outsideFence(text: string, index: number): number {
+  const span = spanStartingBefore(cachedFenceSpans(text), index);
+  if (!span) return index;
+  if (span.end === null) return text.length;
+  return index <= span.end ? span.end : index;
 }
 
 interface Placed {

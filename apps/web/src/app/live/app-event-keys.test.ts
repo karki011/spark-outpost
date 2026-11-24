@@ -44,7 +44,7 @@ const cached: Record<string, QueryKey> = {
 };
 
 async function invalidatedWhile(
-  streamed: (runId: string) => boolean,
+  streamed: (runId: string, conversationId: string) => boolean,
   ...events: AppEvent[]
 ): Promise<string[]> {
   const client = new QueryClient();
@@ -143,6 +143,19 @@ describe('app event invalidation', () => {
       'terminalRemoteA',
     ]);
     expect(await invalidatedWhile(() => false, started)).toContain('detailA');
+  });
+
+  it('a window that says a chat needs no steps skips that chat alone, and still refetches it for approvals, runs and sub-agents', async () => {
+    const started: AppEvent = { ...event('step'), runId: RUN, phase: 'started', step: 'Reading' };
+    const covered = (_runId: string, conversationId: string) => conversationId === A;
+    expect(await invalidatedWhile(covered, started)).not.toContain('detailA');
+    expect(
+      await invalidatedWhile((_runId, conversationId) => conversationId === B, started),
+    ).toContain('detailA');
+    for (const kind of ['approval', 'run', 'subagent'] as const) {
+      expect(await invalidatedWhile(covered, { ...event(kind), runId: RUN })).toContain('detailA');
+    }
+    expect(await invalidatedWhile(covered, { ...event('step'), runId: RUN })).toContain('detailA');
   });
 
   it('a new usage reading refreshes the open chat even while its run is streamed', async () => {

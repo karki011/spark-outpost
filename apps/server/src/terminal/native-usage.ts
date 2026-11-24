@@ -224,7 +224,9 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
     },
     followAgent(session: LiveSession, path: string, agentId: string | null) {
       const transcript = session.transcript;
-      if (!transcript || transcript.agents.has(path)) return;
+      if (!transcript) return;
+      const followed = transcript.agents.get(path);
+      if (followed) return followed.resume();
       const parser =
         session.row.provider === 'claude' ? claudeTranscriptParser(true) : codexRolloutParser();
       const watcher = watch(path, 0, async (lines) => {
@@ -250,6 +252,7 @@ export function nativeUsage(db: Db, watch: WatchTranscript, enqueue: Enqueue) {
       await readAll(session);
       transcript.watcher?.close();
       transcript.watcher = null;
+      for (const agent of transcript.agents.values()) agent.pause();
       await saveQuietly(session);
     },
     async last(session: LiveSession) {

@@ -105,6 +105,51 @@ describe('terminal websocket', () => {
     expect(sessions.activeCount).toBe(0);
   });
 
+  it.skipIf(process.platform === 'win32')(
+    'holds a flood back for a view that acknowledges output, and lets it through as it catches up',
+    async () => {
+      const { id, token } = sessions.create('codex');
+      const socket = connect(`/api/terminal/sessions/${id}/stream?token=${token}`, ORIGIN);
+      let received = 0;
+      let tail = '';
+      socket.on('message', (raw, isBinary) => {
+        if (!isBinary) return;
+        received += (raw as Buffer).length;
+        tail = (tail + String(raw)).slice(-200);
+      });
+      await new Promise((resolve) => socket.on('open', resolve));
+      socket.send(JSON.stringify({ type: 'ack', bytes: 0 }));
+      socket.send(
+        Buffer.from(
+          '\u0015head -c 4000000 /dev/zero | tr "\\0" x; echo; echo "flood-$((1+1))-done"\r',
+        ),
+        { binary: true },
+      );
+      let last = -1;
+      while (received !== last) {
+        last = received;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      expect(received).toBeGreaterThan(1024 * 1024);
+      expect(received).toBeLessThan(3_000_000);
+      expect(tail).not.toContain('flood-2-done');
+
+      const deadline = Date.now() + 8000;
+      let acked = 0;
+      while (!tail.includes('flood-2-done')) {
+        if (Date.now() > deadline) throw new Error('The flood never finished.');
+        if (received > acked) {
+          socket.send(JSON.stringify({ type: 'ack', bytes: received - acked }));
+          acked = received;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(received).toBeGreaterThan(4_000_000);
+      socket.send(JSON.stringify({ type: 'close' }));
+      await new Promise((resolve) => socket.on('close', resolve));
+    },
+  );
+
   it('passes the colours the view reports to the terminal and ignores a malformed one', async () => {
     const { id, token } = sessions.create('codex');
     const socket = connect(`/api/terminal/sessions/${id}/stream?token=${token}`, ORIGIN);

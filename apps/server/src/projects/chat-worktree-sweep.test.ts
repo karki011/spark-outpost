@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Queryable } from '../persistence/db.ts';
-import { eachByRepo, startWorktreeSweeper, type Sweep } from './chat-worktree-sweep.ts';
+import {
+  eachByRepo,
+  oncePerRepo,
+  refsKey,
+  startWorktreeSweeper,
+  type Sweep,
+} from './chat-worktree-sweep.ts';
 
 const db = {} as Queryable;
 
@@ -127,5 +133,37 @@ describe('the worktree sweeper', () => {
     await expect(claim).resolves.toBe('lease');
     expect(order).toEqual(['release', 'claim']);
     await sweeper.stop();
+  });
+});
+
+describe('skipping worktrees whose refs have not moved', () => {
+  const refs = (tip: string, head: string, remoteDefault: string | null) => ({
+    head,
+    remoteDefault,
+    tips: new Map([['spark/one', tip]]),
+  });
+
+  it('gives the same key until the branch, the checkout or the remote default moves', () => {
+    const key = refsKey(refs('t1', 'h1', 'r1'), 'spark/one');
+    expect(refsKey(refs('t1', 'h1', 'r1'), 'spark/one')).toBe(key);
+    expect(refsKey(refs('t2', 'h1', 'r1'), 'spark/one')).not.toBe(key);
+    expect(refsKey(refs('t1', 'h2', 'r1'), 'spark/one')).not.toBe(key);
+    expect(refsKey(refs('t1', 'h1', 'r2'), 'spark/one')).not.toBe(key);
+    expect(refsKey(refs('t1', 'h1', null), 'spark/one')).not.toBe(key);
+  });
+
+  it('has no key when the refs could not be read, so the branch is checked', () => {
+    expect(refsKey(null, 'spark/one')).toBeNull();
+  });
+
+  it('reads a repository once per sweep and treats a failed read as unknown', async () => {
+    const read = vi.fn(async (root: string) => {
+      if (root === '/repo/bad') throw new Error('not a repository');
+      return refs('t1', 'h1', null);
+    });
+    const refsOf = oncePerRepo(read);
+    await Promise.all([refsOf('/repo/a'), refsOf('/repo/a'), refsOf('/repo/bad')]);
+    expect(await refsOf('/repo/bad')).toBeNull();
+    expect(read).toHaveBeenCalledTimes(2);
   });
 });

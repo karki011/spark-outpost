@@ -127,6 +127,8 @@ export async function nativeRuntimeFixture(
         if (watcher.atFlush.length > 0) void watcher.lines(watcher.atFlush.splice(0));
       },
       offset: () => watcher.position,
+      pause: () => undefined,
+      resume: () => undefined,
       close: watcher.close,
     };
   };

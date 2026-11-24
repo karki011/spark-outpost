@@ -160,9 +160,10 @@ describe('output', () => {
     const view = runner.view(asked.id, late, { cols: 90, rows: 20 });
     expect(late.seen.output).toBe('first\r\n');
     expect(fake.spawned[0]!.size).toEqual({ cols: 90, rows: 20 });
-    fake.spawned[0]!.print('second\r\n');
-    expect(late.seen.output).toBe('first\r\nsecond\r\n');
+    fake.spawned[0]!.print('sec');
+    fake.spawned[0]!.print('ond\r\n');
     view!.detach();
+    expect(late.seen.output).toBe('first\r\nsecond\r\n');
     fake.spawned[0]!.print('third\r\n');
     expect(late.seen.output).toBe('first\r\nsecond\r\n');
   });

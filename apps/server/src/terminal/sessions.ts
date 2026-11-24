@@ -3,8 +3,9 @@ import { existsSync } from 'node:fs';
 import type { ProviderId, TerminalEndReason, TerminalStep } from '@spark-outpost/contracts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
-import { killProcessTree, processTable, runningCommand } from './process-group.ts';
+import { processTable, runningCommand } from './process-group.ts';
 import type { PtyProcess, SpawnPty } from './pty.ts';
+import { createReplayBuffer, type ReplayBuffer } from './replay-buffer.ts';
 import type {
   AgentRequest,
   AttachedTerminal,
@@ -16,6 +17,7 @@ import type {
   TerminalView,
 } from './session-types.ts';
 import { defaultLimits, TerminalAuthError, TerminalLimitError } from './session-types.ts';
+import { stopPty } from './stop-pty.ts';
 
 export * from './session-types.ts';
 
@@ -47,7 +49,7 @@ interface Session {
   kind: SetupKind | ShellKind | ViewKind;
   attached: boolean;
   tokenExpiresAt: number;
-  replay: string;
+  replay: ReplayBuffer;
   view: TerminalView | null;
   pty: PtyProcess | null;
   client: TerminalClient | null;
@@ -140,6 +142,7 @@ export class TerminalSessions {
     const oldClient = session.client;
     session.client = null;
     session.attached = false;
+    session.pty?.resume?.();
     oldClient?.close();
     session.token = randomBytes(32);
     session.tokenExpiresAt = Date.now() + this.limits.tokenTtlMs;
@@ -177,7 +180,8 @@ export class TerminalSessions {
     if (kind.type === 'view') return this.attachView(session, kind, size);
     if (session.pty) {
       session.pty.resize(size.cols, size.rows);
-      if (session.replay) client.output(session.replay);
+      const replay = session.replay.text();
+      if (replay) client.output(replay);
     } else this.startPty(session, size);
 
     return {
@@ -192,11 +196,18 @@ export class TerminalSessions {
       colors: (colors) => {
         if (session.client === client) session.pty?.colors?.(colors);
       },
+      pause: () => {
+        if (session.client === client) session.pty?.pause?.();
+      },
+      resume: () => {
+        if (session.client === client) session.pty?.resume?.();
+      },
       close: () => {
         if (session.client === client) this.end(session, 'closed', null);
       },
       disconnect: () => {
         if (session.client !== client) return;
+        session.pty?.resume?.();
         if (!isAgent(kind)) this.end(session, 'disconnected', null);
         else {
           session.client = null;
@@ -286,6 +297,8 @@ export class TerminalSessions {
       input: (data) => view.input(data),
       resize: (cols, rows) => view.resize(cols, rows),
       colors: () => undefined,
+      pause: () => undefined,
+      resume: () => undefined,
       close: () => this.end(session, 'closed', null),
       disconnect: () => this.end(session, 'disconnected', null),
     };
@@ -349,7 +362,7 @@ export class TerminalSessions {
       kind,
       attached: false,
       tokenExpiresAt: Date.now() + this.limits.tokenTtlMs,
-      replay: '',
+      replay: createReplayBuffer(REPLAY_BYTES),
       view: null,
       pty: null,
       client: null,
@@ -405,7 +418,7 @@ export class TerminalSessions {
   }
 
   private handleOutput(session: Session, data: string) {
-    if (isAgent(session.kind)) session.replay = (session.replay + data).slice(-REPLAY_BYTES);
+    if (isAgent(session.kind)) session.replay.push(data);
     session.client?.output(data);
     if (session.kind.type === 'shell') this.watcher?.output?.(session.id, data);
     if (session.kind.type !== 'setup') return;
@@ -451,7 +464,7 @@ export class TerminalSessions {
     session.view = null;
     let stopped = Promise.resolve();
     if (keepRunning) session.pty?.detach?.();
-    else if (session.pty) stopped = this.stopPty(session.pty);
+    else if (session.pty) stopped = stopPty(session.pty);
     if (session.kind.type === 'shell' && session.kind.conversationId) {
       this.track(session.kind.conversationId, stopped);
     }
@@ -470,22 +483,6 @@ export class TerminalSessions {
       pending.delete(stopped);
       if (pending.size === 0 && this.stopping.get(conversationId) === pending) {
         this.stopping.delete(conversationId);
-      }
-    });
-  }
-
-  private stopPty(pty: PtyProcess): Promise<void> {
-    if (!pty.kill) return killProcessTree(pty.pid);
-    if (process.platform !== 'win32') {
-      pty.kill();
-      return Promise.resolve();
-    }
-    const kill = pty.kill.bind(pty);
-    return killProcessTree(pty.pid).finally(() => {
-      try {
-        kill();
-      } catch {
-        return;
       }
     });
   }

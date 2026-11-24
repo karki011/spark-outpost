@@ -31,7 +31,8 @@ interface ItemRow {
   url: string | null;
 }
 
-const SCHEDULED_TODAY = `w.conversation_id = ws.conversation_id AND w.workflow_id = ws.workflow_id
+const SCHEDULED_TODAY = `w.workspace_id = ws.workspace_id AND w.workflow_id = ws.workflow_id
+  AND w.conversation_id = ws.conversation_id
   AND w.source IN ('schedule', 'catch_up') AND w.started_at >= $3`;
 
 const MENTION_DAYS = 7;

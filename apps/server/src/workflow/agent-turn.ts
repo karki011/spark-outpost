@@ -35,6 +35,7 @@ import {
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun, prepareQuestions, prepareSparkWorkRun } from './do-run.ts';
+import { RUN_SIGNAL_FALLBACK_MS } from '../persistence/run-signals.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, publishScope, startBasis } from './publish-context.ts';
 import { openMemberInbox } from './member-inbox.ts';
@@ -219,7 +220,9 @@ export async function runAgentTurn(
     ...reply.result(),
   });
   const modeWatch =
-    input.mode === 'do' ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? 250) : null;
+    input.mode === 'do'
+      ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? RUN_SIGNAL_FALLBACK_MS)
+      : null;
   const inbox = input.assistant
     ? null
     : openMemberInbox(deps.db, {

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { memo, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import type { ScoutMood } from '../brand/BlobScout.tsx';
@@ -244,7 +244,7 @@ function useIndicator(view: AppView) {
   return { railRef, box };
 }
 
-export function Rail({
+export const Rail = memo(function Rail({
   view,
   waiting,
   ticketsWaiting,
@@ -475,4 +475,4 @@ export function Rail({
       )}
     </nav>
   );
-}
+});

@@ -23,6 +23,20 @@ describe('tmux control protocol', () => {
     expect(decodeOutput(Buffer.from('a\\9b\\12', 'utf8')).toString('utf8')).toBe('a\\9b\\12');
   });
 
+  it('decodes every escaped byte value', () => {
+    const all = Buffer.from(Array.from({ length: 256 }, (_, byte) => byte));
+    const escaped = [...all].map((byte) => `\\${byte.toString(8).padStart(3, '0')}`).join('');
+    expect(decodeOutput(Buffer.from(escaped, 'latin1'))).toEqual(all);
+  });
+
+  it('treats a line that only starts like output as a notification', () => {
+    expect(parseAll(['%outputs %1 x\n%output\n%out\n'])).toEqual([
+      { type: 'notice', name: 'outputs' },
+      { type: 'notice', name: 'output' },
+      { type: 'notice', name: 'out' },
+    ]);
+  });
+
   it('reports pane output split across chunks', () => {
     const events = parseAll(['%output %3 he', 'llo\\012\n%output %4 x\n']);
     expect(events).toEqual([

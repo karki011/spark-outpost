@@ -48,6 +48,17 @@ function resolveMarks(root: Element, anchored: readonly Anchored[]): Mark[] {
   });
 }
 
+const LIVE_TURN = '.msg.ai[data-state="working"]';
+
+function inLiveTurn(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return element?.closest(LIVE_TURN) != null;
+}
+
+function sourcedFromLiveTurn(root: Element, anchored: readonly Anchored[]): boolean {
+  return anchored.some((item) => sourcesFor(root, item.sourceMessageId).some(inLiveTurn));
+}
+
 function hitMark(
   marks: readonly Mark[],
   x: number,
@@ -113,9 +124,11 @@ export function QuoteMarks({ scrollerRef, conversationId, pending }: QuoteMarksP
       return;
     }
     let frame = 0;
+    let liveSourced = false;
     let clearSent: () => void = () => undefined;
     let clearUnsent: () => void = () => undefined;
     const paint = () => {
+      liveSourced = sourcedFromLiveTurn(root, sent) || sourcedFromLiveTurn(root, unsent);
       const sentMarks = resolveMarks(root, sent);
       marksRef.current = sentMarks;
       clearSent();
@@ -134,7 +147,10 @@ export function QuoteMarks({ scrollerRef, conversationId, pending }: QuoteMarksP
       frame = requestAnimationFrame(paint);
     };
     paint();
-    const observer = new MutationObserver(schedule);
+    const observer = new MutationObserver((records) => {
+      if (!liveSourced && records.every((record) => inLiveTurn(record.target))) return;
+      schedule();
+    });
     observer.observe(root, { childList: true, subtree: true, characterData: true });
     return () => {
       observer.disconnect();

@@ -22,9 +22,10 @@ import {
   type TerminalApprovals,
 } from './approvals.ts';
 import { readTail } from './read-tail.ts';
-import { inputDetail, transcriptItems } from './transcript-items.ts';
+import { addTranscriptItems, inputDetail } from './transcript-items.ts';
 
 export const SHOWN_ITEMS = 150;
+const KEPT_ITEMS = 2_000;
 export const SUBMIT_DELAY_MS = 400;
 const APPROVAL_DETAIL_MAX = 2_000;
 const PASTE_START = '\u001b[200~';
@@ -63,6 +64,9 @@ interface ParsedTail {
   modified: number;
   items: TerminalTranscriptItem[];
   truncated: boolean;
+  offset: number;
+  all: TerminalTranscriptItem[];
+  cut: boolean;
 }
 
 export function withoutControls(text: string): string {
@@ -142,15 +146,24 @@ export function nativeRemote(deps: NativeRemoteDeps) {
     const cached = parsed.get(conversationId);
     if (cached?.path === path && cached.size === file.size && cached.modified === file.mtimeMs)
       return cached;
-    const tail = await readTail(path).catch(() => null);
+    const grown =
+      cached?.path === path && file.size >= cached.offset && cached.all.length < KEPT_ITEMS
+        ? cached
+        : null;
+    const tail = await readTail(path, grown?.offset ?? null).catch(() => null);
     if (!tail) return null;
-    const all = transcriptItems(provider, tail.lines);
+    const before = grown !== null && tail.appended ? grown : null;
+    const all = addTranscriptItems(provider, tail.lines, before?.all ?? []);
+    const cut = before?.cut ?? tail.truncated;
     const fresh = {
       path,
       size: tail.size,
       modified: tail.modified,
       items: all.slice(-SHOWN_ITEMS),
-      truncated: tail.truncated || all.length > SHOWN_ITEMS,
+      truncated: cut || all.length > SHOWN_ITEMS,
+      offset: tail.offset,
+      all,
+      cut,
     };
     if (deps.live.has(conversationId)) parsed.set(conversationId, fresh);
     else parsed.delete(conversationId);

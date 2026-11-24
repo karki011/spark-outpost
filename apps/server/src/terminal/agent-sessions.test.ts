@@ -49,6 +49,44 @@ function useFixture() {
   return f;
 }
 
+describe('pausing output for a slow view', () => {
+  const size = { cols: 80, rows: 24 };
+  function flowFixture() {
+    const f = useFixture();
+    const pause = vi.fn();
+    const resume = vi.fn();
+    Object.assign(f.pty, { pause, resume });
+    const created = f.sessions.createAgent(f.request);
+    return { f, pause, resume, created };
+  }
+
+  it('pauses and resumes the process only for the view that is attached', () => {
+    const { f, pause, resume, created } = flowFixture();
+    const first = f.sessions.attach(created.id, created.token, f.client(), size);
+    first.pause();
+    expect(pause).toHaveBeenCalledTimes(1);
+    const fresh = f.sessions.reattach(created.id)!;
+    expect(resume).toHaveBeenCalledTimes(1);
+    const second = f.sessions.attach(fresh.id, fresh.token, f.client(), size);
+    first.pause();
+    first.resume();
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(resume).toHaveBeenCalledTimes(1);
+    second.resume();
+    expect(resume).toHaveBeenCalledTimes(2);
+  });
+
+  it('resumes the process when a paused view disconnects', () => {
+    const { f, pause, resume, created } = flowFixture();
+    const view = f.sessions.attach(created.id, created.token, f.client(), size);
+    view.pause();
+    view.disconnect();
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(resume).toHaveBeenCalledTimes(1);
+    expect(f.sessions.activeCount).toBe(1);
+  });
+});
+
 describe('native terminal ownership', () => {
   it('starts one direct executable before a view connects and ignores token expiry for process lifetime', async () => {
     const f = useFixture();

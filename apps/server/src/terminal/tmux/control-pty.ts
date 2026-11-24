@@ -25,6 +25,7 @@ const INPUT_CHUNK_BYTES = 256;
 const LOST_EXIT_CODE = 1;
 const SPLIT_WRITE_MS = 1;
 const SIGHUP = 1;
+const REDRAW = '\x1bc';
 
 export function hexWords(data: Buffer): string {
   const words: string[] = [];
@@ -59,6 +60,7 @@ export function controlPty(
   let seeded = !start.adopt;
   let answered = false;
   let ended = false;
+  let paused = false;
 
   let batch = '';
   const flush = () => {
@@ -109,6 +111,25 @@ export function controlPty(
     checkDeath();
   }
 
+  const seed = (prefix: string) =>
+    requestSeed(client, pane.paneId, (text) => {
+      if (paused) return;
+      emit(prefix + text);
+      seeded = true;
+    });
+  const pause = () => {
+    if (paused || ended) return;
+    paused = true;
+    seeded = false;
+    client.command(`refresh-client -A '${pane.paneId}:pause'`);
+  };
+  const resume = () => {
+    if (!paused || ended) return;
+    paused = false;
+    client.command(`refresh-client -A '${pane.paneId}:continue'`);
+    seed(REDRAW);
+  };
+
   const reportColors = (colors: TerminalColors) => {
     for (const command of colorReportCommands(pane.paneId, colors)) client.command(command);
   };
@@ -116,10 +137,7 @@ export function controlPty(
   const attached = start.observer?.begin('attach');
   connect();
   if (start.adopt) {
-    requestSeed(client!, pane.paneId, (text) => {
-      emit(text);
-      seeded = true;
-    });
+    seed('');
   } else {
     client!.command(`refresh-client -C ${Math.trunc(start.cols)}x${Math.trunc(start.rows)}`);
     if (start.colors) reportColors(start.colors);
@@ -155,6 +173,8 @@ export function controlPty(
         for (const listener of exitListeners) listener({ exitCode: 0, signal: SIGHUP });
       });
     },
+    pause,
+    resume,
     detach: () => {
       if (ended) return;
       ended = true;

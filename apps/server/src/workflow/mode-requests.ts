@@ -1,4 +1,5 @@
 import type { Db, Queryable } from '../persistence/db.ts';
+import { onRunSignal } from '../persistence/run-signals.ts';
 import type { ModeRequests } from '../providers/provider.ts';
 
 export interface ModeRequestWatch extends ModeRequests {
@@ -45,8 +46,13 @@ export function watchModeRequests(db: Db, runId: string, pollMs: number): ModeRe
     last = mode;
     for (const listener of listeners) listener(mode);
   };
-  void poll().catch(() => undefined);
-  const timer = setInterval(() => void poll().catch(() => undefined), pollMs);
+  let polling: Promise<void> = Promise.resolve();
+  const check = () => {
+    polling = polling.then(poll).catch(() => undefined);
+  };
+  check();
+  const unsubscribe = onRunSignal(runId, check);
+  const timer = setInterval(check, pollMs);
   return {
     subscribe(listener) {
       listeners.add(listener);
@@ -54,6 +60,7 @@ export function watchModeRequests(db: Db, runId: string, pollMs: number): ModeRe
     },
     dispose() {
       clearInterval(timer);
+      unsubscribe();
       listeners.clear();
     },
   };

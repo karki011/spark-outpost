@@ -20,13 +20,26 @@ export function tokensLine(compaction: Compaction): string | null {
   return `${formatTokens(before)} → ${formatTokens(after)} tokens`;
 }
 
-export function compactionsByRun(
-  compactions: readonly Compaction[] | undefined,
-): Map<string, Compaction[]> {
+const NO_COMPACTIONS: ReadonlyMap<string, Compaction[]> = new Map();
+const byRunCache = new WeakMap<readonly Compaction[], Map<string, Compaction[]>>();
+
+function groupByRun(compactions: readonly Compaction[]): Map<string, Compaction[]> {
   const byRun = new Map<string, Compaction[]>();
-  for (const compaction of compactions ?? []) {
+  for (const compaction of compactions) {
     if (!compaction.runId) continue;
     byRun.set(compaction.runId, [...(byRun.get(compaction.runId) ?? []), compaction]);
+  }
+  return byRun;
+}
+
+export function compactionsByRun(
+  compactions: readonly Compaction[] | undefined,
+): ReadonlyMap<string, Compaction[]> {
+  if (!compactions) return NO_COMPACTIONS;
+  let byRun = byRunCache.get(compactions);
+  if (!byRun) {
+    byRun = groupByRun(compactions);
+    byRunCache.set(compactions, byRun);
   }
   return byRun;
 }

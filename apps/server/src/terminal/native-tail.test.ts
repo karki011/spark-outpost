@@ -86,6 +86,27 @@ describe('transcript watcher', () => {
     expect(watchTranscript(join(folder, 'missing', 'a.jsonl'), null, collect)).toBeNull();
   });
 
+  it('stops polling while paused, still reads on request and picks up again without repeats', async () => {
+    const watcher = watchTranscript(path, null, collect)!;
+    await watcher.ready;
+    watcher.pause();
+    watcher.pause();
+    await appendFile(path, 'while-paused\n');
+    await new Promise((done) => setTimeout(done, 450));
+    expect(seen).toEqual([]);
+    await watcher.flush();
+    expect(seen).toEqual(['while-paused']);
+    watcher.resume();
+    watcher.resume();
+    await appendFile(path, 'after-resume\n');
+    await expect.poll(() => seen).toEqual(['while-paused', 'after-resume']);
+    watcher.close();
+    watcher.resume();
+    await appendFile(path, 'after-close\n');
+    await new Promise((done) => setTimeout(done, 450));
+    expect(seen).toEqual(['while-paused', 'after-resume']);
+  });
+
   it('keeps reading when a handler fails', async () => {
     let calls = 0;
     const watcher = watchTranscript(path, null, async () => {

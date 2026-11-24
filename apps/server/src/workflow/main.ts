@@ -10,6 +10,7 @@ import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
+import { dispatchRunSignal, RUN_SIGNAL_CHANNEL } from '../persistence/run-signals.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
 import { gitHubAppConfig } from '../ship/github/app-config.ts';
@@ -22,7 +23,7 @@ import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { scanIndexPace } from '../map/scan-index-pace.ts';
 import { flushBufferedText } from './run-appender.ts';
 import { ParkedTurns } from './parked-turns.ts';
-import { startWorker } from './worker.ts';
+import { startWorker, WORKER_IDLE_POLL_MS, WORKER_RECOVERY_EVERY_MS } from './worker.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
 import type { SparkToolDeps } from '../spark-mcp/deps.ts';
 import { startSparkActionFollowThrough } from '../spark-mcp/actions/follow-through.ts';
@@ -104,6 +105,8 @@ const worker = startWorker({
     loginShellEnv(runCommand, loginShell),
   ),
   leaseSeconds: config.LEASE_SECONDS,
+  pollMs: WORKER_IDLE_POLL_MS,
+  recoveryEveryMs: WORKER_RECOVERY_EVERY_MS,
   sessionLimits: {
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,
   },
@@ -157,6 +160,7 @@ const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => 
     .catch(() => undefined);
 });
 const prPollListener = await listen(config.DATABASE_URL, POLL_CHANNEL, () => prFollowUp.wake());
+const runSignalListener = await listen(config.DATABASE_URL, RUN_SIGNAL_CHANNEL, dispatchRunSignal);
 console.log(`Worker running with ${config.AGENT_RUNTIME} agents.`);
 
 const shutdown = async () => {
@@ -164,6 +168,7 @@ const shutdown = async () => {
   await listener.close();
   await approvalListener.close();
   await prPollListener.close();
+  await runSignalListener.close();
   await projectMap.stop();
   await prFollowUp.stop();
   await worker.stop();

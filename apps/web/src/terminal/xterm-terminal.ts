@@ -1,6 +1,5 @@
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal, type ITerminalOptions } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import './xterm-terminal.css';
@@ -16,26 +15,12 @@ import { openTerminalLink } from './terminal-links.ts';
 import { colorsFromTokens, themeFromTokens } from './terminal-theme.ts';
 import { followTerminalDrops } from './terminal-drop.ts';
 import { followSelection, selectionActions } from './selection/follow-selection.ts';
+import { createAckCounter } from './output-acks.ts';
+import { followWebglRenderer } from './webgl-renderer.ts';
 
 const OSC_CLIPBOARD = 52;
+const RESIZE_SEND_MS = 90;
 const encoder = new TextEncoder();
-
-export function loadWebglRenderer(terminal: Terminal): WebglAddon | null {
-  let addon: WebglAddon;
-  try {
-    addon = new WebglAddon();
-  } catch {
-    return null;
-  }
-  addon.onContextLoss(() => addon.dispose());
-  try {
-    terminal.loadAddon(addon);
-  } catch {
-    addon.dispose();
-    return null;
-  }
-  return addon;
-}
 
 export function createTerminal(overrides: ITerminalOptions = {}): Terminal {
   return new Terminal({
@@ -96,12 +81,13 @@ export function openXterm<T extends TerminalTicket>(
   );
   terminal.open(element);
   const unfollowLinks = links?.follow(terminal, element);
-  const webgl = loadWebglRenderer(terminal);
+  const unfollowWebgl = followWebglRenderer(terminal, element);
   terminal.parser.registerOscHandler(OSC_CLIPBOARD, () => true);
 
   let socket: WebSocket | null = null;
   let session: T | null = null;
   let lastSize = '';
+  let resizeTimer: ReturnType<typeof setTimeout> | null = null;
   let ended = false;
   let disposed = false;
 
@@ -117,17 +103,31 @@ export function openXterm<T extends TerminalTicket>(
     const colors = colorsFromTokens();
     if (colors) sendControl({ type: 'colors', colors });
   };
-  const sendResize = () => {
+  const fitToElement = () => {
     try {
       fit.fit();
+      return true;
     } catch {
-      return;
+      return false;
     }
+  };
+  const sendSize = () => {
+    if (resizeTimer !== null) clearTimeout(resizeTimer);
+    resizeTimer = null;
     const size = `${terminal.cols}x${terminal.rows}`;
     if (size === lastSize || socket?.readyState !== WebSocket.OPEN) return;
     lastSize = size;
     sendControl({ type: 'resize', cols: terminal.cols, rows: terminal.rows });
   };
+  const sendResize = () => {
+    if (fitToElement()) sendSize();
+  };
+  const resized = () => {
+    if (!fitToElement()) return;
+    if (resizeTimer !== null) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(sendSize, RESIZE_SEND_MS);
+  };
+  const acknowledge = createAckCounter((bytes) => sendControl({ type: 'ack', bytes }));
 
   try {
     fit.fit();
@@ -135,7 +135,7 @@ export function openXterm<T extends TerminalTicket>(
     terminal.resize(80, 24);
   }
 
-  const resizeObserver = new ResizeObserver(sendResize);
+  const resizeObserver = new ResizeObserver(resized);
   resizeObserver.observe(element);
   const unfollowTheme = followTheme(terminal, sendColors);
   const inputSubscription = terminal.onData(sendInput);
@@ -177,6 +177,7 @@ export function openXterm<T extends TerminalTicket>(
     ws.addEventListener(
       'open',
       () => {
+        sendControl({ type: 'ack', bytes: 0 });
         sendResize();
         sendColors();
         selection.refresh();
@@ -189,7 +190,8 @@ export function openXterm<T extends TerminalTicket>(
       'message',
       (event: MessageEvent<ArrayBuffer | string>) => {
         if (event.data instanceof ArrayBuffer) {
-          terminal.write(new Uint8Array(event.data));
+          const bytes = new Uint8Array(event.data);
+          terminal.write(bytes, () => acknowledge(bytes.byteLength));
           return;
         }
         const message = terminalServerMessageSchema.safeParse(JSON.parse(event.data));
@@ -250,6 +252,7 @@ export function openXterm<T extends TerminalTicket>(
       disposed = true;
       abort.abort();
       resizeObserver.disconnect();
+      if (resizeTimer !== null) clearTimeout(resizeTimer);
       unfollowTheme();
       unfollowDrops();
       selection.stop();
@@ -259,7 +262,7 @@ export function openXterm<T extends TerminalTicket>(
       inputSubscription.dispose();
       if (socket) socket.close();
       else if (session && !handlers.preserveSession) void deleteTerminalSession(session.id);
-      webgl?.dispose();
+      unfollowWebgl();
       terminal.dispose();
     },
   };

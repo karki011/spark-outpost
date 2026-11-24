@@ -302,16 +302,18 @@ const nativeTerminals = await createNativeRuntime({
   onStartPhase: (conversationId) =>
     appEvents.publish(JSON.stringify({ kind: 'terminal_start', conversationId, runId: null })),
 });
-await nativeTerminals.recover();
-const artifactPages = await startArtifactOrigin({
-  db,
-  chatFolders,
-  port: artifactPortFor(config.API_PORT),
-  frameAncestors: [`http://127.0.0.1:${config.API_PORT}`, ...config.ALLOWED_ORIGINS],
-}).catch((error: unknown) => {
-  console.error('Could not start the artifact page server', (error as Error).message);
-  return null;
-});
+const [artifactPages] = await Promise.all([
+  startArtifactOrigin({
+    db,
+    chatFolders,
+    port: artifactPortFor(config.API_PORT),
+    frameAncestors: [`http://127.0.0.1:${config.API_PORT}`, ...config.ALLOWED_ORIGINS],
+  }).catch((error: unknown) => {
+    console.error('Could not start the artifact page server', (error as Error).message);
+    return null;
+  }),
+  nativeTerminals.recover(),
+]);
 sparkPorts.add(nativeMcp.port).add(nativeTerminals.port);
 desktopBrowser?.blockPorts([
   nativeMcp.port,

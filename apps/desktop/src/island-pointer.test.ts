@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { FAR_POLL_MS, NEAR_POLL_MS, pointerOnIsland, pollDelay } from './island-pointer.ts';
+import {
+  FAR_POLL_MS,
+  FAR_STILL_POLL_MS,
+  NEAR_POLL_MS,
+  NEAR_STILL_POLL_MS,
+  STILL_AFTER_TICKS,
+  pointerOnIsland,
+  pollDelay,
+} from './island-pointer.ts';
 
 const full = { x: 760, y: 0, width: 1040, height: 600 };
 const strip = { x: 966, y: 0, width: 628, height: 67 };
@@ -37,5 +45,13 @@ describe('pollDelay', () => {
   it('polls rarely when the island shows nothing to point at', () => {
     const empty = { width: 1040, boxes: [], scout: null };
     expect(pollDelay({ x: 1560, y: 40 }, full, empty)).toBe(FAR_POLL_MS);
+  });
+
+  it('slows down once the cursor has stayed still, and not before', () => {
+    const near = { x: 1560, y: 100 };
+    const far = { x: 1560, y: 900 };
+    expect(pollDelay(near, full, regions, STILL_AFTER_TICKS - 1)).toBe(NEAR_POLL_MS);
+    expect(pollDelay(near, full, regions, STILL_AFTER_TICKS)).toBe(NEAR_STILL_POLL_MS);
+    expect(pollDelay(far, full, regions, STILL_AFTER_TICKS)).toBe(FAR_STILL_POLL_MS);
   });
 });
