@@ -64,6 +64,7 @@ export interface RunOptions {
   findings?: boolean;
   review?: ReviewOptions | null;
   pull?: PullPlace;
+  pullMaterial?: string | null;
 }
 
 interface Running {
@@ -147,6 +148,7 @@ function promptFor(run: Running, step: WorkflowStep, spark: StepSpark, access: S
     ...(access.base ? { baseUpdate: access.base } : {}),
     findings: run.options.findings === true,
     place: run.place,
+    pullMaterial: run.options.pullMaterial ?? null,
   });
 }
 
@@ -251,9 +253,9 @@ function inputOn(h: Handoff, pull: PullPlace): Handoff['input'] {
   return { ...h.input, projectRoots: [pull.path, ...others] };
 }
 
-async function placeOf(h: Handoff, turn: TurnWorkflowRun, pull: PullPlace) {
+async function placeOf(h: Handoff, turn: TurnWorkflowRun, pull: PullPlace, attached: boolean) {
   const place = await stepPlaceFor({ db: h.deps.db, input: inputOn(h, pull), turn });
-  const line = checkoutStepLine(pull);
+  const line = checkoutStepLine(pull, attached);
   return [line, place].filter((part) => part !== null).join('\n\n') || null;
 }
 
@@ -275,7 +277,7 @@ export async function runWorkflow(
     ),
     inChat,
     defaults: inChat ? null : await yourDefaults(h),
-    place: await placeOf(h, turn, options.pull ?? { kind: 'none' }),
+    place: await placeOf(h, turn, options.pull ?? { kind: 'none' }, Boolean(options.pullMaterial)),
     states: startingStates(turn),
     notes: new Map(turn.run.steps.map((step) => [step.stepId, step.note])),
   };

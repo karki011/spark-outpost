@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { GithubInboxTicket } from '@spark-outpost/contracts';
 import { knownTicketsNamed } from '../../persistence/github-inbox.ts';
 import { listProjects } from '../../projects/projects.ts';
-import { connectionFor, type GitHubDeps } from '../../ship/github/access.ts';
+import { DEFAULT_GITHUB_HOST, connectionFor, type GitHubDeps } from '../../ship/github/access.ts';
 import { repoPath, type GitHubConnection } from '../../ship/github/connection.ts';
 import { GITHUB_PAGE_SIZE } from '../../ship/github/pull-reads.ts';
 import { repoSlug, type RemoteRepo } from '../../ship/remote.ts';
@@ -49,6 +49,25 @@ export async function connectionForPull(
   const connection = await connectionFor(deps, linked.repo).catch(() => null);
   if (!connection) throw new ReviewSetupError('No GitHub connection reaches this repository.');
   return { connection, linked };
+}
+
+function unlinkedPull(parsed: { slug: string; number: number }, host: string): LinkedPull {
+  const [owner, name] = parsed.slug.split('/') as [string, string];
+  return { repo: { host, owner, name }, number: parsed.number };
+}
+
+export async function reachablePull(
+  deps: GitHubDeps,
+  pull: string,
+  namedHost: string | null,
+): Promise<{ connection: GitHubConnection; linked: LinkedPull } | null> {
+  const parsed = parsePullId(pull);
+  if (!parsed) return null;
+  const known = await linkedPull(deps, pull);
+  const onNamedHost = known !== null && (namedHost === null || known.repo.host === namedHost);
+  const linked = onNamedHost ? known : unlinkedPull(parsed, namedHost ?? DEFAULT_GITHUB_HOST);
+  const connection = await connectionFor(deps, linked.repo).catch(() => null);
+  return connection ? { connection, linked } : null;
 }
 
 const login = z.object({ login: z.string() }).nullable();
@@ -156,6 +175,15 @@ export async function gatherMaterial(
   earlier: MaterialFacts['earlier'],
 ): Promise<MaterialFacts> {
   const { connection, linked } = await connectionForPull(deps, pull);
+  return gatherMaterialFrom(deps, { connection, linked }, pull, earlier);
+}
+
+export async function gatherMaterialFrom(
+  deps: Pick<GitHubDeps, 'db' | 'workspaceId'>,
+  { connection, linked }: { connection: GitHubConnection; linked: LinkedPull },
+  pull: string,
+  earlier: MaterialFacts['earlier'],
+): Promise<MaterialFacts> {
   const { detail, files } = await pullAtOneHead(connection, linked);
   const path = `${repoPath(linked.repo)}/pulls/${linked.number}`;
   const [reviewComments, reviews, issueComments] = await Promise.all([
