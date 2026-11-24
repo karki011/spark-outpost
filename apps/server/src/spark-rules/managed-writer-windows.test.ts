@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -8,6 +9,8 @@ import {
   CHANGED_STAGED_WINDOWS,
   elevationArgs,
   NOT_WRITTEN_WINDOWS,
+  SCRIPT_CHANGED_WINDOWS,
+  windowsInstallScript,
   powershellLiteral,
   systemPowershell,
   windowsManagedWrite,
@@ -41,6 +44,23 @@ function valueOf(inner: string, name: string): string {
   return literal.slice(1, -1).replace(/(['\u2018\u2019\u201A\u201B])\1/g, '$1');
 }
 
+function scriptPathOf(bootstrap: string): string {
+  const match = /ReadAllBytes\('((?:[^']|'')*)'\)/.exec(bootstrap);
+  expect(match).not.toBeNull();
+  return match![1]!.replace(/''/g, "'");
+}
+
+async function installScriptOf(args: readonly string[]): Promise<string> {
+  const bootstrap = innerOf(outerOf(args));
+  const script = await readFile(scriptPathOf(bootstrap), 'utf8');
+  const sha = createHash('sha256').update(script).digest('hex');
+  expect(bootstrap).toContain(`if ($hex -ne '${sha}') { exit 6 }`);
+  return script;
+}
+
+const LONG_PATH =
+  "C:\\Users\\Ada O'Lovelace-Byron the Countess\\AppData\\Local\\Temp\\spark-managed-AbCdEf\\install.ps1";
+
 const install = {
   source: 'C:\\Users\\Ada Lovelace\\AppData\\Local\\Temp\\spark-managed-x\\managed-settings.json',
   target: TARGET,
@@ -63,15 +83,25 @@ describe('the Windows elevation command for the company file', () => {
   });
 
   it('asks UAC for an elevated, hidden PowerShell and waits for its exit code', () => {
-    const outer = outerOf(elevationArgs(POWERSHELL, install));
+    const outer = outerOf(elevationArgs(POWERSHELL, LONG_PATH, 'f'.repeat(64)));
     expect(outer).toContain(`Start-Process -FilePath '${POWERSHELL}' -Verb RunAs -Wait -PassThru`);
     expect(outer).toContain('-WindowStyle Hidden');
     expect(outer).toContain('NativeErrorCode -eq 1223) { exit 1223 }');
     expect(outer).toContain('exit $process.ExitCode');
   });
 
+  it('hands ShellExecute a short bootstrap that runs the script only if its digest matches', () => {
+    const outer = outerOf(elevationArgs(POWERSHELL, LONG_PATH, 'f'.repeat(64)));
+    const argumentList = /-ArgumentList '([^']*)'/.exec(outer)![1]!;
+    expect(argumentList.length).toBeLessThan(2000);
+    const bootstrap = innerOf(outer);
+    expect(scriptPathOf(bootstrap)).toBe(LONG_PATH);
+    expect(bootstrap).toContain(`if ($hex -ne '${'f'.repeat(64)}') { exit 6 }`);
+    expect(bootstrap.indexOf('exit 6')).toBeLessThan(bootstrap.indexOf('[scriptblock]::Create'));
+  });
+
   it('carries every path intact, spaces and quotes included', () => {
-    const inner = innerOf(outerOf(elevationArgs(POWERSHELL, install)));
+    const inner = windowsInstallScript(install);
     expect(valueOf(inner, 'source')).toBe(install.source);
     expect(valueOf(inner, 'target')).toBe(TARGET);
     expect(valueOf(inner, 'staged')).toBe(install.staged);
@@ -82,7 +112,7 @@ describe('the Windows elevation command for the company file', () => {
   });
 
   it('checks both digests and locks the folder to administrators before moving the file', () => {
-    const inner = innerOf(outerOf(elevationArgs(POWERSHELL, install)));
+    const inner = windowsInstallScript(install);
     const order = [
       "if ($was -eq 'missing')",
       'CreateDirectory($folder)',
@@ -120,7 +150,7 @@ describe('writing the company file on Windows', () => {
     const target = join(scratch, 'Spark Outpost', 'managed-settings.json');
     let seen: { text: string; mode: number; want: string; powershell: string } | null = null;
     const runner: ElevatedRunner = async (powershell, args) => {
-      const inner = innerOf(outerOf(args));
+      const inner = await installScriptOf(args);
       const source = valueOf(inner, 'source');
       seen = {
         text: await readFile(source, 'utf8'),
@@ -162,15 +192,22 @@ describe('writing the company file on Windows', () => {
     await expect(windowsManagedWrite('stale', failing(4))(target, '{}', 'missing')).rejects.toThrow(
       CHANGED_STAGED_WINDOWS,
     );
-    await expect(windowsManagedWrite('stale', failing(5))(target, '{}', 'missing')).rejects.toThrow(
-      'exit 5',
+    await expect(windowsManagedWrite('stale', failing(6))(target, '{}', 'missing')).rejects.toThrow(
+      SCRIPT_CHANGED_WINDOWS,
     );
+    const odd = windowsManagedWrite('stale', async () => {
+      throw Object.assign(new Error('Command failed: powershell.exe -EncodedCommand AAAA'), {
+        code: 5,
+      });
+    })(target, '{}', 'missing');
+    await expect(odd).rejects.toThrow("Windows couldn't change the company rules (exit 5)");
+    await expect(odd).rejects.not.toThrow('-EncodedCommand');
   });
 
   it('removes the staged copy whatever happens', async () => {
     let source = '';
     const write = windowsManagedWrite('stale', async (_powershell, args) => {
-      source = valueOf(innerOf(outerOf(args)), 'source');
+      source = valueOf(await installScriptOf(args), 'source');
       throw Object.assign(new Error('cancelled'), { code: 1223 });
     });
     await expect(write(join(scratch, 'm.json'), '{}', 'missing')).rejects.toThrow(CANCELLED_UAC);

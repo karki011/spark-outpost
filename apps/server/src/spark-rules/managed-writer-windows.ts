@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, win32 } from 'node:path';
@@ -12,12 +12,15 @@ const run = promisify(execFile);
 
 export const STALE_EXIT = 3;
 export const CHANGED_EXIT = 4;
+export const SCRIPT_CHANGED_EXIT = 6;
 export const CANCELLED_EXIT = 1223;
 
 export const CANCELLED_UAC =
   'You cancelled the Windows administrator prompt, so the company rules did not change.';
 export const CHANGED_STAGED_WINDOWS =
   'The staged company rules changed before Windows wrote them, so Spark changed nothing.';
+export const SCRIPT_CHANGED_WINDOWS =
+  'The install script changed before Windows ran it, so Spark changed nothing.';
 export const NOT_WRITTEN_WINDOWS =
   'Windows reported the change, but the company rules file does not hold it, so Spark changed nothing.';
 
@@ -84,6 +87,16 @@ export function windowsInstallScript(install: WindowsInstall): string {
   ].join('\n');
 }
 
+export function bootstrapScript(scriptPath: string, scriptHash: string): string {
+  return [
+    `$bytes = [IO.File]::ReadAllBytes(${powershellLiteral(scriptPath)})`,
+    "$hex = -join ([Security.Cryptography.SHA256]::Create().ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') })",
+    `if ($hex -ne '${scriptHash}') { exit ${SCRIPT_CHANGED_EXIT} }`,
+    '& ([scriptblock]::Create([Text.Encoding]::UTF8.GetString($bytes)))',
+    'exit 5',
+  ].join('\n');
+}
+
 export function elevationScript(powershell: string, inner: string): string {
   const argumentList = `-NoProfile -NonInteractive -EncodedCommand ${encodedCommand(inner)}`;
   return [
@@ -102,8 +115,12 @@ export function elevationScript(powershell: string, inner: string): string {
   ].join('\n');
 }
 
-export function elevationArgs(powershell: string, install: WindowsInstall): string[] {
-  const outer = elevationScript(powershell, windowsInstallScript(install));
+export function elevationArgs(
+  powershell: string,
+  scriptPath: string,
+  scriptHash: string,
+): string[] {
+  const outer = elevationScript(powershell, bootstrapScript(scriptPath, scriptHash));
   return ['-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand(outer)];
 }
 
@@ -121,7 +138,18 @@ function elevationError(error: unknown, staleMessage: string): Error {
   if (code === CANCELLED_EXIT) return new RulesFileError(CANCELLED_UAC);
   if (code === STALE_EXIT) return new StaleRulesError(staleMessage);
   if (code === CHANGED_EXIT) return new RulesFileError(CHANGED_STAGED_WINDOWS);
-  return error instanceof Error ? error : new Error(String(error));
+  if (code === SCRIPT_CHANGED_EXIT) return new RulesFileError(SCRIPT_CHANGED_WINDOWS);
+  if (code !== null) {
+    return new RulesFileError(
+      `Windows couldn't change the company rules (exit ${code}), so Spark changed nothing.`,
+    );
+  }
+  if ((error as { killed?: unknown } | null)?.killed === true) {
+    return new RulesFileError(
+      'The Windows administrator prompt waited too long, so Spark changed nothing.',
+    );
+  }
+  return new RulesFileError("Windows couldn't change the company rules, so Spark changed nothing.");
 }
 
 export function windowsManagedWrite(
@@ -132,12 +160,16 @@ export function windowsManagedWrite(
   return async (target, text, previousHash) => {
     const folder = await mkdtemp(join(tmpdir(), 'spark-managed-'));
     const source = join(folder, 'managed-settings.json');
+    const scriptPath = join(folder, 'install.ps1');
     const textHash = rulesTextHash({ kind: 'text', text });
     const powershell = systemPowershell(env);
     const install = { source, target, staged: stagedPathFor(target), textHash, previousHash };
+    const script = windowsInstallScript(install);
+    const scriptHash = createHash('sha256').update(script).digest('hex');
     try {
       await writeFile(source, text, { mode: 0o600 });
-      await runner(powershell, elevationArgs(powershell, install));
+      await writeFile(scriptPath, script, { mode: 0o600 });
+      await runner(powershell, elevationArgs(powershell, scriptPath, scriptHash));
     } catch (error) {
       throw elevationError(error, staleMessage);
     } finally {
