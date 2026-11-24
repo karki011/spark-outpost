@@ -156,7 +156,7 @@ test('Use for new chats starts every new chat as that Spark until the user picks
   await expect(setup(page)).toContainText('Now: Wren.');
 });
 
-test('the @ picker lists every workflow and Spark with its kind, and marks one it cannot run', async ({
+test('the @ picker lists every workflow and Spark in its group, and marks one it cannot run', async ({
   page,
 }) => {
   const pip = await addSpark(page, { name: 'Pip', role: 'Code reviewer' });
@@ -173,9 +173,9 @@ test('the @ picker lists every workflow and Spark with its kind, and marks one i
   await input.pressSequentially('@');
   const sparks = page.getByRole('listbox', { name: 'Sparks' });
   const workflows = page.getByRole('listbox', { name: 'Workflows' });
-  await expect(sparks.getByRole('option', { name: /Pip/ })).toContainText('Spark');
+  await expect(sparks.getByRole('option', { name: /Pip/ })).toBeVisible();
   await expect(workflows.getByRole('option')).toHaveCount(9);
-  await expect(workflows.getByRole('option', { name: /Flow 8/ })).toContainText('Workflow');
+  await expect(workflows.getByRole('option', { name: /Flow 8/ })).toBeVisible();
   const broken = workflows.getByRole('option', { name: /Broken flow/ });
   await expect(broken).toHaveAttribute('aria-disabled', 'true');
   await expect(broken).toContainText('Has problems');
