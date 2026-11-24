@@ -18,6 +18,9 @@ const TAR_EXTRACTS = /^(?:--extract|--get|-[A-Za-z]*x[A-Za-z]*|[A-Za-z]*x[A-Za-z
 const REMOTE_PATH = /^[^/]*:/;
 const UNKNOWN_WORD = /\$|`|\{\}/;
 const GLOB = /[*?[{]/;
+const DISCARDED = new Set(['/dev/null', '/dev/stdout', '/dev/stderr']);
+const WRITER_WORD =
+  /(?:^|[\s;&|(`'"])(?:cp|mv|rm|rmdir|unlink|shred|touch|tee|truncate|install|ln|rsync|tar|dd)\s/;
 const NAMES_GIT_FOLDER = /(?:^|[\s'"=:/\\])\.git(?:$|[\s'"/\\;&|)])/i;
 const FINDS_GIT_FOLDER = /--(?:absolute-)?git-(?:dir|common-dir|path)\b|\bGIT_(?:DIR|COMMON_DIR)\b/;
 
@@ -75,6 +78,10 @@ function uncertain(word: string): boolean {
   return UNKNOWN_WORD.test(word) || (GLOB.test(word) && NAMES_GIT_FOLDER.test(` ${word}`));
 }
 
+function writesSomething(command: string, words: readonly string[]): boolean {
+  return WRITER_WORD.test(command) || words.some((word) => !DISCARDED.has(word));
+}
+
 function anchored(word: string): boolean {
   return word.startsWith('/') || word === '~' || word.startsWith('~/');
 }
@@ -89,7 +96,7 @@ export function gitControlWrites(written: string, cwd: string, home: string): Gi
   const dirs = commandDirs(tree, cwd, home);
   const unknown =
     namesGit &&
-    (tree.opaque ||
+    ((tree.opaque && writesSomething(command, words)) ||
       tree.fedByXargs.some((program) => WRITERS.has(programName(program))) ||
       words.some(uncertain) ||
       (dirs === null && !words.every(anchored)));

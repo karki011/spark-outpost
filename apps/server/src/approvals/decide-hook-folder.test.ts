@@ -158,6 +158,17 @@ describe('decide() for ordinary copies, moves and deletes', () => {
   });
 });
 
+describe('decide() for reads that find the git folder', () => {
+  it.each([
+    'ls -la "$(git rev-parse --git-common-dir)/FETCH_HEAD"',
+    'for b in $(git branch --format=x); do git log -1 "$b" 2>/dev/null; done; cat .git/HEAD',
+  ])('%s raises no git hook card', async (command) => {
+    for (const [, rules] of RULE_SETS) {
+      expect(await decided('asks', command, rules)).not.toHaveProperty('gitControl');
+    }
+  });
+});
+
 describe("decide() for the hooks folder of a worktree's real git folder", () => {
   const repo = '/work/main';
   const worktree = `${repo}/.spark/worktrees/chat-1`;
