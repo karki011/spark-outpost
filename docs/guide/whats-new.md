@@ -11,6 +11,7 @@ summary: What changed in recent releases and what to do next.
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
 | Faster; protocol logs kept 14 days by default   | Older [protocol logs](guardrails.md) go at first start.    |
+| Windows: privacy screen, company rules          | [Privacy](privacy-screen.md).                              |
 | Share copies the link; checks secrets again     | [Share one](share-an-artifact.md).                         |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
@@ -23,10 +24,9 @@ summary: What changed in recent releases and what to do next.
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
 | Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |
 | One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
-| Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
+| Outposts are gone; agents split work instead    | [Split a job](split-into-sub-chats.md).                    |
 | Sub-chats nest; **Sub-chats** tab; **Edit**     | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
 | Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
-| Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |
 | Browser menus, docked tools                     | [Browser](use-the-browser.md).                             |
 | Chats message each other                        | [Messages](chat-messages.md).                              |
 | **Enter** sends mid-dictation; PR panel tidied  | [Talk to Spark](voice.md#turn-it-on).                      |
@@ -42,7 +42,6 @@ summary: What changed in recent releases and what to do next.
 | **Health** in Settings                          | [Check Health](trouble-setup-and-reset.md#check-health).   |
 | Sent messages show where read                   | —                                                          |
 | Round card; top-right toasts                    | —                                                          |
-| Chat rows show steps; plans name chats          | [Chat list](statuses-and-limits.md#chat-list).             |
 
 ## Mid-November 2026
 
