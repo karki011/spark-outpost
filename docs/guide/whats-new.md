@@ -15,6 +15,12 @@ summary: What changed in recent releases and what to do next.
 | Terminal sessions                                  | [Recover](terminals.md#close-and-recover). |
 | Codex: PowerShell commands checked                 | [Approvals](approvals.md).                 |
 
+## 24 November 2026
+
+| What changed                                         | What to do           |
+| ---------------------------------------------------- | -------------------- |
+| Blobs only for Sparks; company logos; plain switches | [Sparks](sparks.md). |
+
 ## 23 November 2026
 
 | What changed                             | What to do                                              |
@@ -70,5 +76,3 @@ summary: What changed in recent releases and what to do next.
 | **Share…** artifacts; the rail lists them                  | [Share one](share-an-artifact.md).                                                       |
 | Mac app: privacy screen, left-bar lock                     | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.                                      |
 | **GitHub** page, reviews, auto-review, resizing            | [Guide](github-page.md).                                                                 |
-| **⌘1**–**⌘9** open chats                                   | [Keyboard shortcuts](keyboard-shortcuts.md#chats).                                       |
-| Agent terminal card; compact workflows; more redaction     | —                                                                                        |

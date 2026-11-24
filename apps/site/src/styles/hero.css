@@ -11,9 +11,9 @@
 }
 
 .hero h1 {
-  font-size: clamp(40px, 6vw, 76px);
+  font-size: clamp(36px, 5.2vw, 60px);
   letter-spacing: -0.045em;
-  line-height: 1;
+  line-height: 1.04;
   margin-bottom: 20px;
 }
 
@@ -24,91 +24,92 @@
   margin: 0 auto 32px;
 }
 
+.pill {
+  display: inline-block;
+  margin: 0 0 20px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .hero .download-row {
   justify-content: center;
 }
 
-.hero .fine {
-  margin-top: 16px;
+.button.quiet {
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
 }
 
-.hero-visual {
-  position: relative;
-  max-width: 1100px;
-  margin: 56px auto 0;
+.button.quiet:hover {
+  box-shadow: inset 0 0 0 1px var(--text);
+}
+
+.hero-other {
+  margin: 14px 0 0;
+}
+
+.trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 28px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.trust li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trust svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--text);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .product {
-  margin: 0;
+  max-width: 1100px;
+  margin: 56px auto 0;
   padding: var(--frame-pad);
   border-radius: var(--frame-radius);
   background: var(--panel);
   box-shadow: 0 40px 80px color-mix(in srgb, var(--jet) 18%, transparent);
 }
 
+.product-bar {
+  display: flex;
+  gap: 7px;
+  padding: 6px 8px 12px;
+}
+
+.product-bar span {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  opacity: 0.55;
+}
+
 .product img {
   display: block;
   width: 100%;
-  border-radius: calc(var(--frame-radius) - var(--frame-pad));
-}
-
-.island-card {
-  position: absolute;
-  left: -3%;
-  bottom: -9%;
-  width: min(44%, 440px);
-  filter: drop-shadow(0 24px 40px color-mix(in srgb, var(--jet) 35%, transparent));
-}
-
-.scout-stage {
-  position: absolute;
-  right: -5%;
-  top: -24%;
-  width: min(30%, 300px);
-  aspect-ratio: 1;
-}
-
-.scout-stage canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 600ms var(--out);
-}
-
-.scout-poster {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 62%;
   height: auto;
-  translate: -50% -50%;
-  filter: drop-shadow(0 20px 24px color-mix(in srgb, var(--jet) 28%, transparent));
-  transition: opacity 500ms var(--out);
-}
-
-.scout-stage[data-live='true'] canvas {
-  opacity: 1;
-}
-
-.scout-stage[data-live='true'] .scout-poster {
-  opacity: 0;
-}
-
-.poke {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: transparent;
-  cursor: pointer;
-  border-radius: 50%;
-}
-
-.poke:focus-visible {
-  outline-offset: -4px;
+  border-radius: calc(var(--frame-radius) - var(--frame-pad));
 }
 
 .claims {
@@ -156,23 +157,13 @@
     font-size: 18px;
   }
 
-  .hero-visual {
+  .product {
     margin-top: 40px;
   }
 
-  .island-card {
-    position: relative;
-    left: auto;
-    bottom: auto;
-    display: block;
-    width: min(100%, 440px);
-    margin: -32px auto 0;
-  }
-
-  .scout-stage {
-    right: -2%;
-    top: -18%;
-    width: 26%;
+  .trust {
+    flex-direction: column;
+    align-items: center;
   }
 
   .claims {

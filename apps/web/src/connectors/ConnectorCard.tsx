@@ -2,8 +2,7 @@ import '../providers/providers.css';
 import './connectors.css';
 import { useId, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ConnectorBlob, type ConnectorId } from '../brand/ConnectorBlob.tsx';
-import type { BlobExpression } from '../brand/blob-expression.ts';
+import { ConnectorMark, type ConnectorId } from '../brand/ConnectorMark.tsx';
 import { CheckIcon, ChevronIcon } from '../ui/icons.tsx';
 import { fadeReveal } from '../ui/transitions.tsx';
 
@@ -17,7 +16,6 @@ interface ConnectorCardProps {
   badge: ConnectorBadge;
   open?: boolean;
   onToggle?: () => void;
-  expression?: BlobExpression;
   children?: ReactNode;
 }
 
@@ -43,21 +41,13 @@ export function ConnectorCard({
   badge,
   open = false,
   onToggle,
-  expression,
   children,
 }: ConnectorCardProps) {
   const bodyId = useId();
-  const mood: BlobExpression =
-    expression ?? (badge === 'soon' ? 'sleepy' : badge === 'checking' ? 'thinking' : 'idle');
   const head = (
     <>
       <span className="plogo cx-logo">
-        <ConnectorBlob
-          connectorId={connectorId}
-          size={42}
-          expression={mood}
-          animate={open ? 'always' : 'hover'}
-        />
+        <ConnectorMark connectorId={connectorId} size={36} />
         <span className="cx-glyph">{icon}</span>
       </span>
       <span className="nm">

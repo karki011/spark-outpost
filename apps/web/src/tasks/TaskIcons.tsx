@@ -1,5 +1,5 @@
 import type { TaskItemState } from '@spark-outpost/contracts';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
+import { AgentMark } from '../brand/ProviderMark.tsx';
 import { CheckIcon } from '../ui/icons.tsx';
 
 const stateNames: Record<TaskItemState, string> = {
@@ -59,7 +59,7 @@ export function WhoIcon({ provider }: { provider: string | undefined }) {
   if (!provider) return <HarnessIcon />;
   return (
     <span className="mb" aria-hidden="true">
-      <AgentBlob provider={provider} size={16} />
+      <AgentMark provider={provider} size={16} />
     </span>
   );
 }

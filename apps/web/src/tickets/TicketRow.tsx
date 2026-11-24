@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { TicketSourceId, TicketStatus } from '@spark-outpost/contracts';
 import { useTooltip, type TipContent } from '../ui/Tooltip.tsx';
-import { UserBlob } from '../brand/UserBlob.tsx';
+import { UserAvatar } from '../brand/UserAvatar.tsx';
 import { StatusBadge } from './StatusChip.tsx';
 import { Glyph, PriorityGlyph } from './ticket-icons.tsx';
 
@@ -54,7 +54,7 @@ function Assignee({ name }: { name: string | null }) {
   }
   return (
     <span className="ir-who" role="img" aria-label={`Assigned to ${name}`} title={name}>
-      <UserBlob displayName={name} size={18} />
+      <UserAvatar displayName={name} size={18} />
     </span>
   );
 }

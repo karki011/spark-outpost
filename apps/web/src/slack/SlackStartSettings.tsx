@@ -10,7 +10,7 @@ import {
 import { queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { requestChat } from '../app/chat-request.ts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { SwitchSettingRow } from '../settings/SwitchSettingRow.tsx';
 import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -235,45 +235,26 @@ export function SlackStartSettings({
     <section className="sl-section" aria-labelledby={`${id}-title`}>
       <h4 id={`${id}-title`}>Start work from Slack</h4>
       <StartFromLink onStarted={onStarted} />
-      <div className="tk-sync">
-        <div>
-          <label className="tk-switch">
-            <BlobToggle
-              size="sm"
-              label="Start work from the Slack shortcut and @mentions"
-              checked={settings.startFromSlack}
-              disabled={!tokens.app}
-              describedBy={`${id}-socket`}
-              onChange={(next) => save.settings.mutate({ startFromSlack: next })}
-            />
-            <span>Start work from the Slack shortcut and @mentions</span>
-          </label>
-          <p id={`${id}-socket`} className="tk-field-help">
-            {tokens.app
+      <div>
+        <SwitchSettingRow
+          label="Start work from the Slack shortcut and @mentions"
+          hint={`${
+            tokens.app
               ? settings.startFromSlack
                 ? SOCKET_LINES[connection.socket]
                 : SOCKET_LINES.off
-              : 'Needs an app-level token (xapp-). Reconnect with one to turn this on.'}{' '}
-            In an allowed channel, use Start work in Spark on a message or mention @
-            {connection.botName}. The chat uses your default agent mode.
-          </p>
-        </div>
-        <div>
-          <label className="tk-switch">
-            <BlobToggle
-              size="sm"
-              label="Reply in the thread when work starts, finishes or opens a PR"
-              checked={settings.postUpdatesToThread}
-              describedBy={`${id}-updates`}
-              onChange={(next) => save.settings.mutate({ postUpdatesToThread: next })}
-            />
-            <span>Reply in the thread when work starts, finishes or opens a PR</span>
-          </label>
-          <p id={`${id}-updates`} className="tk-field-help">
-            Only for chats started from Slack itself. The replies are fixed short lines, never agent
-            text.
-          </p>
-        </div>
+              : 'Needs an app-level token (xapp-). Reconnect with one to turn this on.'
+          } In an allowed channel, use Start work in Spark on a message or mention @${connection.botName}. The chat uses your default agent mode.`}
+          checked={settings.startFromSlack}
+          disabled={!tokens.app}
+          onChange={(next) => save.settings.mutate({ startFromSlack: next })}
+        />
+        <SwitchSettingRow
+          label="Reply in the thread when work starts, finishes or opens a PR"
+          hint="Only for chats started from Slack itself. The replies are fixed short lines, never agent text."
+          checked={settings.postUpdatesToThread}
+          onChange={(next) => save.settings.mutate({ postUpdatesToThread: next })}
+        />
       </div>
       <AllowedUsers connection={connection} save={save} />
     </section>

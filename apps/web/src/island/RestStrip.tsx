@@ -7,7 +7,7 @@ import { answerable } from './inbox-model.ts';
 import type { Card } from './island-model.ts';
 import { useArmed } from './island-parts.tsx';
 import { IslandRecording } from './IslandRecording.tsx';
-import { SessionBlob } from './SessionBlob.tsx';
+import { SessionMark } from './SessionMark.tsx';
 import { findOption, useDecide, type Decided } from './use-decide.ts';
 
 export interface StripData {
@@ -46,7 +46,7 @@ function HoverRequest({
   const ready = armed && !decide.isPending;
   return (
     <div className="isl-hover" data-in-place>
-      <SessionBlob chat={card.chat} state="waiting" size={26} />
+      <SessionMark chat={card.chat} state="waiting" size={26} />
       <button type="button" className="isl-hover-text" onClick={onOpen}>
         <b>{card.chat.title}</b>
         <span>{attentionLine(card.chat.attention)}</span>

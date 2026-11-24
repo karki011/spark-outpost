@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import type { ConversationSummary, NativeTerminalSession } from '@spark-outpost/contracts';
-import { SessionBlob } from '../island/SessionBlob.tsx';
+import { SessionMark } from '../island/SessionMark.tsx';
 import { terminalMood } from './native-state.ts';
 
 export function TerminalCompanion({
@@ -49,11 +49,10 @@ export function TerminalCompanion({
       data-motion={visible && !reduced ? 'on' : 'off'}
       aria-hidden="true"
     >
-      <SessionBlob
+      <SessionMark
         chat={chat}
         state={happy && state === 'ready' ? 'done' : terminalMood(state)}
         size={size}
-        live={visible && !reduced}
       />
     </span>
   );

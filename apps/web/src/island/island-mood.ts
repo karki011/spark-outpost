@@ -1,5 +1,4 @@
 import type { ScoutMood } from '../brand/BlobScout.tsx';
-import type { BlobExpression } from '../brand/blob-expression.ts';
 import type { IslandView, Moment, SessionState } from './island-model.ts';
 
 export interface MoodContext {
@@ -66,29 +65,4 @@ export function crewQuirk(input: QuirkInput): Quirk {
     return 'calm';
   }
   return input.state === 'working' ? 'bounce' : 'calm';
-}
-
-const EXPRESSIONS: Record<SessionState, BlobExpression> = {
-  working: 'thinking',
-  waiting: 'unsure',
-  done: 'happy',
-  failed: 'sad',
-  idle: 'idle',
-};
-
-export function sessionExpression(state: SessionState, sleepy: boolean): BlobExpression {
-  if (state === 'idle' && sleepy) return 'sleepy';
-  return EXPRESSIONS[state];
-}
-
-export const SESSION_COLORS = [
-  '--c-claude',
-  '--c-codex',
-  '--c-zai',
-  '--c-jev',
-  '--accent',
-] as const;
-
-export function sessionColor(seedIndexOf: (size: number) => number): string {
-  return `var(${SESSION_COLORS[seedIndexOf(SESSION_COLORS.length)]})`;
 }

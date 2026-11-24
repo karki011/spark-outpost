@@ -6,7 +6,7 @@ import type {
   CalendarChoicePatch,
   CalendarSourceKind,
 } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { CalendarName } from './CalendarName.tsx';
 
 export const SOURCE_LABEL: Record<CalendarSourceKind, string> = {
@@ -45,9 +45,8 @@ interface RowProps {
 function EditSwitch({ calendar, onChange }: Omit<RowProps, 'view'>) {
   return (
     <span className="cal-col cal-end">
-      <BlobToggle
+      <Switch
         size="sm"
-        kind="plain"
         label={`${AGENTS_EDIT_LABEL}, ${calendar.title}${calendar.writable ? '' : ' (read-only)'}`}
         checked={calendar.writable && calendar.agentsEdit}
         disabled={!calendar.writable}
@@ -60,9 +59,8 @@ function EditSwitch({ calendar, onChange }: Omit<RowProps, 'view'>) {
 function NudgeSwitch({ calendar, onChange }: Omit<RowProps, 'view'>) {
   return (
     <span className="cal-col cal-end">
-      <BlobToggle
+      <Switch
         size="sm"
-        kind="plain"
         label={`${NUDGE_LABEL}, ${calendar.title}`}
         checked={calendar.include && calendar.nudges}
         disabled={!calendar.include}

@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { useSwitchWords } from '../../brand/switch-words.ts';
+import { useSwitchWords } from '../../ui/switch-words.ts';
 import { SparkleIcon, StrokeIcon } from '../../ui/icons.tsx';
 import { usePaneId } from '../split/chat-pane.ts';
 

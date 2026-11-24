@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   advisorLabel,
   mergeCostSource,
-  providerIdSchema,
   type AdvisorUsage,
   type CategoryTotals,
   type ProviderTotals,
@@ -11,7 +10,7 @@ import {
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { categoryName } from '../categories/category-usage.ts';
-import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { AgentMark } from '../brand/ProviderMark.tsx';
 import { providerName } from '../chat/provider-name.ts';
 import { formatTokens } from '../chat/composer/model-options.ts';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -50,17 +49,11 @@ function sumTotals(rows: ProviderTotals[]): ProviderTotals {
   );
 }
 
-function ProviderMark({ provider }: { provider: string }) {
-  const known = providerIdSchema.safeParse(provider);
-  if (!known.success) return <span className="provider-dot" aria-hidden="true" />;
-  return <ProviderBlob providerId={known.data} size={28} />;
-}
-
 function UsageRow({ row, label }: { row: ProviderTotals; label: string }) {
   const replies = `${row.runs} ${row.runs === 1 ? 'reply' : 'replies'}`;
   return (
     <li className={row.provider === 'total' ? 'usage-row total' : 'usage-row'} aria-label={label}>
-      <ProviderMark provider={row.provider} />
+      <AgentMark provider={row.provider} size={28} />
       <b>{label}</b>
       <span className={row.costUsd === null ? 'usage-cost none' : 'usage-cost'}>
         <CostText usd={row.costUsd} source={row.costSource} empty="No cost reported" />
@@ -77,7 +70,7 @@ function AdvisorRow({ entry }: { entry: AdvisorUsage }) {
   const label = advisorLabel(entry.advisor);
   return (
     <li className="usage-row" aria-label={label}>
-      <ProviderMark provider={entry.advisor} />
+      <AgentMark provider={entry.advisor} size={28} />
       <b>{label}</b>
       <span className="usage-cost">
         <CostText usd={entry.costUsd} source="estimated" />
