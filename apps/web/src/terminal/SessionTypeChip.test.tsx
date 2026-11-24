@@ -35,13 +35,13 @@ describe('the session type chip', () => {
     expect(onChange).toHaveBeenCalledWith({ sessionType: 'terminal', terminalProvider: 'claude' });
   });
 
-  it('says Terminal sessions are coming to Windows and can’t be chosen there', () => {
+  it('offers Terminal sessions on Windows', () => {
     onDesktop('win32');
     const onChange = openMenu();
     const terminal = screen.getByRole('menuitemradio', { name: /Terminal/ });
-    expect(terminal).toHaveProperty('disabled', true);
-    expect(terminal.textContent).toContain('Coming to Windows');
+    expect(terminal).toHaveProperty('disabled', false);
+    expect(terminal.textContent).not.toContain('Coming to Windows');
     fireEvent.click(terminal);
-    expect(onChange).not.toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith({ sessionType: 'terminal', terminalProvider: 'claude' });
   });
 });

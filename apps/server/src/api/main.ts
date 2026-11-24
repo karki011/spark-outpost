@@ -1,5 +1,10 @@
 import { join, resolve } from 'node:path';
-import { DEV_API_TOKEN_FILE, artifactPortFor, isKeepTerminalsStop } from '@spark-outpost/contracts';
+import {
+  DEV_API_TOKEN_FILE,
+  artifactPortFor,
+  isEndTerminalsStop,
+  isKeepTerminalsStop,
+} from '@spark-outpost/contracts';
 import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
 import { chatFoldersBase } from '../chat-files/folders.ts';
 import { chatResearchBase } from '../chat-files/research-copies.ts';
@@ -27,8 +32,7 @@ import { configuredSecretStore } from '../setup/secrets.ts';
 import { processKillsSent } from '../terminal/process-group.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { savedPort, savePort } from '../terminal/tmux/stable-port.ts';
-import { chooseTmux, killTmuxServer, tmuxChoiceLine } from '../terminal/tmux/tmux-host.ts';
-import { tmuxSpawner } from '../terminal/tmux/tmux-spawner.ts';
+import { chooseKeptSessions } from '../terminal/kept-choice.ts';
 import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
 import { defaultLimits, TerminalSessions } from '../terminal/sessions.ts';
 import { shellRegistry } from '../terminal/shell-registry.ts';
@@ -213,25 +217,27 @@ const chatFolders = chatFoldersBase(nativeDataDir, config.BRANCH_PREFIX);
 const researchCopies = chatResearchBase(nativeDataDir, config.BRANCH_PREFIX);
 const nativeSessionsDir = join(nativeDataDir, config.BRANCH_PREFIX, 'terminal-sessions');
 const perInstance = config.SPARK_DATA_DIR ? '' : `-${config.API_PORT}`;
-const terminalTmux = chooseTmux(
-  process.env,
-  join(nativeDataDir, config.BRANCH_PREFIX, `tmux${perInstance}`),
-  config.SPARK_DATA_DIR ? null : localDir,
-);
-if (terminalTmux.host) console.log(tmuxChoiceLine(terminalTmux));
-else console.warn(tmuxChoiceLine(terminalTmux));
+const terminalKept = chooseKeptSessions({
+  env: process.env,
+  platform: process.platform,
+  tmuxDirectory: join(nativeDataDir, config.BRANCH_PREFIX, `tmux${perInstance}`),
+  hostDirectory: join(nativeSessionsDir, `host${perInstance}`),
+  localDir: config.SPARK_DATA_DIR ? null : localDir,
+});
+if (terminalKept.kept) console.log(terminalKept.line);
+else console.warn(terminalKept.line);
 const sparkPorts = new Set([config.API_PORT, artifactPortFor(config.API_PORT)]);
 const databasePort = postgresPort(config.DATABASE_URL);
 if (databasePort) sparkPorts.add(databasePort);
 chatPorts = chatPortWatcher({
-  probe: systemPortProbe(terminalTmux.host),
+  probe: systemPortProbe(terminalKept.tmux),
   agentRoots: () => agentTerminals.roots(),
   excluded: sparkPorts,
   changed: () =>
     appEvents.publish(JSON.stringify({ kind: 'chat_ports', conversationId: null, runId: null })),
 });
 const terminals = new TerminalSessions(
-  tmuxSpawner(loginShellSpawner(), terminalTmux.host),
+  terminalKept.kept?.spawner(loginShellSpawner()) ?? loginShellSpawner(),
   defaultLimits,
   shellWatchers(
     shellRegistry(db, workspaceId),
@@ -295,7 +301,7 @@ const nativeTerminals = await createNativeRuntime({
   dataDir: nativeDataDir,
   channel: config.BRANCH_PREFIX,
   mcp: nativeMcp,
-  tmux: terminalTmux.host,
+  kept: terminalKept.kept,
   locateCli: loginShellLocator(loginShell),
   branchPrefix: config.BRANCH_PREFIX,
   approvalWaiters: nativeApprovalWaiters,
@@ -447,7 +453,7 @@ const shutdown = async (keepTerminals = false) => {
     [
       'tmux',
       () => {
-        if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
+        if (!keepTerminals) return terminalKept.kept?.stopAll();
       },
     ],
     ['native MCP', () => nativeMcp.close()],
@@ -485,4 +491,5 @@ process.once('SIGINT', () => void shutdown());
 process.once('SIGTERM', () => void shutdown());
 process.on('message', (message) => {
   if (isKeepTerminalsStop(message)) void shutdown(true);
+  else if (isEndTerminalsStop(message)) void shutdown();
 });

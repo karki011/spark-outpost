@@ -50,7 +50,7 @@ import {
 import { launchUntracked } from './untracked-launch.ts';
 import { terminalAgents } from './terminal-agents.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
-import { readoptTmuxSessions } from './tmux/readopt.ts';
+import { readoptKeptSessions } from './tmux/readopt.ts';
 import { terminalLaunchSettings } from '../persistence/native-terminal-settings.ts';
 
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
@@ -228,7 +228,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
       );
       row.observation = launch.observation;
       const ceiling = prepared.input.agentMode ?? (provider === 'claude' ? 'auto' : 'agent');
-      if (deps.tmux && launch.directory)
+      if (deps.kept && launch.directory)
         await writeAdoptRecord(launch.directory, {
           grant: sparkGrantKey(grant.token),
           mcpPort: deps.mcp.port,
@@ -424,9 +424,9 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     },
     async recover() {
       if (live.size) throw new NativeRuntimeError('Recovery requires a stopped terminal host.');
-      const kept = deps.tmux
-        ? await readoptTmuxSessions({
-            tmux: deps.tmux,
+      const kept = deps.kept
+        ? await readoptKeptSessions({
+            kept: deps.kept,
             db: deps.db,
             workspaceId: deps.workspaceId,
             dataDir: deps.dataDir,

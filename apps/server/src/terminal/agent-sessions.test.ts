@@ -98,6 +98,20 @@ describe('native terminal ownership', () => {
     expect(f.spawn).toHaveBeenCalledTimes(1);
   });
 
+  it('replays output without the terminal queries the view answered live', () => {
+    const f = useFixture();
+    const first = f.sessions.createAgent(f.request);
+    const live = f.client();
+    f.sessions.attach(first.id, first.token, live, { cols: 80, rows: 24 }).disconnect();
+    f.output('ready\x1b[c\x1b]11;?');
+    f.output('\x07 done');
+    expect(live.output).not.toHaveBeenCalled();
+    const fresh = f.sessions.reattach(first.id)!;
+    const next = f.client();
+    f.sessions.attach(fresh.id, fresh.token, next, { cols: 80, rows: 24 });
+    expect(next.output).toHaveBeenCalledWith('ready done');
+  });
+
   it('reuses a matching launch and refuses another conversation or command', () => {
     const f = useFixture();
     const first = f.sessions.createAgent(f.request);

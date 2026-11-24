@@ -20,14 +20,13 @@ import type { AgentRequest, TerminalSessions } from '../sessions.ts';
 import { shellFolder, type ShellFolder } from '../shell-folder.ts';
 import { untrackedSession } from '../untracked-launch.ts';
 import { readStoredLaunch, sessionRoot, writeObserver } from './adopt-record.ts';
-import type { TmuxHost } from './tmux-host.ts';
-import { killSessionTree, killUnknownSessions, listSessionIds } from './tmux-session.ts';
+import type { KeptSessions } from '../kept-sessions.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const WAITING = 'Waiting for native lifecycle events.';
 
 export interface ReadoptInput {
-  tmux: TmuxHost;
+  kept: KeptSessions;
   db: Db;
   workspaceId: string;
   dataDir: string;
@@ -194,13 +193,13 @@ async function readoptOne(input: ReadoptInput, row: NativeTerminalRow): Promise<
   }
 }
 
-export async function readoptTmuxSessions(input: ReadoptInput): Promise<string[]> {
+export async function readoptKeptSessions(input: ReadoptInput): Promise<string[]> {
   const kept: string[] = [];
-  await killUnknownSessions(input.tmux);
-  for (const id of new Set(await listSessionIds(input.tmux))) {
+  await input.kept.killUnknownSessions();
+  for (const id of new Set(await input.kept.listSessionIds())) {
     const row = await liveRow(input.db, input.workspaceId, id);
     if (!row) {
-      await killSessionTree(input.tmux, id);
+      await input.kept.killSessionTree(id);
       continue;
     }
     if (input.live.has(row.conversation_id)) continue;
@@ -210,7 +209,7 @@ export async function readoptTmuxSessions(input: ReadoptInput): Promise<string[]
     } catch (error) {
       console.error('Could not re-adopt a terminal session:', (error as Error).message);
       input.terminals.kill(id);
-      await killSessionTree(input.tmux, id);
+      await input.kept.killSessionTree(id);
     }
   }
   return kept;

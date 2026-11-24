@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import type { ProviderId, TerminalEndReason, TerminalStep } from '@spark-outpost/contracts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
+import { createAnsweredQueryFilter } from './tmux/answered-queries.ts';
 import { killProcessTree, processTable, runningCommand } from './process-group.ts';
 import type { PtyProcess, SpawnPty } from './pty.ts';
 import type {
@@ -48,6 +49,7 @@ interface Session {
   attached: boolean;
   tokenExpiresAt: number;
   replay: string;
+  replayFilter?: (text: string) => string;
   view: TerminalView | null;
   pty: PtyProcess | null;
   client: TerminalClient | null;
@@ -405,7 +407,10 @@ export class TerminalSessions {
   }
 
   private handleOutput(session: Session, data: string) {
-    if (isAgent(session.kind)) session.replay = (session.replay + data).slice(-REPLAY_BYTES);
+    if (isAgent(session.kind)) {
+      session.replayFilter ??= createAnsweredQueryFilter();
+      session.replay = (session.replay + session.replayFilter(data)).slice(-REPLAY_BYTES);
+    }
     session.client?.output(data);
     if (session.kind.type === 'shell') this.watcher?.output?.(session.id, data);
     if (session.kind.type !== 'setup') return;
