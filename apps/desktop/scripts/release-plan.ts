@@ -54,6 +54,16 @@ function latestDmgs(version: string): { source: string; name: string }[] {
   }));
 }
 
+function windowsInstallers(
+  version: string,
+): { source: string; name: string; cacheControl: string }[] {
+  const source = `Spark-Outpost-${version}-windows-alpha-x64.exe`;
+  return [
+    { source, name: source, cacheControl: ARTIFACT_CACHE },
+    { source, name: 'Spark-Outpost-latest-windows-alpha-x64.exe', cacheControl: CHANNEL_CACHE },
+  ];
+}
+
 export function updateZips(version: string): string[] {
   return RELEASE_ARCHS.map((arch) => `Spark-Outpost-${version}-${arch}.zip`);
 }
@@ -132,6 +142,10 @@ export function releasePlan(input: PlanInput): ReleasePlan {
     for (const alias of latestDmgs(version)) {
       const size = sizes.get(alias.source);
       if (size !== undefined) uploads.push({ ...alias, size, cacheControl: CHANNEL_CACHE });
+    }
+    for (const installer of windowsInstallers(version)) {
+      const size = sizes.get(installer.source);
+      if (size !== undefined) uploads.push({ ...installer, size });
     }
   }
   for (const name of channelFiles(version, mode)) {

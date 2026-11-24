@@ -76,9 +76,13 @@ Spark-Outpost-<v>-x64.zip.blockmap, ...-arm64.zip.blockmap    for differential d
 Spark-Outpost-<v>-x64.dmg, Spark-Outpost-<v>-arm64.dmg        first installs and manual reinstalls
 release-notes.html        rendered from apps/desktop/CHANGELOG.md; linked from Settings › Updates
 Spark-Outpost-latest-x64.dmg, Spark-Outpost-latest-arm64.dmg  copies of the newest Beta dmgs; the website's download links
+Spark-Outpost-<v>-windows-alpha-x64.exe                       unsigned Windows alpha installer, when it is in the release folder
+Spark-Outpost-latest-windows-alpha-x64.exe                    copy of it; the website's Windows link
 ```
 
 The two `latest` dmgs are not written by electron-builder: `pnpm desktop:release` uploads a copy of each versioned dmg under those names on every publish to Beta (`publish` and `--beta-only`, not `--promote`), so the website's download links always fetch the newest Beta build. They follow the Beta channel for now; when Stable has its own downloads, give it its own names.
+
+The Windows alpha has no update channel: the installer is built by the **installer** job of `.github/workflows/windows.yml` (run it by hand on the release commit and download the `windows-installer-unsigned` artifact into `apps/desktop/release/<version>/`). When `Spark-Outpost-<v>-windows-alpha-x64.exe` is there, `pnpm desktop:release` uploads it and its `latest` copy before the channel files; when it is not, the release goes ahead without it. The CI build bakes in no Google, Slack, Microsoft or share client, so those sign-ins and **Share…** are off in it.
 
 `generateUpdatesFilesForAllChannels` makes a stable release also update `beta-mac.yml`, so Beta users get stable releases too. Keep old zips' blockmaps on the feed: electron-updater compares the old and new blockmap to download only changed blocks. The first update after a fresh install always downloads in full (there is no cached `update.zip` yet).
 
