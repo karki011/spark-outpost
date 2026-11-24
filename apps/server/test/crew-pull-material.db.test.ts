@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -6,7 +7,7 @@ import { MATERIAL_START } from '../src/crew-flows/step-prompt.ts';
 import { saveGitHubToken } from '../src/persistence/github-tokens.ts';
 import { turnObservations } from '../src/persistence/observations.ts';
 import { getRun } from '../src/persistence/runs.ts';
-import type { Worker } from '../src/workflow/worker.ts';
+import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { repoWithPull } from './crew-pr-checkout-support.ts';
 import {
   newSpark,
@@ -21,7 +22,7 @@ import { shipAccessTo } from './publish-step-support.ts';
 import { startGitHubStub, type GitHubStub } from './ship-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 import { openChat, repliesOf, sendMessage } from './turn-support.ts';
-import { connectAgents, startTurnWorker } from './turn-worker.ts';
+import { connectAgents, fakeAgents, startTurnWorker } from './turn-worker.ts';
 
 const OTHER_URL = 'https://github.com/someone/else/pull/3';
 const OTHER_ID = 'someone/else#3';
@@ -80,6 +81,10 @@ function otherPull(): FakePull {
 }
 
 async function workerSignedIn() {
+  harness = startTurnWorker(t, { shipAccess: await signedInAccess() });
+}
+
+async function signedInAccess() {
   const access = shipAccessTo(stub.url);
   await access.secrets.set('github', 'ghp_test_token');
   await saveGitHubToken(t.db, t.workspaceId, {
@@ -89,8 +94,10 @@ async function workerSignedIn() {
     expiresAt: null,
     repos: [],
   });
-  harness = startTurnWorker(t, { shipAccess: access });
+  return access;
 }
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function finished(runId: string) {
   await eventually(async () => ((await getRun(t.db, runId))?.finishedAt ? true : null), 60_000);
@@ -186,6 +193,43 @@ describe('a workflow run named for a pull request in a repository the chat has n
     expect(stub.github.requests.map((request) => request.path)).not.toContain(
       '/repos/acme/widgets/pulls/7',
     );
+  }, 90_000);
+
+  it('writes nothing when the turn loses its lease while GitHub is read', async () => {
+    const access = await signedInAccess();
+    let read: Promise<void> | null = null;
+    const loseLease = async () => {
+      await t.db.query(
+        `UPDATE jobs SET lease_token = $1, lease_expires_at = now() + interval '1 hour'`,
+        [randomUUID()],
+      );
+      await pause(2500);
+    };
+    const fetchLosingLease: typeof fetch = async (...args) => {
+      read ??= loseLease();
+      await read;
+      return fetch(...args);
+    };
+    harness = startWorker({
+      db: t.db,
+      providers: fakeAgents(),
+      leaseSeconds: 3,
+      pollMs: 20,
+      cancelPollMs: 20,
+      approvalPollMs: 20,
+      shipAccess: { ...access, fetch: fetchLosingLease },
+    });
+    await lookFlow();
+
+    const runId = await sendMessage(t, await openChat(t), `@check review this pr ${OTHER_URL}`);
+    await eventually(async () => (read ? true : null), 60_000);
+    await read;
+    await pause(1000);
+    const record = await recordOf(t, runId);
+
+    expect(record?.status).toBe('running');
+    expect(statesOf(record)).toEqual({ look: 'waiting', judge: 'waiting' });
+    expect((await getRun(t.db, runId))?.finishedAt).toBeNull();
   }, 90_000);
 
   it('gives the steps the pull request in a chat whose project is another repository', async () => {
