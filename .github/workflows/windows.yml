@@ -10,6 +10,7 @@ on:
       - 'scripts/acp-reply.ts'
       - 'scripts/windows-installer-smoke.ts'
       - 'apps/desktop/scripts/**'
+      - 'apps/server/src/terminal/session-host/**'
 
 permissions:
   contents: read
@@ -37,6 +38,10 @@ jobs:
       - name: Smoke checks
         shell: bash
         run: pnpm exec tsx scripts/windows-smoke.ts
+      - name: Session host
+        if: always()
+        shell: bash
+        run: pnpm exec vitest run --project unit apps/server/src/terminal/session-host apps/server/src/terminal/kept-choice.test.ts
       - name: Unit tests
         if: always()
         continue-on-error: true

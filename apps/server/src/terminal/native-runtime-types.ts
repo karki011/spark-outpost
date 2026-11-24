@@ -21,7 +21,7 @@ import type { prepareNativeLaunch, NativeLaunch } from './native-launch.ts';
 import type { ShellFolder } from './shell-folder.ts';
 import type { TerminalSessions } from './sessions.ts';
 import type { TerminalCliLocator } from './terminal-agents.ts';
-import type { TmuxHost } from './tmux/tmux-host.ts';
+import type { KeptSessions } from './kept-sessions.ts';
 import type { ModRoutedRemote } from './remote/mod-routing.ts';
 import type { ChatRecord } from './chat-record.ts';
 
@@ -38,7 +38,7 @@ export interface NativeRuntimeDeps {
   prepareLaunch?: typeof prepareNativeLaunch;
   place?: typeof placeChat;
   watchTranscript?: WatchTranscript;
-  tmux?: TmuxHost | null;
+  kept?: KeptSessions | null;
   now?: () => Date;
   logStart?: (line: string) => void;
   onStartPhase?: (conversationId: string) => void;

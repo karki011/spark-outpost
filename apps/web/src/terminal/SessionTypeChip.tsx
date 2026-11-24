@@ -1,5 +1,4 @@
 import { useEffect, useId, type KeyboardEvent } from 'react';
-import { COMING_TO_WINDOWS, onWindows } from '../desktop/desktop-bridge.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { CheckIcon, CommentIcon, TerminalIcon } from '../ui/icons.tsx';
 import { usePopover } from '../ui/use-popover.ts';
@@ -57,8 +56,6 @@ export function SessionTypeChip({
     items[(index + step + items.length) % items.length]?.focus();
   };
 
-  const unavailable = (type: SessionChoice['sessionType']) => type === 'terminal' && onWindows();
-
   return (
     <div className="session-chip-wrap">
       <button
@@ -90,7 +87,6 @@ export function SessionTypeChip({
             className="mopt"
             role="menuitemradio"
             aria-checked={type.id === value.sessionType}
-            disabled={unavailable(type.id)}
             onClick={() => choose(type.id)}
           >
             <span className="mi" aria-hidden="true">
@@ -98,7 +94,7 @@ export function SessionTypeChip({
             </span>
             <span>
               <b>{type.label}</b>
-              <small>{unavailable(type.id) ? COMING_TO_WINDOWS : type.note}</small>
+              <small>{type.note}</small>
             </span>
             <span className="tick" aria-hidden="true">
               <CheckIcon />

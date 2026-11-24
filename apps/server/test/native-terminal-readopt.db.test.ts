@@ -26,6 +26,7 @@ import {
   tryTmux,
   type TmuxHost,
 } from '../src/terminal/tmux/tmux-host.ts';
+import { tmuxKept } from '../src/terminal/kept-sessions.ts';
 import { tmuxSpawner } from '../src/terminal/tmux/tmux-spawner.ts';
 import {
   createSession,
@@ -77,7 +78,7 @@ describe.skipIf(!bin)('Terminal sessions across a Spark restart', () => {
       dataDir: folder,
       channel: 'test',
       mcp,
-      tmux,
+      kept: tmuxKept(tmux),
       now: () => new Date('2026-10-13T07:14:00.000Z'),
       prepareDependencies: (...args) => prepareDependencies(...args),
       locateCli: async () => '/bin/sh',
