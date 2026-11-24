@@ -295,39 +295,23 @@
 }
 .tk-sync {
   display: grid;
-  gap: 10px;
+  gap: 0;
   padding: 4px 0 2px;
-}
-.tk-switch {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text);
-}
-
-.tk-switch + .tk-field-help {
-  margin: 2px 0 0 42px;
 }
 .tk-empty .tk-cform p {
   margin: 0;
 }
-.tk-move-title {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text);
+.tk-set-row {
+  padding-bottom: 12px;
 }
-.tk-move-title + .tk-field-help {
-  margin-top: 2px;
+.tk-set-row + .tk-set-row {
+  border-top: 1px solid var(--line);
 }
 .tk-move {
   display: grid;
-  gap: 4px;
-  max-width: 320px;
-  margin: 6px 0 0 42px;
-}
-.tk-move-title ~ .tk-move {
-  margin-left: 0;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 16px;
 }
 .tk-move-notes {
   display: grid;

@@ -294,8 +294,9 @@ export function createZoomService(deps: ZoomServiceDeps): ZoomService {
       await renewOnce().catch(() => undefined);
     },
     start() {
-      void this.keepAlive();
-      setInterval(() => void this.keepAlive(), DAY_MS).unref();
+      const quietly = () => void this.keepAlive().catch(() => undefined);
+      quietly();
+      setInterval(quietly, DAY_MS).unref();
     },
     deleteMeeting: (meetingId) => withToken((token) => deleteZoomMeeting(zoom(), token, meetingId)),
   };

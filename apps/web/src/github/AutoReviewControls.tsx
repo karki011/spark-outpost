@@ -1,7 +1,7 @@
 import './auto-review.css';
 import { useId } from 'react';
 import type { GithubReviewSettings } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { WarnIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -53,7 +53,7 @@ function SwitchRow({ label, field, settings, hint, blocked, onChange }: SwitchRo
       hintId={hintId}
       disabled={blocked !== null}
     >
-      <BlobToggle
+      <Switch
         id={switchId}
         label={label}
         checked={settings[field]}

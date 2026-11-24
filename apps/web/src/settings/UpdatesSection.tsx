@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { WAITING_FOR_RUNS, type UpdateChannel, type UpdateStatus } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { BetaBadge } from '../desktop/BetaBadge.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { installMessage, useInstallUpdate } from '../desktop/use-install-update.ts';
@@ -177,10 +177,9 @@ function UpdateRows({ status }: { status: UpdateStatus }) {
             }
             hintId={autoHint}
           >
-            <BlobToggle
+            <Switch
               id={autoId}
               label={AUTO_DOWNLOAD}
-              kind="spark"
               checked={status.autoDownload}
               describedBy={autoHint}
               onChange={(on) => void updates.setAutoDownload(on)}

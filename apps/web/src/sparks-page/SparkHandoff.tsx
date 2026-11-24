@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { TeammateView } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { TeammateProject } from '../teammates/TeammateProject.tsx';
 import { useTeammates } from '../teammates/use-teammates.ts';
 import { defaultSparkHint } from './spark-usage-model.ts';
@@ -25,7 +25,7 @@ export function SparkHandoff({ spark }: { spark: TeammateView }) {
             {defaultSparkHint(spark, current)}
           </p>
         </div>
-        <BlobToggle
+        <Switch
           label="Use for new chats"
           describedBy={hintId}
           checked={on}

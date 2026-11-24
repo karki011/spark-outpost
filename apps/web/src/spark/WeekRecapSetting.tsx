@@ -48,7 +48,6 @@ export function WeekRecapSetting({ enabled, day, time }: WeekRecapSettingProps) 
   return (
     <SwitchValueSetting
       label={WEEK_RECAP_LABEL}
-      blob="sun"
       info={INFO}
       hint={hint}
       on={on.value}

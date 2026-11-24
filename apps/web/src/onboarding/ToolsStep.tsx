@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import type { ConnectorId } from '../brand/ConnectorBlob.tsx';
+import type { ConnectorId } from '../brand/ConnectorMark.tsx';
 import { takeCalendarCardRequest, useCalendarCardRequests } from '../calendar/calendar-open.ts';
 import { CalendarCard } from '../calendar/CalendarCard.tsx';
 import { CALENDAR_PATH, ChevronIcon, VideoIcon } from '../ui/icons.tsx';

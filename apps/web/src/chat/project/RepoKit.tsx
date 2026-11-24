@@ -1,9 +1,7 @@
 import './repo-kit.css';
 import { useId, useState, type CSSProperties } from 'react';
-import { Blobatar } from 'blobatar/react';
-import * as expressions from 'blobatar/expression';
 import type { Project } from '@spark-outpost/contracts';
-import { useReducedMotion } from '../../ui/motion.ts';
+import { MarkTile } from '../../brand/MarkTile.tsx';
 import { useOpenFile } from './file-sheet/FileSheet.tsx';
 import { kitShelves, type KitKind, type KitShelf } from './repo-kit.ts';
 import { SetupList } from './SetupCard.tsx';
@@ -22,10 +20,6 @@ function KitTile({
   panelId: string;
   onToggle: () => void;
 }) {
-  const reduced = useReducedMotion();
-  let expression = expressions.idle;
-  if (!shelf.on) expression = expressions.sleepy;
-  else if (open) expression = expressions.happy;
   return (
     <button
       type="button"
@@ -37,14 +31,7 @@ function KitTile({
       onClick={onToggle}
     >
       <span className="kit-blob">
-        <Blobatar
-          name={`kit:${shelf.kind}`}
-          hue={shelf.hue}
-          size={38}
-          animate={reduced ? 'hover' : 'always'}
-          expression={expression}
-          aria-hidden="true"
-        />
+        <MarkTile letters={shelf.label} hue={shelf.hue} size={38} />
         <b className="kit-count">{shelf.items.length}</b>
       </span>
       <span className="kit-label">{shelf.label}</span>

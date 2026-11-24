@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ATLASSIAN_NAME, SERVICENOW_NAME, ticketSourceNames } from '@spark-outpost/contracts';
-import { ConnectorBlob, type ConnectorId } from '../brand/ConnectorBlob.tsx';
+import { ConnectorMark, type ConnectorId } from '../brand/ConnectorMark.tsx';
 import { BranchIcon } from '../ui/icons.tsx';
 import { activeLine } from '../ship/GitHubCard.tsx';
 import { githubApi, shipKeys } from '../ship/ship-api.ts';
@@ -21,7 +21,7 @@ export interface SummaryItem {
 function toolItem(id: ConnectorId, name: string, detail: string): SummaryItem {
   return {
     key: id,
-    icon: <ConnectorBlob connectorId={id} size={30} expression="happy" animate="always" />,
+    icon: <ConnectorMark connectorId={id} size={30} />,
     title: <b>{name}</b>,
     detail,
   };

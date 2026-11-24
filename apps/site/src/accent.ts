@@ -35,10 +35,3 @@ export function setUpAccentPicker(): void {
   });
   sync();
 }
-
-export function onPaletteChange(change: () => void): void {
-  new MutationObserver(change).observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-accent', 'data-skin'],
-  });
-}

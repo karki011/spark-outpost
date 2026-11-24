@@ -1,5 +1,5 @@
 import type { TodayChat, TodayChatState, TodaySummary } from '@spark-outpost/contracts';
-import type { BlobExpression } from '../../brand/blob-expression.ts';
+import type { ChatFaceState } from '../../brand/chat-face.ts';
 import { formatCost } from '../../usage/format.ts';
 
 export interface TodayStat {
@@ -64,15 +64,15 @@ export function chatNote(chat: TodayChat): string {
   return parts.join(' · ');
 }
 
-const STATE_EXPRESSION: Record<TodayChatState, BlobExpression> = {
-  waiting: 'unsure',
-  running: 'thinking',
-  failed: 'sad',
-  stalled: 'sleepy',
-  finished: 'happy',
+const STATE_GLYPH: Record<TodayChatState, ChatFaceState> = {
+  waiting: 'needs_you',
+  running: 'working',
+  failed: 'failed',
+  stalled: 'idle',
+  finished: 'done',
   idle: 'idle',
 };
 
-export function chatExpression(state: TodayChatState): BlobExpression {
-  return STATE_EXPRESSION[state];
+export function chatGlyphState(state: TodayChatState): ChatFaceState {
+  return STATE_GLYPH[state];
 }

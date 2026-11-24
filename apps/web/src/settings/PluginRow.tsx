@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { UserPlugin } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import {
@@ -119,7 +119,7 @@ export function PluginRow({ plugin, open, onToggle }: PluginRowProps) {
             <ChevronIcon />
             Details
           </button>
-          <BlobToggle
+          <Switch
             id={switchId}
             label={plugin.name}
             checked={checked}

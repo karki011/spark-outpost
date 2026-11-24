@@ -18,7 +18,7 @@ import { reveal } from '../ui/transitions.tsx';
 import { StatusBadge } from './StatusChip.tsx';
 import type { DetailTicket } from './TicketDetail.tsx';
 import { refreshTicket, ticketsApi } from './tickets-api.ts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { SessionTypePicker, type SessionChoice } from '../terminal/SessionTypePicker.tsx';
 import { StartContext } from './StartContext.tsx';
 import { useStartContext } from './use-start-context.ts';
@@ -183,7 +183,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
               onChange={setProjectId}
             />
             <label className="check-row">
-              <BlobToggle
+              <Switch
                 size="sm"
                 label={`Move ${ticket.key} to In progress in ${source}`}
                 checked={move}
@@ -193,7 +193,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
             </label>
             {!ticket.mine && (
               <label className="check-row">
-                <BlobToggle
+                <Switch
                   size="sm"
                   label={
                     owner

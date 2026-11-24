@@ -139,7 +139,7 @@ test('create a Spark on the Sparks page, talk to it and see its face in the chat
   await expect(row).toBeVisible();
   await expect(sidebar(page).locator('.rface')).toHaveCount(1);
   await expect(sidebar(page).locator('.row:has(.rface) .st > *')).toHaveCount(1);
-  await expect(sidebar(page).locator('.row:has(.rface) .chat-face')).toHaveCount(0);
+  await expect(sidebar(page).locator('.row:has(.rface) .chat-glyph')).toHaveCount(0);
   await sidebar(page)
     .getByRole('group', { name: 'Filter chats by Spark' })
     .getByRole('button', { name: 'Ada' })
@@ -325,7 +325,7 @@ test('the roster and the sheet pass axe and fit a phone', async ({ page }) => {
   );
   expect(overflow).toBeLessThanOrEqual(0);
   const rights = await roster(page)
-    .locator('.spk-card')
+    .locator('.spk-crew')
     .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().right)));
   expect(rights).toHaveLength(2);
   for (const right of rights) expect(right).toBeLessThanOrEqual(375);

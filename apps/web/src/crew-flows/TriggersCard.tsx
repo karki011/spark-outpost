@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BRANCH_GLOB_MAX } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { FieldProblem } from './FieldProblem.tsx';
 import { matchingBranches } from './triggers-model.ts';
 import { problemOf, type DraftProblem, type TriggersDraft } from './workflow-draft.ts';
@@ -30,12 +30,7 @@ function TriggerRow({ label, hint, checked, onChange, children }: TriggerRowProp
           <b>{label}</b>
           <small id={`${id}-hint`}>{hint}</small>
         </span>
-        <BlobToggle
-          label={label}
-          checked={checked}
-          describedBy={`${id}-hint`}
-          onChange={onChange}
-        />
+        <Switch label={label} checked={checked} describedBy={`${id}-hint`} onChange={onChange} />
       </div>
       {checked && children}
     </li>
