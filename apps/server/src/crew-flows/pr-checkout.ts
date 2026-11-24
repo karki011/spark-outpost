@@ -321,25 +321,42 @@ export async function sweepRunCheckouts(db: Queryable, now = Date.now()): Promis
 
 const shortSha = (sha: string) => sha.slice(0, 12);
 
-export function checkoutStepLine(place: PullPlace): string | null {
+const ATTACHED =
+  'its description, discussion and diff are at the end of this message, so you do not need to fetch them';
+
+export function checkoutStepLine(place: PullPlace, attached = false): string | null {
   if (place.kind === 'checkout') {
     return `You are working in a temporary checkout of pull request ${place.pull.id} at its head (${shortSha(place.head)}, a detached HEAD with no branch), not in this chat’s own folder or branch. Spark deletes it when the run ends, so nothing you change there is kept.`;
   }
   if (place.kind === 'unlinked') {
-    return `This run is about pull request ${place.pull.id}, which is not in a repository linked to this chat, so it is not checked out: read it from GitHub.`;
+    const about = `This run is about pull request ${place.pull.id}, which is not in a repository linked to this chat, so it is not checked out`;
+    return attached
+      ? `${about}. Spark read it from GitHub: ${ATTACHED}.`
+      : `${about}: read it from GitHub.`;
   }
   if (place.kind === 'unfetched') {
-    return `This run is about pull request ${place.pull.id}, but Spark could not fetch it, so you are on this chat’s own branch: read the pull request from GitHub.`;
+    const about = `This run is about pull request ${place.pull.id}, but Spark could not fetch it, so you are on this chat’s own branch`;
+    return attached
+      ? `${about}. Spark read the pull request from GitHub: ${ATTACHED}.`
+      : `${about}: read the pull request from GitHub.`;
   }
   return null;
 }
 
-export function checkoutNote(place: PullPlace, changed: readonly string[]): string | null {
+export function checkoutNote(
+  place: PullPlace,
+  changed: readonly string[],
+  attached = false,
+): string | null {
   if (place.kind === 'unlinked') {
-    return `Pull request ${place.pull.id} is not in a repository linked to this chat, so the steps read it from GitHub instead of a checkout.`;
+    return attached
+      ? `Pull request ${place.pull.id} is not in a repository linked to this chat, so Spark read it from GitHub and gave the steps its description, discussion and diff instead of a checkout.`
+      : `Pull request ${place.pull.id} is not in a repository linked to this chat, so the steps read it from GitHub instead of a checkout.`;
   }
   if (place.kind === 'unfetched') {
-    return `Spark could not fetch pull request ${place.pull.id}, so the steps worked on this chat’s own branch and read the pull request from GitHub.`;
+    return attached
+      ? `Spark could not fetch pull request ${place.pull.id}, so the steps worked on this chat’s own branch, with its description, discussion and diff read from GitHub by Spark.`
+      : `Spark could not fetch pull request ${place.pull.id}, so the steps worked on this chat’s own branch and read the pull request from GitHub.`;
   }
   if (place.kind !== 'checkout') return null;
   const ran = `The steps ran on a temporary checkout of pull request ${place.pull.id} at its head (${shortSha(place.head)}), not on this chat’s branch; Spark removed it when the run ended.`;
