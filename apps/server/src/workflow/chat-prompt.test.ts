@@ -56,6 +56,7 @@ describe('chatPrompt', () => {
         '- Logic with a branch, loop, parser, money or security in it gets one small test.',
         '- Small, coherent changes that match the surrounding code. No unrelated cleanup.',
         '- Run the checks that cover what you changed.',
+        text.LONG_COMMAND_LINE,
         '',
         'Reporting',
         '- Lead with the result: what changed, what you verified.',
