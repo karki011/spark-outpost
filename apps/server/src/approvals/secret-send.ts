@@ -69,15 +69,20 @@ function nativeRoots(roots: readonly string[]): string[] {
   return roots.map((root) => toNativePath(root));
 }
 
+async function rootSecretSources(root: string): Promise<SecretSource[]> {
+  const files = await secretFiles(root);
+  const sources = await Promise.all(
+    files.map(async (file) => ({
+      file,
+      values: (await secretFileValues(path.join(root, file))).filter(distinctive),
+    })),
+  );
+  return sources.filter((source) => source.values.length > 0);
+}
+
 async function secretSources(roots: readonly string[]): Promise<SecretSource[]> {
-  const sources: SecretSource[] = [];
-  for (const root of await withMainCheckouts(nativeRoots(roots))) {
-    for (const file of await secretFiles(root)) {
-      const values = (await secretFileValues(path.join(root, file))).filter(distinctive);
-      if (values.length > 0) sources.push({ file, values });
-    }
-  }
-  return sources;
+  const checkouts = await withMainCheckouts(nativeRoots(roots));
+  return (await Promise.all(checkouts.map(rootSecretSources))).flat();
 }
 
 function pushedRefs(args: readonly string[]): string[] {
@@ -155,8 +160,11 @@ export async function pushedSecretFiles(root: string, branch: string): Promise<s
 }
 
 export async function turnSecretValues(roots: readonly string[]): Promise<string[]> {
-  const nested = (await secretSources(roots)).flatMap((source) => source.values);
-  const values = [...(await projectSecretValues(nativeRoots(roots))), ...nested];
+  const [sources, direct] = await Promise.all([
+    secretSources(roots),
+    projectSecretValues(nativeRoots(roots)),
+  ]);
+  const values = [...direct, ...sources.flatMap((source) => source.values)];
   const encoded = values.flatMap((value) => [value, encodeURIComponent(value)]);
   return [...new Set(encoded)].sort((a, b) => b.length - a.length);
 }

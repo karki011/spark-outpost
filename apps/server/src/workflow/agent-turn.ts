@@ -4,7 +4,7 @@ import type { RunSnapshot } from '../persistence/run-snapshots.ts';
 import { STOPPED_BY_QUIT, type RunEvent } from '@spark-outpost/contracts';
 import type { SparkPreferences } from '../persistence/setup.ts';
 import { auditSparkHandoff } from './spark-audit.ts';
-import { asksThroughGate, liveTurn, promptWithBrowserCheck, sparkSession } from './turn-facts.ts';
+import { asksThroughGate, liveTurn, promptWithBrowserCheck } from './turn-facts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { recordSuggestedTitle } from '../persistence/auto-title.ts';
@@ -46,7 +46,6 @@ import { guardedRun, recordErrorDetails, recordModelSwitch } from './model-guard
 import { createReplyText } from './reply-text.ts';
 import type { RunInput } from './run-input.ts';
 import {
-  knownModes,
   recordCapabilities,
   recordAgentInfo,
   recordFollowedInstructions,
@@ -69,10 +68,9 @@ import { recordPlan, withResetTime } from '../usage/plan-limits.ts';
 import { recordRequestUsage } from '../persistence/prompt-cache.ts';
 import { turnSessionFor, type TurnSession } from './turn-session.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
-import { repoScanner } from '../agent-config/discovery.ts';
-import { loadRepoLaunch } from '../agent-config/launch.ts';
 import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
-import { loadTurnExtensions } from './turn-extensions.ts';
+import { fulfilled, together } from './together.ts';
+import { doBaseline, startTurnReads } from './turn-preflight.ts';
 import { withMoveNote } from './project-move.ts';
 import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
 import { startAssistantTurn, type AssistantTurn } from '../companion/assistant-turn.ts';
@@ -80,7 +78,6 @@ import type { AssistantIdleCompaction } from '../companion/assistant-idle.ts';
 import { createRunObservations } from '../observations/run-observations.ts';
 import { conversationHasSlackContext } from '../persistence/slack.ts';
 import { SLACK_CONTEXT_OBSERVATION } from '../slack/thread.ts';
-import { startRailFlags } from './rail-flags.ts';
 import { linkedArtifactActivity } from '../artifacts/activity.ts';
 import { createObservedEdits } from './observed-edits.ts';
 import { observeSession } from './session-audit.ts';
@@ -155,6 +152,7 @@ export async function runAgentTurn(
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
+  const reads = startTurnReads(deps.db, input, options.prefs);
   const secretValues = await turnSecretValues(input.projectRoots);
   const audit = createAuditRecorder({
     write: (entries) =>
@@ -256,19 +254,23 @@ export async function runAgentTurn(
     }
     const provider = deps.providers.get(input.provider);
     if (!provider) throw new ProviderError(`Provider "${input.provider}" is not available.`);
-    const repo = await loadRepoLaunch(
-      deps.db,
-      repoScanner,
-      input.identity.threadId,
-      input.projectRoots,
-    ).catch(() => []);
+    const changesProject = input.mode === 'do' && input.parentRunId === null;
+    const [[snapshot, rails], session, [repo, modes, extensions, spark], publish, commandScope] =
+      await together([
+        doBaseline({ ...input, db: deps.db, runId: lease.runId, audit }, options.keepSnapshot),
+        turnSessionFor(deps, input).then((prepared) => (turnSession = prepared)),
+        reads.then(fulfilled),
+        publishScope(deps.db, input),
+        sparkCommandScope(deps.db, lease.runId, input, { observations }),
+      ]);
+    const { userMcp, userPlugins } = extensions;
     const trustedCommands = commandAllowlistFromRules(repo.flatMap((root) => root.allowRules));
     const gateOptions = {
       db: deps.db,
       runId: lease.runId,
       provider: input.provider,
       mode: input.agentMode,
-      modes: await knownModes(deps.db, input),
+      modes,
       extraAllowlist: () => [...trustedCommands, ...TEST_RUNNER_ALLOWLIST],
       append,
       waiters: deps.approvalWaiters,
@@ -277,7 +279,6 @@ export async function runAgentTurn(
       onTimeout: () => control.stop('approval_timeout'),
       observations,
     };
-    const changesProject = input.mode === 'do' && input.parentRunId === null;
     const asking = asksThroughGate(input);
     const approvals =
       input.mode === 'do'
@@ -290,7 +291,7 @@ export async function runAgentTurn(
             observe: options.observeEdits,
             plans: plans.hooks,
             publish: publishGrant(input),
-            snapshot: options.keepSnapshot,
+            snapshot,
           })
         : input.sparkWork && input.projectRoots.length > 0
           ? prepareSparkWorkRun(gateOptions, input)
@@ -299,17 +300,9 @@ export async function runAgentTurn(
             : undefined;
     const asksUser = input.parentRunId === null && !input.assistant;
     const questions = asksUser ? prepareQuestions(gateOptions, approvals) : undefined;
-    const rails =
-      input.mode === 'do'
-        ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
-        : null;
-    turnSession = await turnSessionFor(deps, input);
-    const session = turnSession;
     const recordSpend = spendRecorder(deps.db, lease.runId, input.provider, session);
     const recordRequest = (request: RequestUsage) =>
       recordRequestUsage(deps.db, lease.runId, request, new Date());
-    const { userMcp, userPlugins } = await loadTurnExtensions(deps.db, input);
-    const spark = await sparkSession(deps.db, input, options.prefs);
     auditSparkHandoff(audit, input, spark.teammate);
     const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
     assistantTurn = input.assistant
@@ -375,8 +368,8 @@ export async function runAgentTurn(
           ...(input.testRun ? { testRun: true } : {}),
           ...(input.reviewRun ? { reviewRun: true } : {}),
           observations,
-          publish: await publishScope(deps.db, input),
-          commands: await sparkCommandScope(deps.db, lease.runId, input, { observations }),
+          publish,
+          commands: commandScope,
           actions: {
             append,
             waiters: deps.approvalWaiters ?? new ApprovalWaiters(),
