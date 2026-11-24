@@ -56,6 +56,10 @@ describe('todayState', () => {
     expect(todayState(status({ helper: 'failed' }))).toBe('helper');
   });
 
+  it('offers a cloud sign-in where macOS Calendar is unsupported', () => {
+    expect(todayState(status({ helper: 'unsupported', authorization: null }))).toBe('connect');
+  });
+
   it('treats denied, restricted and write-only access as off', () => {
     for (const authorization of ['denied', 'restricted', 'writeOnly'] as const) {
       expect(todayState(status({ authorization, connected: false }))).toBe('denied');

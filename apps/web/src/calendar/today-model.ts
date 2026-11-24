@@ -41,7 +41,12 @@ export function includedCalendars(status: CalendarStatus): number {
   );
 }
 
+export function macAvailable(status: CalendarStatus): boolean {
+  return status.helper !== 'unsupported';
+}
+
 export function macState(status: CalendarStatus): TodayState {
+  if (!macAvailable(status)) return 'connect';
   if (status.helper === 'missing' || status.helper === 'failed') return 'helper';
   const access = status.authorization;
   if (access === 'denied' || access === 'restricted' || access === 'writeOnly') return 'denied';

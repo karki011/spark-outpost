@@ -41,6 +41,7 @@ export interface MicrosoftLiveAccount {
   expiresAt: number;
   calendars: Map<string, CalendarSync>;
   seriesUids: Map<string, string | null>;
+  deltaRefused: Map<string, string>;
   state: GoogleAccountState;
   message: string | null;
   failures: number;
@@ -55,6 +56,7 @@ export function microsoftLiveAccount(row: CloudAccountRow): MicrosoftLiveAccount
     expiresAt: 0,
     calendars: new Map(),
     seriesUids: new Map(),
+    deltaRefused: new Map(),
     state: row.needsSignIn ? 'sign_in_again' : 'syncing',
     message: row.needsSignIn ? MICROSOFT_SIGN_IN_AGAIN : null,
     failures: 0,
@@ -102,6 +104,7 @@ export function microsoftTarget(
     calendarId,
     email: account.row.email,
     seriesUids: account.seriesUids,
+    deltaRefused: account.deltaRefused,
   };
 }
 
@@ -158,6 +161,9 @@ async function pollWith(
   });
   const saved = await saveCalendars(deps, account.row.id, mapped);
   const window = syncWindow(deps.now());
+  for (const [calendarId, windowKey] of account.deltaRefused) {
+    if (windowKey !== window.key) account.deltaRefused.delete(calendarId);
+  }
   const prefix = microsoftPrefix(account.row.id);
   const wanted = saved.choices
     .filter((choice) => choice.include && choice.calendarId.startsWith(prefix))

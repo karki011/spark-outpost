@@ -11,7 +11,13 @@ import { AddCalendar } from './AddCalendar.tsx';
 import { CLOUD_WORDS, CloudSignInStatus, CloudSource } from './CloudSource.tsx';
 import { DeniedBody, ErrorLine, HelperBody, MAC_CALENDAR, MacSource } from './MacSource.tsx';
 import { RefreshCalendar } from './RefreshCalendar.tsx';
-import { connectorLine, hasCalendarSource, macState, nextMeeting } from './today-model.ts';
+import {
+  connectorLine,
+  hasCalendarSource,
+  macAvailable,
+  macState,
+  nextMeeting,
+} from './today-model.ts';
 import { useCalendarChoices } from './use-calendar-choices.ts';
 import { useCalendarActions, useCalendarNow, useCalendarStatus } from './use-calendar.ts';
 import { useCloudCalendar, type CloudCalendar } from './use-cloud-calendar.ts';
@@ -110,6 +116,8 @@ function MacTile({ status }: { status: CalendarStatus }) {
   );
 }
 
+const NO_SIGN_INS = 'This build has no calendar sign-in set up for this computer.';
+
 interface Clouds {
   google: CloudCalendar;
   microsoft: CloudCalendar;
@@ -145,9 +153,13 @@ function CloudTile({ cloud, testing }: { cloud: CloudCalendar; testing: boolean 
 }
 
 function EmptyBody({ status, clouds }: { status: CalendarStatus; clouds: Clouds }) {
+  const mac = macAvailable(status);
+  if (!mac && !status.google.available && !status.microsoft.available) {
+    return <p className="cal-muted">{NO_SIGN_INS}</p>;
+  }
   return (
     <div className="cal-tiles">
-      <MacTile status={status} />
+      {mac && <MacTile status={status} />}
       {status.google.available && (
         <CloudTile cloud={clouds.google} testing={status.google.testing} />
       )}
@@ -179,7 +191,7 @@ function ConnectedBody({ status, clouds }: { status: CalendarStatus; clouds: Clo
   const { connect } = useCalendarActions();
   const state = macState(status);
   const macRefused = !status.connected && connect.isSuccess && state === 'denied';
-  const canAddMac = !status.connected && state !== 'helper';
+  const canAddMac = macAvailable(status) && !status.connected && state !== 'helper';
   return (
     <>
       {status.connected && <MacSource status={status} accounts={mac} onChange={change} />}

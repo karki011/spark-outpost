@@ -14,13 +14,13 @@ About 2 minutes.
 
 ## Sign-ins
 
-Google sign-ins expire weekly until verified: **Sign in again**. Microsoft needs an app ID, none yet. **Disconnect** signs out.
+Google sign-ins expire weekly until verified: **Sign in again**. Microsoft needs an app ID. Windows has no Mac Calendar. **Disconnect** signs out.
 
 ## Use it
 
 - **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before**, **Hold alerts during this**.
-- Events show your reply (**Accepted**, **Maybe**, **Not answered**, **Declined**); hover for details. **Day** marks free time.
+- Events show your reply (**Accepted**, **Maybe**, **Not answered**, **Declined**). **Day** marks free time.
 - **Take notes** records it: [Meeting notes (alpha)](meetings.md).
 - **Refresh now** re-reads.
 

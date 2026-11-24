@@ -38,7 +38,7 @@ export const calendarHostRequestSchema = z.discriminatedUnion('op', [
 export type CalendarHostRequest = z.infer<typeof calendarHostRequestSchema>;
 export type CalendarHostOp = CalendarHostRequest['op'];
 
-export const calendarHelperStateSchema = z.enum(['ready', 'missing', 'failed']);
+export const calendarHelperStateSchema = z.enum(['ready', 'missing', 'failed', 'unsupported']);
 export type CalendarHelperState = z.infer<typeof calendarHelperStateSchema>;
 
 export const calendarHostResultSchemas = {
