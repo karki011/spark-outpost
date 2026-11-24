@@ -134,6 +134,6 @@ Each signal is stored once with its time, its source and a small detail object. 
 
 ## Open questions
 
-- How long to keep outcomes and comments; the audit log keeps 90 days by default.
+- How long to keep outcomes and comments; the audit log keeps 14 days by default.
 - Whether a turn's outcome should roll up into its task's outcome once a task spans several turns, or stay per turn with a task view on top.
 - The minimum sample size per recommendation, once phase 2 shows real volumes.

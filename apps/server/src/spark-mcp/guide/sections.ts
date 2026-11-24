@@ -256,7 +256,7 @@ Overview covers turns, runs, cost, outcomes (good/bad/mixed), keep and revert ra
     keywords: ['audit', 'audit log', 'protocol log', 'hash chain', 'verify'],
     text: `Every agent run's full protocol traffic — every JSON-RPC message to and from the agent, redacted — is recorded to a per-run, hash-chained audit log, along with Spark's own entries like approvals and Ship attempts. Secrets (API keys, tokens, passwords, secret-file contents) are redacted before anything is stored.
 
-The chain lets Spark detect tampering: verifying it walks every row and reports the first broken one. Logs are retained 90 days by default and can be exported per conversation as JSONL or CSV. spark_audit reads a run's log for troubleshooting a specific run.`,
+The chain lets Spark detect tampering: verifying it walks every row and reports the first broken one. Logs are retained 14 days by default and can be exported per conversation as JSONL or CSV. spark_audit reads a run's log for troubleshooting a specific run.`,
   },
   {
     id: 'desktop-app',

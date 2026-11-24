@@ -10,6 +10,7 @@ import { pruneSlackLog } from '../persistence/slack.ts';
 import { pruneRemoteAudit } from '../remote/store.ts';
 
 const PRUNE_EVERY_MS = 60 * 60 * 1000;
+const LOG_RETENTION_DAYS = 90;
 
 export interface StartupPrune {
   db: Db;
@@ -36,8 +37,8 @@ export async function pruneOldRows(options: StartupPrune): Promise<void> {
     ['empty chats', () => pruneEmptyConversations(db, workspaceId)],
     ['unlinked attachments', () => pruneUnlinkedAttachments(db, workspaceId)],
     ['old audit entries', () => pruneProtocolLog(db, options.auditRetentionDays)],
-    ['old Slack log rows', () => pruneSlackLog(db, options.auditRetentionDays)],
-    ['old remote control entries', () => pruneRemoteAudit(db, options.auditRetentionDays)],
+    ['old Slack log rows', () => pruneSlackLog(db, LOG_RETENTION_DAYS)],
+    ['old remote control entries', () => pruneRemoteAudit(db, LOG_RETENTION_DAYS)],
   ];
   const { chatFolders, researchCopies } = options;
   if (chatFolders)
