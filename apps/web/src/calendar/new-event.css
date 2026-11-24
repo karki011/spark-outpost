@@ -33,8 +33,14 @@
   font-size: 13.5px;
 }
 
-.ne-form .td-hint {
-  margin: 4px 0 0;
+.field > .ne-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ne-label label {
+  margin: 0;
 }
 
 .ne-foot {

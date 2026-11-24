@@ -3,6 +3,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CalendarStatus } from '@spark-outpost/contracts';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
+import { InfoTip } from '../ui/InfoTip.tsx';
 import { ModalFrame } from '../ui/ModalFrame.tsx';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { AllowGoogleChanges } from './EventReply.tsx';
@@ -163,21 +164,21 @@ export function NewEventDialog({ status, date, today, now, onClose }: NewEventDi
           />
         )}
         <div className="field">
-          <label htmlFor={`${ids}-guests`}>Guests</label>
+          <span className="ne-label">
+            <label htmlFor={`${ids}-guests`}>Guests</label>
+            <InfoTip
+              topic="guests"
+              text="Email addresses, separated by commas. Google emails each guest an invitation. Leave empty to tell no one."
+            />
+          </span>
           <input
             id={`${ids}-guests`}
             className="inp"
             value={guestText}
             placeholder="ana@example.com, ivan@example.com"
             spellCheck={false}
-            aria-describedby={`${ids}-guests-hint`}
             onChange={(event) => setGuestText(event.target.value)}
           />
-          <p id={`${ids}-guests-hint`} className="td-hint">
-            {guests.emails.length > 0
-              ? 'Google emails each guest an invitation.'
-              : 'Email addresses, separated by commas. Leave empty to tell no one.'}
-          </p>
         </div>
         <label className="ne-check">
           <input

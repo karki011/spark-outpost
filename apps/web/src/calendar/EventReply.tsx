@@ -6,6 +6,7 @@ import {
   type CalendarReply,
   type GoogleSignInFlow,
 } from '@spark-outpost/contracts';
+import { InfoTip } from '../ui/InfoTip.tsx';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { useCalendarStatus } from './use-calendar.ts';
 import { useCloudSignIn } from './use-cloud-calendar.ts';
@@ -47,17 +48,19 @@ export function AllowGoogleChanges(props: AllowGoogleChangesProps) {
   const failed = flow.status === 'failed' ? flow.message : null;
   return (
     <div className="ev-reply">
-      <button
-        type="button"
-        className="btn line sm"
-        disabled={start.isPending || waiting}
-        onClick={() =>
-          start.mutate({ accountId: props.accountId, editCalendar: null, replies: true })
-        }
-      >
-        {waiting ? 'Waiting for Google…' : props.label}
-      </button>
-      <p className="td-hint">{props.hint}</p>
+      <div className="ev-reply-row">
+        <button
+          type="button"
+          className="btn line sm"
+          disabled={start.isPending || waiting}
+          onClick={() =>
+            start.mutate({ accountId: props.accountId, editCalendar: null, replies: true })
+          }
+        >
+          {waiting ? 'Waiting for Google…' : props.label}
+        </button>
+        <InfoTip topic={props.label.toLowerCase()} text={props.hint} />
+      </div>
       {(start.error || failed) && (
         <p className="home-error" role="alert">
           {start.error?.message ?? failed}
@@ -90,6 +93,7 @@ export function EventReply({ event }: { event: CalendarEvent }) {
         <span className="ev-reply-ask" aria-hidden="true">
           Going?
         </span>
+        <InfoTip topic="replies" text="Google tells the organiser and guests." />
         {CHOICES.map((choice) => (
           <button
             key={choice.reply}
@@ -103,7 +107,6 @@ export function EventReply({ event }: { event: CalendarEvent }) {
           </button>
         ))}
       </div>
-      <p className="td-hint">Google tells the organiser and guests.</p>
       {send.error && (
         <p className="home-error" role="alert">
           {send.error.message}

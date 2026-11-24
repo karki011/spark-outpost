@@ -356,7 +356,7 @@ test('a Google invitation is answered from its popover after allowing replies', 
   await expect(popover).toContainText('Ana Ruiz');
   await expect(popover).toContainText('Accepted');
   const popup = page.waitForEvent('popup');
-  await popover.getByRole('button', { name: 'Allow replies' }).click();
+  await popover.getByRole('button', { name: 'Allow replies', exact: true }).click();
   await (await popup).close();
   const going = popover.getByRole('group', { name: 'Going?' });
   await expect(going.getByRole('button', { name: 'Yes' })).toHaveAttribute('aria-pressed', 'false');
@@ -387,7 +387,7 @@ test('New event creates a Google event with a guest after allowing changes', asy
   const create = dialog.getByRole('button', { name: /^Create/ });
   await expect(create).toBeDisabled();
   const popup = page.waitForEvent('popup');
-  await dialog.getByRole('button', { name: 'Allow changes' }).click();
+  await dialog.getByRole('button', { name: 'Allow changes', exact: true }).click();
   await (await popup).close();
   await expect(create).toBeEnabled();
   await create.click();
@@ -400,7 +400,7 @@ test('New event creates a Google event with a guest after allowing changes', asy
   await dialog.getByRole('textbox', { name: 'Ends' }).fill('13:30');
   await dialog.getByRole('textbox', { name: 'Guests' }).fill('ana@example.com');
   await dialog.getByRole('checkbox', { name: 'Add a Google Meet link' }).check();
-  await expect(dialog).toContainText('Google emails each guest an invitation.');
+  await expect(dialog.getByRole('button', { name: 'More about guests' })).toBeVisible();
   const results = await new AxeBuilder({ page }).include('.ne-dialog').analyze();
   expect(results.violations).toEqual([]);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/google-new-event.png` });
