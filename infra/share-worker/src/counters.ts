@@ -2,10 +2,15 @@ import type { CounterNamespace } from './env.ts';
 
 export const LOCK_AFTER = 5;
 export const LOCK_MS = 15 * 60_000;
+export const SHARE_ATTEMPTS_PER_HOUR = 50;
+const HOUR_MS = 3_600_000;
+const SHARE_WINDOW = 'share-window';
+const clientAttempts = (client: string) => `attempts:${client}`;
 
 export interface CounterStorage {
   get<T>(key: string): Promise<T | undefined>;
   put(key: string, value: unknown): Promise<void>;
+  delete(key: string): Promise<boolean>;
   deleteAll(): Promise<void>;
   setAlarm(time: number): Promise<void>;
 }
@@ -15,10 +20,10 @@ export interface CounterState {
 }
 
 type CounterOp =
-  | { op: 'hit'; now: number; limit: number; windowMs: number }
-  | { op: 'check'; now: number }
-  | { op: 'attempt'; now: number }
-  | { op: 'pass' }
+  | { op: 'hit'; now: number; limit: number; windowMs: number; amount: number }
+  | { op: 'check'; now: number; client: string }
+  | { op: 'attempt'; now: number; client: string }
+  | { op: 'pass'; client: string }
   | { op: 'clear' };
 
 interface RateWindow {
@@ -52,19 +57,22 @@ export class ShareCounters {
   }
 
   async alarm(): Promise<void> {
-    await this.storage.deleteAll();
+    const window = await this.storage.get<RateWindow>(SHARE_WINDOW);
+    const keepUntil = window ? window.start + HOUR_MS + LOCK_MS : 0;
+    if (Date.now() < keepUntil) await this.storage.setAlarm(keepUntil);
+    else await this.storage.deleteAll();
   }
 
   private async apply(op: CounterOp): Promise<unknown> {
     switch (op.op) {
       case 'hit':
-        return this.hit(op.now, op.limit, op.windowMs);
+        return this.hit(op.now, op.limit, op.windowMs, op.amount);
       case 'check':
-        return this.check(op.now);
+        return this.check(op.now, op.client);
       case 'attempt':
-        return this.attempt(op.now);
+        return this.attempt(op.now, op.client);
       case 'pass':
-        await this.storage.deleteAll();
+        await this.pass(op.client);
         return {};
       case 'clear':
         await this.storage.deleteAll();
@@ -72,37 +80,61 @@ export class ShareCounters {
     }
   }
 
-  private async hit(now: number, limit: number, windowMs: number) {
+  private async hit(now: number, limit: number, windowMs: number, amount: number) {
     let window = await this.storage.get<RateWindow>('window');
     if (!window || now >= window.start + windowMs) {
       window = { start: now, count: 0 };
       await this.storage.setAlarm(now + windowMs);
     }
-    window.count += 1;
+    if (window.count + amount > limit) return { allowed: false };
+    window.count += amount;
     await this.storage.put('window', window);
-    return { allowed: window.count <= limit };
+    return { allowed: true };
   }
 
-  private async attempts(): Promise<Attempts> {
-    const stored = await this.storage.get<Attempts>('attempts');
+  private async pass(client: string): Promise<void> {
+    await this.storage.delete(clientAttempts(client));
+    const window = await this.storage.get<RateWindow>(SHARE_WINDOW);
+    if (!window || window.count === 0) return;
+    await this.storage.put(SHARE_WINDOW, { ...window, count: window.count - 1 });
+  }
+
+  private async attempts(client: string): Promise<Attempts> {
+    const stored = await this.storage.get<Attempts>(clientAttempts(client));
     return { run: stored?.run ?? 0, lockedUntil: stored?.lockedUntil ?? 0 };
   }
 
-  private async check(now: number): Promise<AttemptState> {
-    const { lockedUntil } = await this.attempts();
-    return { lockedUntil: lockedUntil > now ? lockedUntil : 0 };
+  private async shareWindow(now: number): Promise<RateWindow> {
+    const stored = await this.storage.get<RateWindow>(SHARE_WINDOW);
+    return stored && now < stored.start + HOUR_MS ? stored : { start: now, count: 0 };
   }
 
-  private async attempt(now: number): Promise<Reservation> {
-    const attempts = await this.attempts();
-    if (attempts.lockedUntil > now) return { allowed: false, lockedUntil: attempts.lockedUntil };
+  private async lockedUntil(now: number, client: string): Promise<number> {
+    const { lockedUntil } = await this.attempts(client);
+    if (lockedUntil > now) return lockedUntil;
+    const window = await this.shareWindow(now);
+    return window.count >= SHARE_ATTEMPTS_PER_HOUR ? window.start + HOUR_MS : 0;
+  }
+
+  private async check(now: number, client: string): Promise<AttemptState> {
+    return { lockedUntil: await this.lockedUntil(now, client) };
+  }
+
+  private async attempt(now: number, client: string): Promise<Reservation> {
+    const lockedUntil = await this.lockedUntil(now, client);
+    if (lockedUntil) return { allowed: false, lockedUntil };
+    const window = await this.shareWindow(now);
+    if (window.count === 0) await this.storage.setAlarm(window.start + HOUR_MS + LOCK_MS);
+    window.count += 1;
+    await this.storage.put(SHARE_WINDOW, window);
+    const attempts = await this.attempts(client);
     attempts.run += 1;
     attempts.lockedUntil = 0;
     if (attempts.run >= LOCK_AFTER) {
       attempts.run = 0;
       attempts.lockedUntil = now + LOCK_MS;
     }
-    await this.storage.put('attempts', attempts);
+    await this.storage.put(clientAttempts(client), attempts);
     return { allowed: true, lockedUntil: attempts.lockedUntil };
   }
 }
@@ -115,32 +147,48 @@ async function call<T>(namespace: CounterNamespace, name: string, op: CounterOp)
   return (await response.json()) as T;
 }
 
+export interface RateLimit {
+  name: string;
+  limit: number;
+  windowMs: number;
+  amount?: number;
+}
+
 export async function allowHit(
   namespace: CounterNamespace,
-  name: string,
+  rate: RateLimit,
   now: number,
-  limit: number,
-  windowMs: number,
 ): Promise<boolean> {
-  const result = await call<{ allowed: boolean }>(namespace, `rate:${name}`, {
+  const result = await call<{ allowed: boolean }>(namespace, `rate:${rate.name}`, {
     op: 'hit',
     now,
-    limit,
-    windowMs,
+    limit: rate.limit,
+    windowMs: rate.windowMs,
+    amount: rate.amount ?? 1,
   });
   return result.allowed;
 }
 
-export function checkAttempts(namespace: CounterNamespace, id: string, now: number) {
-  return call<AttemptState>(namespace, `attempts:${id}`, { op: 'check', now });
+export function checkAttempts(
+  namespace: CounterNamespace,
+  id: string,
+  client: string,
+  now: number,
+) {
+  return call<AttemptState>(namespace, `attempts:${id}`, { op: 'check', now, client });
 }
 
-export function reserveAttempt(namespace: CounterNamespace, id: string, now: number) {
-  return call<Reservation>(namespace, `attempts:${id}`, { op: 'attempt', now });
+export function reserveAttempt(
+  namespace: CounterNamespace,
+  id: string,
+  client: string,
+  now: number,
+) {
+  return call<Reservation>(namespace, `attempts:${id}`, { op: 'attempt', now, client });
 }
 
-export async function recordRightCode(namespace: CounterNamespace, id: string) {
-  await call(namespace, `attempts:${id}`, { op: 'pass' });
+export async function recordRightCode(namespace: CounterNamespace, id: string, client: string) {
+  await call(namespace, `attempts:${id}`, { op: 'pass', client });
 }
 
 export async function clearAttempts(namespace: CounterNamespace, id: string) {
