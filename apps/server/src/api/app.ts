@@ -32,6 +32,7 @@ import { homeRoutes } from './home-routes.ts';
 import { interruptionRoutes } from './interruption-routes.ts';
 import { mapRoutes } from './map-routes.ts';
 import { mcpRoutes, type McpRouteDeps } from './mcp-routes.ts';
+import { setupDraftRoutes } from './setup-draft-routes.ts';
 import { modelCardRoutes } from './model-card-routes.ts';
 import { outcomeRoutes, type OutcomeRouteDeps } from './outcome-routes.ts';
 import { projectCloneRoutes, type CloneRouteDeps } from './project-clone-routes.ts';
@@ -169,6 +170,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', agentConfigRoutes(options));
   app.use('/api', userPluginRoutes(options));
   app.use('/api', mcpRoutes(options));
+  app.use('/api', setupDraftRoutes(options));
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
   app.use('/api', queueRoutes(options));

@@ -15,6 +15,8 @@ import {
   ticketSourceNames,
   type SaveTicketConnectionRequest,
   type ServiceNowAuthKind,
+  type SetupFields,
+  type SetupTarget,
   type TicketConnections,
   type TicketSourceId,
 } from '@spark-outpost/contracts';
@@ -34,6 +36,7 @@ import {
 import { jiraSiteHost, jiraSiteUrl } from './jira-site.ts';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import './connect.css';
+import { usePreparedSetup } from '../setup-drafts/use-setup-drafts.ts';
 
 export const JIRA_TOKEN_URL = 'https://id.atlassian.com/manage-profile/security/api-tokens';
 export const LINEAR_KEY_URL = 'https://linear.app/settings/account/security';
@@ -196,6 +199,12 @@ function statusLine(mood: CheckMood | null, name: string): string {
   return '';
 }
 
+const SETUP_TARGETS: Record<TicketSourceId, SetupTarget> = {
+  jira: 'atlassian',
+  linear: 'linear',
+  servicenow: 'servicenow',
+};
+
 export function TicketConnectForm({ source, onConnected, onCancel }: TicketConnectFormProps) {
   const id = useId();
   const queryClient = useQueryClient();
@@ -204,6 +213,14 @@ export function TicketConnectForm({ source, onConnected, onCancel }: TicketConne
   const [invalid, setInvalid] = useState<CheckFailure | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [authKind, setAuthKind] = useState<ServiceNowAuthKind>('basic');
+  const prepared = usePreparedSetup(SETUP_TARGETS[source]);
+  const [applied, setApplied] = useState<SetupFields | null>(null);
+  if (prepared.fields && prepared.fields !== applied) {
+    const { authKind: wantedKind, ...fields } = prepared.fields;
+    setApplied(prepared.fields);
+    setValues((current) => ({ ...fields, ...current }));
+    if (wantedKind === 'basic' || wantedKind === 'api_key') setAuthKind(wantedKind);
+  }
   const name = source === 'jira' ? ATLASSIAN_NAME : ticketSourceNames[source];
   const connect = useMutation({
     mutationFn: (body: SaveTicketConnectionRequest) =>
@@ -219,6 +236,7 @@ export function TicketConnectForm({ source, onConnected, onCancel }: TicketConne
 
   const finish = useEffectEvent((connections: TicketConnections) => {
     setValues({});
+    prepared.clear();
     queryClient.setQueryData(ticketKeys.connections, connections);
     void queryClient.invalidateQueries({ queryKey: ticketKeys.all });
     onConnected?.(connections);

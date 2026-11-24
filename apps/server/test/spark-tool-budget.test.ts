@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { advertisedSize, SESSION_CASES } from './spark-tool-sizes.ts';
 
-const PLAIN_CHAT_MAX_CHARS = 27_800;
+const PLAIN_CHAT_MAX_CHARS = 28_800;
 const INSTRUCTIONS_MAX_CHARS = 1_650;
 const BROWSER_GROUP_MAX_CHARS = 7_700;
 const ATLASSIAN_GROUPS_MAX_CHARS = 7_600;

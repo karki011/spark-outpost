@@ -384,6 +384,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/onboarding/', groups: ['settings-providers', 'island-desktop'] },
   { prefix: 'apps/web/src/phone/', groups: ['phone'] },
   { prefix: 'apps/web/src/providers/', groups: ['settings-providers', 'approvals'] },
+  { prefix: 'apps/web/src/setup-drafts/', groups: ['settings-providers', 'approvals'] },
   { prefix: 'apps/web/src/reset/', groups: ['settings-providers'] },
   {
     prefix: 'apps/web/src/settings/',

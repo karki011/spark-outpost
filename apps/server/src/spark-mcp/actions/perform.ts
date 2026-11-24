@@ -38,6 +38,7 @@ import { performCrewEdit } from './crew-edit-perform.ts';
 import { performLinkRepo } from './link-repo-perform.ts';
 import { performCloneRepo } from './clone-repo-perform.ts';
 import type { StartedBy } from '../../sub-chats/start.ts';
+import { performPrepareSetup } from './setup-actions.ts';
 
 export const OPEN_PR_RETIRED =
   'Spark no longer opens pull requests from a card. Ask the agent to push the branch and open it.';
@@ -67,6 +68,8 @@ export function performSparkAction(
       return performUpdateTeammate(context, action);
     case 'delete_teammate':
       return performDeleteTeammate(context, action);
+    case 'prepare_setup':
+      return performPrepareSetup(context, action);
     case 'add_mcp_server':
       return performAddMcpServer(context, action);
     case 'update_mcp_server':
