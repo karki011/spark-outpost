@@ -9,6 +9,7 @@ import {
   calendarStatusSchema,
   googleSignInFlowSchema,
   type CalendarChoicePatch,
+  type CalendarCreateRequest,
   type CalendarDay,
   type CalendarEventDetail,
   type CalendarMarkRequest,
@@ -77,6 +78,8 @@ export const calendarApi = {
     request(ok, '/calendar/marks', { method: 'PUT', body: JSON.stringify(mark) }),
   open: (occurrence: CalendarOccurrence): Promise<{ opened: boolean }> =>
     post(opened, '/calendar/open', occurrence),
+  createEvent: (event: CalendarCreateRequest): Promise<{ ok: true }> =>
+    post(ok, '/calendar/events', event),
   reply: (reply: CalendarReplyRequest): Promise<{ ok: true }> => post(ok, '/calendar/reply', reply),
   detail: (occurrence: CalendarOccurrence): Promise<CalendarEventDetail> =>
     post(calendarEventDetailSchema, '/calendar/event', occurrence),

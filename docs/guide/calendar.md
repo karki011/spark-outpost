@@ -20,7 +20,7 @@ Google sign-ins expire weekly until verified: **Sign in again**. Microsoft needs
 
 - **Today**, or the clock below **Settings**, opens **Month** and **Scheduled**, or **Week**; Enter opens **Day**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before**, **Hold alerts during this**.
-- Events show your reply; Google events take **Yes**, **No** or **Maybe**. **Day** marks free time.
+- Events show your reply. [Reply or create events](calendar-events.md). **Day** marks free time.
 - **Take notes** records: [Meeting notes (alpha)](meetings.md).
 - **Refresh now** syncs.
 

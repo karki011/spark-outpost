@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Router, type Response } from 'express';
 import {
   CALENDAR_RANGE_MAX_DAYS,
@@ -7,6 +8,7 @@ import {
   calendarChoicePatchSchema,
   calendarMarkRequestSchema,
   calendarOccurrenceSchema,
+  calendarCreateRequestSchema,
   calendarReplyRequestSchema,
   GOOGLE_REPLY_NEEDS_GRANT,
   calendarSettingsPatchSchema,
@@ -272,6 +274,35 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
         throw new CalendarHostError('not_authorized', GOOGLE_REPLY_NEEDS_GRANT);
       }
       if (outcome === 'not_found') throw new CalendarHostError('not_found', 'That event is gone.');
+      return { ok: true };
+    }),
+  );
+
+  router.post('/calendar/events', (req, res) =>
+    guarded(res, async () => {
+      const request = parseBody(calendarCreateRequestSchema, req);
+      const choices = await savedChoices(deps.db, deps.workspaceId);
+      const calendar = choices.find((choice) => choice.key === request.calendarKey);
+      if (!google || calendar?.sourceKind !== 'google' || !calendar.writable) {
+        throw new BadRequestError('Pick a Google calendar you can change.');
+      }
+      const outcome = await cloudWrite(() =>
+        google.create(calendar.calendarId, {
+          summary: request.title,
+          start: new Date(request.start).toISOString(),
+          end: new Date(request.end).toISOString(),
+          guests: request.guests,
+          meetRequestId: request.meet ? randomUUID() : null,
+          location: request.location.trim(),
+          description: request.notes.trim(),
+        }),
+      );
+      if (outcome === 'needs_grant') {
+        throw new CalendarHostError('not_authorized', GOOGLE_REPLY_NEEDS_GRANT);
+      }
+      if (outcome === 'not_found') {
+        throw new CalendarHostError('not_found', 'That calendar is gone.');
+      }
       return { ok: true };
     }),
   );

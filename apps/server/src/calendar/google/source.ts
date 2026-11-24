@@ -4,7 +4,14 @@ import {
   type CalendarGoogleStatus,
   type GoogleSignInFlow,
 } from '@spark-outpost/contracts';
-import { getGoogleEvent, replyToGoogleEvent, type GoogleReply } from './api.ts';
+import {
+  createGoogleEvent,
+  getGoogleEvent,
+  replyToGoogleEvent,
+  type GoogleEventCreate,
+  type GoogleApiDeps,
+  type GoogleReply,
+} from './api.ts';
 import type { Db } from '../../persistence/db.ts';
 import { googleCalendarSecret, type SecretStore } from '../../setup/secrets.ts';
 import {
@@ -93,6 +100,10 @@ export interface GoogleSource {
     occurrence: GoogleOccurrence,
     reply: GoogleReply,
   ): Promise<'sent' | 'needs_grant' | 'not_found'>;
+  create(
+    calendarId: string,
+    create: GoogleEventCreate,
+  ): Promise<'created' | 'needs_grant' | 'not_found'>;
   signIn(request: GoogleSignInRequest): Promise<GoogleSignInFlow>;
   signInFlow(): GoogleSignInFlow;
   cancelSignIn(): GoogleSignInFlow;
@@ -185,6 +196,21 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       emit();
       throw new GoogleSignInNeeded();
     }
+  };
+
+  const writeAs = async (account: LiveAccount, work: (api: GoogleApiDeps) => Promise<unknown>) => {
+    try {
+      await withFreshToken(accountDeps!, account, work);
+    } catch (error) {
+      if (!needsSignInAgain(error)) throw error;
+      await markSignInAgain(accountDeps!, account);
+      schedule(account.row.id, null);
+      emit();
+      throw new GoogleSignInNeeded();
+    }
+    ranges?.dropAccount(account.row.id);
+    await poll(account.row.id);
+    emit();
   };
 
   const schedule = (accountId: string, delayMs: number | null) => {
@@ -352,21 +378,16 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
         : null;
       if (!accountDeps || !parts || !account || !calendarId) return 'not_found';
       if (!account.row.canEdit) return 'needs_grant';
-      try {
-        await withFreshToken(accountDeps, account, (api) =>
-          replyToGoogleEvent(api, calendarId, parts.eventId, reply),
-        );
-      } catch (error) {
-        if (!needsSignInAgain(error)) throw error;
-        await markSignInAgain(accountDeps, account);
-        schedule(account.row.id, null);
-        emit();
-        throw new GoogleSignInNeeded();
-      }
-      ranges?.dropAccount(account.row.id);
-      await poll(account.row.id);
-      emit();
+      await writeAs(account, (api) => replyToGoogleEvent(api, calendarId, parts.eventId, reply));
       return 'sent';
+    },
+    async create(calendarId, create) {
+      const match = /^google:([^:]+):(.+)$/.exec(calendarId);
+      const account = match ? accounts.get(match[1]!) : undefined;
+      if (!accountDeps || !match || !account) return 'not_found';
+      if (!account.row.canEdit) return 'needs_grant';
+      await writeAs(account, (api) => createGoogleEvent(api, match[2]!, create));
+      return 'created';
     },
     signInFlow: () => signIn?.flow() ?? IDLE_FLOW,
     cancelSignIn: () => signIn?.cancel() ?? IDLE_FLOW,

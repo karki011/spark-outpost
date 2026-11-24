@@ -34,7 +34,14 @@ function useReply(event: CalendarEvent) {
   });
 }
 
-function AllowReplies(props: { accountId: string; email: string; flow: GoogleSignInFlow }) {
+interface AllowGoogleChangesProps {
+  accountId: string;
+  flow: GoogleSignInFlow;
+  label: string;
+  hint: string;
+}
+
+export function AllowGoogleChanges(props: AllowGoogleChangesProps) {
   const { flow, start } = useCloudSignIn('google', props.flow, true);
   const waiting = flow.status === 'waiting';
   const failed = flow.status === 'failed' ? flow.message : null;
@@ -48,12 +55,9 @@ function AllowReplies(props: { accountId: string; email: string; flow: GoogleSig
           start.mutate({ accountId: props.accountId, editCalendar: null, replies: true })
         }
       >
-        {waiting ? 'Waiting for Google…' : 'Allow replies'}
+        {waiting ? 'Waiting for Google…' : props.label}
       </button>
-      <p className="td-hint">
-        Google asks in your browser to let Spark change events for {props.email}. Spark uses it to
-        send your reply.
-      </p>
+      <p className="td-hint">{props.hint}</p>
       {(start.error || failed) && (
         <p className="home-error" role="alert">
           {start.error?.message ?? failed}
@@ -71,7 +75,12 @@ export function EventReply({ event }: { event: CalendarEvent }) {
   if (!accountId || !account || event.myStatus === 'none') return null;
   if (!account.canEdit) {
     return (
-      <AllowReplies accountId={accountId} email={account.email} flow={status.data!.google.signIn} />
+      <AllowGoogleChanges
+        accountId={accountId}
+        flow={status.data!.google.signIn}
+        label="Allow replies"
+        hint={`Google asks in your browser to let Spark change events for ${account.email}. Spark uses it to send your reply.`}
+      />
     );
   }
   const current = send.isPending ? send.variables : event.myStatus;

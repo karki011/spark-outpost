@@ -223,6 +223,25 @@ export const calendarReplyRequestSchema = z
   })
   .strict();
 export type CalendarReplyRequest = z.infer<typeof calendarReplyRequestSchema>;
+
+export const CALENDAR_GUESTS_MAX = 50;
+
+export const calendarCreateRequestSchema = z
+  .object({
+    calendarKey: z.uuid(),
+    title: z.string().trim().min(1).max(300),
+    start: z.iso.datetime({ offset: true }),
+    end: z.iso.datetime({ offset: true }),
+    guests: z.array(z.email().max(300)).max(CALENDAR_GUESTS_MAX),
+    meet: z.boolean(),
+    location: z.string().max(500),
+    notes: z.string().max(5_000),
+  })
+  .strict()
+  .refine((request) => Date.parse(request.end) > Date.parse(request.start), {
+    message: 'The end must be after the start.',
+  });
+export type CalendarCreateRequest = z.infer<typeof calendarCreateRequestSchema>;
 export type CalendarPerson = z.infer<typeof calendarPersonSchema>;
 
 export const calendarEventDetailSchema = z.object({

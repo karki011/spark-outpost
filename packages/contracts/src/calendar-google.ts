@@ -84,7 +84,7 @@ export const startGoogleSignInSchema = z
 export type StartGoogleSignIn = z.infer<typeof startGoogleSignInSchema>;
 
 export const GOOGLE_REPLY_NEEDS_GRANT =
-  'Spark can’t reply for this Google account yet. Select Allow replies and approve it with Google.';
+  'Spark can’t change events for this Google account yet. Select Allow and approve it with Google.';
 
 export function googleEventAccountId(eventId: string): string | null {
   if (!isGoogleEventId(eventId)) return null;

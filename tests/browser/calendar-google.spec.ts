@@ -371,6 +371,44 @@ test('a Google invitation is answered from its popover after allowing replies', 
   expect(results.violations).toEqual([]);
 });
 
+test('New event creates a Google event with a guest after allowing changes', async ({ page }) => {
+  await openCard(page);
+  await addGoogle(page);
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Today/ })
+    .click();
+  await today(page).getByRole('radio', { name: 'Week' }).click();
+  await today(page).getByRole('checkbox', { name: 'Show weekends' }).check();
+  await today(page).getByRole('button', { name: 'New event' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New event' });
+  await expect(dialog.getByRole('textbox', { name: 'Title' })).toBeFocused();
+  const create = dialog.getByRole('button', { name: /^Create/ });
+  await expect(create).toBeDisabled();
+  const popup = page.waitForEvent('popup');
+  await dialog.getByRole('button', { name: 'Allow changes' }).click();
+  await (await popup).close();
+  await expect(create).toBeEnabled();
+  await create.click();
+  await expect(dialog.getByRole('alert')).toHaveText('Give the event a title.');
+  await dialog.getByRole('textbox', { name: 'Title' }).fill('Launch review');
+  await dialog
+    .getByRole('textbox', { name: 'Date' })
+    .fill(new Date(anchor).toLocaleDateString('en-CA'));
+  await dialog.getByRole('textbox', { name: 'Starts' }).fill('13:00');
+  await dialog.getByRole('textbox', { name: 'Ends' }).fill('13:30');
+  await dialog.getByRole('textbox', { name: 'Guests' }).fill('ana@example.com');
+  await dialog.getByRole('checkbox', { name: 'Add a Google Meet link' }).check();
+  await expect(dialog).toContainText('Google emails each guest an invitation.');
+  const results = await new AxeBuilder({ page }).include('.ne-dialog').analyze();
+  expect(results.violations).toEqual([]);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/google-new-event.png` });
+  await dialog.getByRole('button', { name: 'Create and invite 1 guest' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(today(page).getByRole('button', { name: /^Launch review, / })).toBeVisible();
+});
+
 test('shows the Calendars access note, not a Mac account, when macOS refuses Add calendar', async ({
   page,
 }) => {

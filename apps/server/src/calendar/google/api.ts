@@ -332,3 +332,41 @@ export async function replyToGoogleEvent(
   const query = new URLSearchParams({ sendUpdates: 'all' });
   return parsedEvent(await getJson(deps, path, query, { method: 'PATCH', body }));
 }
+
+export interface GoogleEventCreate {
+  summary: string;
+  start: string;
+  end: string;
+  guests: readonly string[];
+  meetRequestId: string | null;
+  location: string;
+  description: string;
+}
+
+export async function createGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  create: GoogleEventCreate,
+): Promise<GoogleEvent> {
+  const query = new URLSearchParams({ sendUpdates: create.guests.length > 0 ? 'all' : 'none' });
+  if (create.meetRequestId) query.set('conferenceDataVersion', '1');
+  const body = {
+    summary: create.summary,
+    start: { dateTime: create.start },
+    end: { dateTime: create.end },
+    ...(create.location ? { location: create.location } : {}),
+    ...(create.description ? { description: create.description } : {}),
+    ...(create.guests.length > 0 ? { attendees: create.guests.map((email) => ({ email })) } : {}),
+    ...(create.meetRequestId
+      ? {
+          conferenceData: {
+            createRequest: {
+              requestId: create.meetRequestId,
+              conferenceSolutionKey: { type: 'hangoutsMeet' },
+            },
+          },
+        }
+      : {}),
+  };
+  return parsedEvent(await getJson(deps, eventPath(calendarId), query, { method: 'POST', body }));
+}

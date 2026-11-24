@@ -11,6 +11,7 @@ import { CopyToasts } from './copy-toast.tsx';
 import { DayView, type TodayProps } from './DayView.tsx';
 import { MonthView } from './MonthView.tsx';
 import { WeekView } from './WeekView.tsx';
+import { NewEventButton } from './NewEventButton.tsx';
 import { RefreshCalendar } from './RefreshCalendar.tsx';
 import { TodayStatePage } from './TodayStates.tsx';
 import { todayState } from './today-model.ts';
@@ -132,6 +133,7 @@ function TodayViews(props: TodayProps) {
   useTodayEventRequests(showEvent);
   const switcher = (
     <div className="td-tools">
+      <NewEventButton date={date} today={today} now={now} />
       <RefreshCalendar />
       <div className="td-views">
         <Segmented
