@@ -60,8 +60,11 @@ export const watchTranscript: WatchTranscript = (path, from, onLines) => {
     }
   };
   let chain = Promise.resolve();
-  const queue = () => {
-    chain = chain.then(() => (closed ? undefined : read())).catch(() => undefined);
+  let watching = false;
+  const queue = (polled = false) => {
+    chain = chain
+      .then(() => (closed || (polled && !watching) ? undefined : read()))
+      .catch(() => undefined);
     return chain;
   };
   try {
@@ -69,8 +72,7 @@ export const watchTranscript: WatchTranscript = (path, from, onLines) => {
   } catch {
     return null;
   }
-  const onChange = () => void queue();
-  let watching = false;
+  const onChange = () => void queue(true);
   const pause = () => {
     if (watching) unwatchFile(path, onChange);
     watching = false;
@@ -84,7 +86,7 @@ export const watchTranscript: WatchTranscript = (path, from, onLines) => {
   resume();
   return {
     ready: chain,
-    flush: queue,
+    flush: () => queue(),
     offset: () => (offset === null ? null : offset - rest.length),
     pause,
     resume,
