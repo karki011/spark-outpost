@@ -29,6 +29,10 @@
   scroll-margin-top: 8px;
 }
 
+.col > section[data-deferred] {
+  min-height: 360px;
+}
+
 .col > section:not(:nth-last-child(-n + 2)) .msg {
   animation: none;
 }

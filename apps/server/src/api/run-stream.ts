@@ -42,7 +42,10 @@ async function endRun(stream: Stream, runId: string, end: 'done' | 'missing'): P
 }
 
 async function pump(stream: Stream, runId: string): Promise<boolean> {
-  const batch = await listRunEventsAfter(stream.db, runId, stream.cursors.get(runId)!);
+  const cursor = stream.cursors.get(runId)!;
+  const batch = await stream.hub.eventsAfter(runId, cursor, () =>
+    listRunEventsAfter(stream.db, runId, cursor),
+  );
   for (const stored of batch) {
     if (stream.signal.aborted) return false;
     await send(stream.res, stream.hub.frame(runId, stored), stream.signal);

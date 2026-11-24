@@ -1,6 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import type { RepoAgentConfig } from '@spark-outpost/contracts';
-import { BlobToggle } from '../../brand/BlobToggle.tsx';
+import { Switch } from '../../ui/Switch.tsx';
 import type { AgentConfigChange } from './use-agent-config.ts';
 
 export interface SetupCardsProps {
@@ -29,7 +29,7 @@ export function SetupSwitch({
   onChange,
 }: SetupSwitchProps) {
   return (
-    <BlobToggle
+    <Switch
       size="sm"
       label={label}
       checked={checked}

@@ -58,6 +58,9 @@ export async function appendRunEvents(
   events: readonly RunEvent[],
   options: AppendOptions = {},
 ): Promise<number> {
+  if (isPlainAppend(events, options)) {
+    return appendHeldEvents(db, lease, events, options.expectExpired ?? false);
+  }
   return withTransaction(db, async (client) => {
     await assertLeaseHeld(client, lease, options.expectExpired ?? false);
     const seq = await insertRunEvents(client, lease.runId, events);
@@ -79,6 +82,74 @@ export async function appendRunEvents(
     await client.query(`SELECT pg_notify('run_events', $1)`, [lease.runId]);
     return seq;
   });
+}
+
+function isPlainAppend(events: readonly RunEvent[], options: AppendOptions): boolean {
+  if (events.length === 0) return false;
+  return !options.assistantMessage && !options.artifact && !options.todo && !options.transition;
+}
+
+const SEQ_CONFLICT_ATTEMPTS = 20;
+const UNIQUE_VIOLATION = '23505';
+
+function isSeqConflict(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === UNIQUE_VIOLATION;
+}
+
+async function appendHeldEvents(
+  db: Db,
+  lease: Lease,
+  events: readonly RunEvent[],
+  expectExpired: boolean,
+): Promise<number> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await insertHeldEvents(db, lease, events, expectExpired);
+    } catch (error) {
+      if (!isSeqConflict(error) || attempt >= SEQ_CONFLICT_ATTEMPTS) throw error;
+    }
+  }
+}
+
+async function insertHeldEvents(
+  db: Db,
+  lease: Lease,
+  events: readonly RunEvent[],
+  expectExpired: boolean,
+): Promise<number> {
+  const { rows } = await db.query<{ seq: number }>(
+    `WITH held AS (
+       SELECT id FROM jobs
+       WHERE id = $1 AND lease_token = $2 AND status = 'leased' AND ${leaseExpiry(expectExpired)}
+       FOR UPDATE
+     ), last AS (
+       SELECT COALESCE(MAX(seq), 0) AS seq FROM run_events WHERE run_id = $3::uuid
+     ), inserted AS (
+       INSERT INTO run_events (run_id, seq, type, payload)
+       SELECT $3::uuid, last.seq + listed.position::integer, listed.type, listed.payload::jsonb
+       FROM held, last,
+         unnest($4::text[], $5::text[]) WITH ORDINALITY AS listed(type, payload, position)
+       ORDER BY listed.position
+       RETURNING seq
+     )
+     SELECT (SELECT MAX(seq) FROM inserted)::integer AS seq, pg_notify('run_events', $6::text)
+     FROM held`,
+    [
+      lease.jobId,
+      lease.token,
+      lease.runId,
+      events.map((event) => event.type),
+      events.map((event) => JSON.stringify(event)),
+      lease.runId,
+    ],
+  );
+  const appended = rows[0];
+  if (!appended) throw new LeaseLostError(lease);
+  return appended.seq;
+}
+
+function leaseExpiry(expectExpired: boolean): string {
+  return expectExpired ? 'lease_expires_at <= now()' : 'lease_expires_at > now()';
 }
 
 export async function insertRunEvent(
@@ -110,10 +181,9 @@ async function insertRunEvents(
 }
 
 export async function assertLeaseHeld(client: DbClient, lease: Lease, expectExpired: boolean) {
-  const expiry = expectExpired ? 'lease_expires_at <= now()' : 'lease_expires_at > now()';
   const { rowCount } = await client.query(
     `SELECT 1 FROM jobs
-     WHERE id = $1 AND lease_token = $2 AND status = 'leased' AND ${expiry}
+     WHERE id = $1 AND lease_token = $2 AND status = 'leased' AND ${leaseExpiry(expectExpired)}
      FOR UPDATE`,
     [lease.jobId, lease.token],
   );

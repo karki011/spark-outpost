@@ -1,6 +1,6 @@
 import { isReadOnlyTable, type TicketSourceId, type TicketView } from '@spark-outpost/contracts';
 import { useId, useState } from 'react';
-import { UserBlob } from '../brand/UserBlob.tsx';
+import { UserAvatar } from '../brand/UserAvatar.tsx';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
@@ -105,7 +105,7 @@ export function TicketBody({
               {ticket.comments.map((comment, index) => (
                 <li key={`${comment.createdAt}-${index}`} className="cmt">
                   <div className="cmt-head">
-                    <UserBlob displayName={comment.author ?? 'Someone'} size={22} />
+                    <UserAvatar displayName={comment.author ?? 'Someone'} size={22} />
                     <b>{comment.author ?? 'Someone'}</b>
                     <time dateTime={comment.createdAt}>{relativeTime(comment.createdAt)}</time>
                     {comment.visibility && <VisibilityTag visibility={comment.visibility} />}

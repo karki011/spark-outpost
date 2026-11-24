@@ -102,8 +102,8 @@ describe('a Google range outside the synced window', () => {
       link: 'https://www.google.com/calendar/event?eid=plan',
       location: 'Room 4',
       attendees: [
-        { name: 'Alex Wong', email: 'alex@example.com' },
-        { name: 'ivan@example.com', email: 'ivan@example.com' },
+        { name: 'Alex Wong', email: 'alex@example.com', reply: 'none' },
+        { name: 'ivan@example.com', email: 'ivan@example.com', reply: 'none' },
       ],
     });
     expect(h.fake.requests.slice(before).map((request) => request.path)).toEqual([

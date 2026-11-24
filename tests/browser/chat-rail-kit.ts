@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { expect, type Page } from '@playwright/test';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
 import { openChats } from './navigation.ts';
@@ -72,7 +73,7 @@ export async function longChat(page: Page, prompts: readonly string[] = PROMPTS)
 export async function widenSecondReply(page: Page) {
   await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch();
+    const response = await fetchFresh(route);
     const detail = (await response.json()) as ConversationDetail;
     const second = detail.messages.filter((message) => message.role === 'assistant')[1];
     const messages = detail.messages.map((message) =>

@@ -124,6 +124,9 @@ function editAction(key: string): CalendarEditAction {
       recurring: true,
     },
     floor: ['others', 'shared'],
+    meet: false,
+    guests: [],
+    reply: null,
   };
 }
 
@@ -171,4 +174,53 @@ test('shows a calendar change before and after on its card', async ({ page }) =>
     .include('.sac')
     .analyze();
   expect(scan.violations).toEqual([]);
+});
+
+test('shows guests and the Meet link on an invite card', async ({ page }) => {
+  const family = (await status(page)).accounts
+    .flatMap((account) => account.calendars)
+    .find((calendar) => calendar.title === 'Spark Family')!;
+  const change = editAction(family.key);
+  const invite: CalendarEditAction = {
+    ...change,
+    op: 'create',
+    eventId: null,
+    occurrence: null,
+    fields: { title: 'Launch sync', start: change.after!.start, end: change.after!.end },
+    before: null,
+    after: { ...change.after!, title: 'Launch sync', others: 0, recurring: false },
+    floor: ['invites'],
+    meet: true,
+    guests: ['ana@example.com', 'bo@example.com'],
+  };
+  await seedChats([
+    {
+      title: 'Set up the launch sync',
+      run: { status: 'awaiting_approval' },
+      approval: {
+        kind: 'spark_action',
+        title: 'Add this event? Launch sync',
+        payload: {
+          sparkAction: invite,
+          sparkResult: { state: 'waiting', message: null, url: null },
+        },
+        options: [
+          { optionId: SPARK_ACTION_OPTION.confirm, name: 'Add and invite', kind: 'allow_once' },
+          { optionId: SPARK_ACTION_OPTION.decline, name: 'Don’t', kind: 'reject_once' },
+        ],
+      },
+    },
+  ]);
+  await openChats(page);
+  await page
+    .getByRole('navigation', { name: 'Chats' })
+    .getByRole('button', { name: /^Set up the launch sync/ })
+    .click();
+  const event = page.getByRole('group', { name: /Add this event\?/ });
+  await expect(event).toContainText('wants to add an event.');
+  await expect(event).toContainText('ana@example.com, bo@example.com');
+  await expect(event).toContainText('Google Meet link');
+  await expect(event).toContainText('Google emails each guest an invitation');
+  await expect(event.getByRole('button', { name: 'Add and invite' })).toBeVisible();
+  if (SHOTS) await event.screenshot({ path: `${SHOTS}/calendar-invite-card.png` });
 });

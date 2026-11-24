@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  WHATS_NEW_SLUG,
+  isWhatsNewEntryFile,
+  parseWhatsNewEntry,
+  whatsNewBody,
+  type WhatsNewEntry,
+} from './guide-whats-new.ts';
 
 export interface GuideHeading {
   depth: number;
@@ -92,6 +99,16 @@ export function inlineText(markdown: string): string {
     .trim();
 }
 
+const IMAGE_MARKDOWN = /!\[[^\]]*\]\(([^)\s]+)\)/g;
+
+export function guideLineWords(line: string): number {
+  const text = inlineText(line.replace(IMAGE_MARKDOWN, ' ').replace(/\|/g, ' ')).replace(
+    /^\s*(#{1,6}|>|[-*+]|\d+\.)\s+/,
+    '',
+  );
+  return text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
+}
+
 export function headingAnchor(text: string): string {
   return inlineText(text)
     .toLowerCase()
@@ -152,11 +169,22 @@ export function guideSlug(fileName: string): string | null {
   return base.slice(0, -3);
 }
 
+function withEntries(source: string, entries: readonly WhatsNewEntry[]): string {
+  return entries.length === 0 ? source : `${source.trimEnd()}\n\n${whatsNewBody(entries)}\n`;
+}
+
 export function loadGuidePages(files: Record<string, string>): GuidePage[] {
+  const entries = Object.entries(files)
+    .filter(([file]) => isWhatsNewEntryFile(file))
+    .map(([file, source]) => parseWhatsNewEntry(file, source));
   const pages: GuidePage[] = [];
   for (const [file, source] of Object.entries(files)) {
+    if (isWhatsNewEntryFile(file)) continue;
     const slug = guideSlug(file);
-    if (slug) pages.push(parseGuidePage(slug, source));
+    if (!slug) continue;
+    pages.push(
+      parseGuidePage(slug, slug === WHATS_NEW_SLUG ? withEntries(source, entries) : source),
+    );
   }
   return pages.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
 }

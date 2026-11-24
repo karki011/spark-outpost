@@ -4,6 +4,7 @@ const MAX_CACHED_FRAMES = 2_000;
 const MAX_CACHED_CHARS = 4_000_000;
 
 type Listener = (runId: string) => void;
+type LoadEvents = () => Promise<StoredRunEvent[]>;
 
 function eventFrame(runId: string, stored: StoredRunEvent): string {
   return `data: ${JSON.stringify({ runId, seq: stored.seq, event: stored.event })}\n\n`;
@@ -80,9 +81,11 @@ export class RunWatch {
 export class RunEventHub {
   private readonly listeners = new Map<string, Set<Listener>>();
   private readonly frames = new Map<string, string>();
+  private readonly loading = new Map<string, Map<number, Promise<StoredRunEvent[]>>>();
   private cachedChars = 0;
 
   notify(runId: string): void {
+    this.loading.delete(runId);
     for (const listener of [...(this.listeners.get(runId) ?? [])]) listener(runId);
   }
 
@@ -101,6 +104,19 @@ export class RunEventHub {
     if (!listening) return;
     listening.delete(listener);
     if (listening.size === 0) this.listeners.delete(runId);
+  }
+
+  eventsAfter(runId: string, afterSeq: number, load: LoadEvents): Promise<StoredRunEvent[]> {
+    const shared = this.loading.get(runId)?.get(afterSeq);
+    if (shared) return shared;
+    const byCursor = this.loading.get(runId) ?? new Map<number, Promise<StoredRunEvent[]>>();
+    this.loading.set(runId, byCursor);
+    const batch = load().finally(() => {
+      if (byCursor.get(afterSeq) === batch) byCursor.delete(afterSeq);
+      if (byCursor.size === 0 && this.loading.get(runId) === byCursor) this.loading.delete(runId);
+    });
+    byCursor.set(afterSeq, batch);
+    return batch;
   }
 
   frame(runId: string, stored: StoredRunEvent): string {

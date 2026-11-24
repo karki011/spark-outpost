@@ -1,11 +1,12 @@
 import {
   guideHrefTarget,
+  guideLineWords,
   guideNextSlug,
-  inlineText,
   markdownLines,
   type GuidePage,
   type GuidePageType,
 } from '../packages/contracts/src/guide.ts';
+import { WHATS_NEW_WORDS_MAX } from '../packages/contracts/src/guide-whats-new.ts';
 
 export const WORD_CAPS: Readonly<Record<GuidePageType, number>> = {
   start: 200,
@@ -13,7 +14,7 @@ export const WORD_CAPS: Readonly<Record<GuidePageType, number>> = {
   concept: 300,
   reference: 600,
   troubleshooting: 350,
-  'whats-new': 400,
+  'whats-new': WHATS_NEW_WORDS_MAX,
 };
 
 export const PARAGRAPH_WORDS_MAX = 40;
@@ -33,18 +34,10 @@ const TIP = /^>\s*\*\*Tip:\*\*/gm;
 const TIME_ESTIMATE = /About \d+ minutes?\./;
 const NUMBERED_STEP = /^\s*1\.\s/m;
 
-function wordsIn(line: string): number {
-  const text = inlineText(line.replace(IMAGE, ' ').replace(/\|/g, ' ')).replace(
-    /^\s*(#{1,6}|>|[-*+]|\d+\.)\s+/,
-    '',
-  );
-  return text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
-}
-
 export function proseWords(body: string): number {
   return markdownLines(body)
     .filter(({ line }) => !TABLE_RULE.test(line))
-    .reduce((sum, { line }) => sum + wordsIn(line), 0);
+    .reduce((sum, { line }) => sum + guideLineWords(line), 0);
 }
 
 export function longestParagraph(body: string): number {
@@ -52,7 +45,7 @@ export function longestParagraph(body: string): number {
   let current = 0;
   for (const { line, code } of markdownLines(body)) {
     const prose = !code && line.trim() !== '' && !BLOCK_START.test(line) && !/^\s{2,}/.test(line);
-    current = prose ? current + wordsIn(line) : 0;
+    current = prose ? current + guideLineWords(line) : 0;
     longest = Math.max(longest, current);
   }
   return longest;

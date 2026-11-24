@@ -1,9 +1,7 @@
 import { memo, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
-import type { ScoutMood } from '../brand/BlobScout.tsx';
-import type { BlobExpression } from '../brand/blob-expression.ts';
-import { UserBlob } from '../brand/UserBlob.tsx';
+import { UserAvatar } from '../brand/UserAvatar.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { useRecordingId } from '../meetings/index.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
@@ -44,7 +42,6 @@ interface RailProps {
   ticketsWaiting: number;
   ticketNotices: number;
   githubUpdates: boolean;
-  mood: ScoutMood;
   onView: (view: AppView) => void;
   onIntent: (view: AppView) => void;
   onSettingsIntent: () => void;
@@ -222,14 +219,6 @@ const RESUME_ICON = (
   </svg>
 );
 
-const MOOD_EXPRESSIONS: Record<NonNullable<ScoutMood>, BlobExpression> = {
-  working: 'thinking',
-  alert: 'unsure',
-  happy: 'happy',
-  sad: 'sad',
-  sleep: 'sleepy',
-};
-
 function useIndicator(view: AppView) {
   const railRef = useRef<HTMLElement>(null);
   const [box, setBox] = useState<{ top: number; height: number } | null>(null);
@@ -251,7 +240,6 @@ export const Rail = memo(function Rail({
   ticketsWaiting,
   ticketNotices,
   githubUpdates,
-  mood,
   onView,
   onIntent,
   onSettingsIntent,
@@ -334,12 +322,7 @@ export const Rail = memo(function Rail({
         onFocus={onSettingsIntent}
         onClick={onProfile}
       >
-        <UserBlob
-          displayName={name}
-          size={40}
-          expression={mood ? MOOD_EXPRESSIONS[mood] : 'idle'}
-          animate="always"
-        />
+        <UserAvatar displayName={name} size={40} />
       </button>
       <span
         className="rail-ind"

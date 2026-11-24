@@ -14,7 +14,7 @@ import {
   visibleModels,
 } from './model-options.ts';
 import { UnusableModelNotice } from './UnusableModelNotice.tsx';
-import { BlobSwitchFace } from '../../brand/BlobToggle.tsx';
+import { SwitchFace } from '../../ui/Switch.tsx';
 
 interface ModelListProps {
   provider: ProviderSetup;
@@ -74,7 +74,7 @@ export function ModelList({ provider, capabilities, loading, selected, onSelect 
           aria-checked={showRetiring}
           onClick={() => setShowRetiring(!showRetiring)}
         >
-          <BlobSwitchFace checked={showRetiring} />
+          <SwitchFace checked={showRetiring} />
           Show retiring models
         </button>
       )}

@@ -105,6 +105,30 @@ describe('releasePlan', () => {
     );
   });
 
+  it('uploads a Windows alpha installer and its latest copy before the channel file, when built', () => {
+    const version = '0.1.0-beta.1';
+    const exe = `Spark-Outpost-${version}-windows-alpha-x64.exe`;
+    const beta = releasePlan({
+      version,
+      mode: 'publish',
+      files: [...built(version), { name: exe, size: 170 * MB }],
+      channelText: (name) => (name === 'beta-mac.yml' ? channel(version) : null),
+    });
+    expect(beta.problems).toEqual([]);
+    const order = names(beta.uploads);
+    expect(order.slice(-3)).toEqual([
+      exe,
+      'Spark-Outpost-latest-windows-alpha-x64.exe',
+      'beta-mac.yml',
+    ]);
+    expect(beta.uploads.find((step) => step.name === exe)!.cacheControl).toBe(ARTIFACT_CACHE);
+    expect(beta.uploads.at(-2)).toMatchObject({ source: exe, cacheControl: CHANNEL_CACHE });
+    expect(
+      names(plan(version, 'publish', { 'beta-mac.yml': channel(version) }).uploads),
+    ).not.toContain(exe);
+    expect(names(plan('0.1.0', 'promote').uploads)).toEqual(['latest-mac.yml']);
+  });
+
   it('can hold a stable build on Beta, then promote the same build to Stable', () => {
     expect(names(plan('0.1.0', 'beta-only').uploads).slice(-1)).toEqual(['beta-mac.yml']);
     const promote = plan('0.1.0', 'promote');

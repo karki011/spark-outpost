@@ -1,0 +1,201 @@
+.wk-page {
+  overflow: hidden;
+}
+
+.wk-weekends {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.wk-page .td-tools {
+  margin-left: 0;
+}
+
+.wk {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.wk-head,
+.wk-body {
+  display: grid;
+  grid-template-columns: 56px repeat(var(--wk-days), minmax(0, 1fr));
+}
+
+.wk-head {
+  border-bottom: 1px solid var(--line);
+}
+
+.wk-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px 6px;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.wk-day:hover {
+  background: var(--raise);
+}
+
+.wk-num {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.wk-day[aria-current='date'] .wk-num {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.wk-allday {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 3px 4px;
+  border-left: 1px solid var(--line);
+}
+
+.wk-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 8px;
+}
+
+.wk-body {
+  position: relative;
+  background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 100% 56px;
+}
+
+.wk-gutter {
+  position: relative;
+  background: var(--panel);
+}
+
+.wk-gutter span {
+  position: absolute;
+  right: 8px;
+  margin-top: -8px;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.wk-col {
+  position: relative;
+  min-width: 0;
+  border-left: 1px solid var(--line);
+}
+
+.wk-ev {
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-left: 3px solid var(--cal-color, var(--line-strong));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cal-color, var(--line-strong)) 18%, var(--panel));
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: left;
+}
+
+.wk-chip {
+  padding: 2px 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wk-block {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 6px;
+}
+
+.wk-title {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wk-time {
+  color: var(--muted);
+}
+
+.wk-ev:hover,
+.wk-ev[aria-expanded='true'] {
+  z-index: 2;
+  border-color: var(--text);
+  border-left-color: var(--cal-color, var(--line-strong));
+}
+
+.wk-ev[data-reply='dashed'] {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  border-left-style: solid;
+  border-left-color: var(--cal-color, var(--line-strong));
+  background: var(--panel);
+}
+
+.wk-ev[data-reply='striped'] {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cal-color, var(--line-strong)) 18%, var(--panel)) 0 6px,
+    var(--panel) 6px 10px
+  );
+}
+
+.wk-ev[data-reply='struck'] {
+  background: var(--panel);
+  color: var(--faint);
+}
+
+.wk-ev[data-reply='struck'] .wk-title {
+  text-decoration: line-through;
+}
+
+.wk-ev[data-ended] {
+  background: var(--panel);
+  color: var(--faint);
+}
+
+.wk-ev[data-ended] .wk-time {
+  color: var(--faint);
+}
+
+.wk-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+@media (prefers-contrast: more) {
+  .wk-ev {
+    border-color: var(--line-strong);
+  }
+}

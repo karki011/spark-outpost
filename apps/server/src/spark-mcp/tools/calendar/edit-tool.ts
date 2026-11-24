@@ -1,13 +1,17 @@
 import { z } from 'zod';
 import {
   CALENDAR_ALARM_MAX_MINUTES,
+  CALENDAR_GUESTS_MAX,
   calendarEditConfirm,
+  calendarEditOpSchema,
   calendarEditSpanSchema,
+  calendarReplySchema,
   type CalendarChoice,
   type CalendarEditAction,
   type CalendarEditOp,
   type CalendarEventFacts,
   type CalendarEventFields,
+  type CalendarReply,
 } from '@spark-outpost/contracts';
 import { agentDetail, cloudCanEdit, type AgentCalendar } from '../../../calendar/agent/access.ts';
 import {
@@ -17,6 +21,7 @@ import {
   factsAfter,
   factsOf,
   floorReasons,
+  googleOnlyProblem,
   isSynced,
   newEventProblem,
   timesProblem,
@@ -35,8 +40,6 @@ import { parseWhen } from './read-model.ts';
 
 const TOOL = 'spark_calendar_edit';
 
-const editOpSchema = z.enum(['create', 'update', 'delete']);
-
 interface EditArgs {
   action: CalendarEditOp;
   calendar: string;
@@ -50,6 +53,9 @@ interface EditArgs {
   notes?: string | undefined;
   location?: string | undefined;
   alarmMinutes?: number | null | undefined;
+  guests: string[];
+  meet: boolean;
+  reply?: CalendarReply | undefined;
 }
 
 function iso(text: string | undefined, name: string): string | undefined {
@@ -101,7 +107,7 @@ function checked(
   prior: CalendarEventFacts | null,
   fields: CalendarEventFields,
 ) {
-  if (op === 'delete') return null;
+  if (op === 'delete' || op === 'reply') return null;
   const problem =
     op === 'create'
       ? newEventProblem(fields)
@@ -123,10 +129,22 @@ async function plan(calendar: AgentCalendar, args: EditArgs): Promise<CalendarEd
     span: args.span,
   });
   if (refusal) throw new CalendarToolError('refused', refusal);
+  const guests = [...new Set(args.guests.map((guest) => guest.toLowerCase()))];
+  const unfit = googleOnlyProblem({
+    op: args.action,
+    choice,
+    guests: guests.length,
+    meet: args.meet,
+  });
+  if (unfit) throw new CalendarToolError('invalid_input', unfit);
+  if (args.action === 'reply' && !args.reply) {
+    throw new CalendarToolError('invalid_input', 'Pass reply: accepted, tentative or declined.');
+  }
   const prior = await asToolErrors(() => before(calendar, choice, args));
   const crowded = othersRefusal(choice, prior?.others ?? 0);
   if (crowded) throw new CalendarToolError('refused', crowded);
-  const fields = args.action === 'delete' ? {} : completeFields(requestedFields(args), prior);
+  const changes = args.action === 'create' || args.action === 'update';
+  const fields = changes ? completeFields(requestedFields(args), prior) : {};
   const after = checked(args.action, prior, fields);
   return {
     action: 'calendar_edit',
@@ -143,7 +161,10 @@ async function plan(calendar: AgentCalendar, args: EditArgs): Promise<CalendarEd
     fields,
     before: prior,
     after,
-    floor: floorReasons(args.action, choice, prior?.others ?? 0),
+    floor: floorReasons(args.action, choice, prior?.others ?? 0, guests.length),
+    meet: args.meet,
+    guests,
+    reply: args.action === 'reply' ? args.reply! : null,
   };
 }
 
@@ -164,6 +185,9 @@ async function edit(args: EditArgs, context: SparkToolContext) {
       calendarKey: action.calendar.key,
       synced: action.calendar.synced,
       changed: Object.keys(action.fields).toSorted(),
+      ...(action.meet ? { meet: true } : {}),
+      ...(action.guests.length > 0 ? { guests: action.guests.length } : {}),
+      ...(action.reply ? { reply: action.reply } : {}),
       ...(action.floor.length > 0 ? { floor: action.floor } : {}),
       ...('approvalId' in result && result.approvalId ? { approvalId: result.approvalId } : {}),
     },
@@ -177,9 +201,9 @@ export const calendarEditTool = sparkTool({
   acts: true,
   title: 'Change the calendar',
   description:
-    'Creates, changes (title, start, end, allDay, notes, location, alarmMinutes; null removes the alarm) or deletes an event on a calendar where the user turned on Agents can edit. calendar is the calendar key; update and delete take eventId and occurrence from the event’s ref. span future changes a recurring macOS event from this occurrence on. Follows the agent mode with a card showing the change before and after; an event with other people and a shared calendar always ask. Never invites anyone or answers invitations.',
+    'Creates, changes (title, start, end, allDay, notes, location, alarmMinutes; null removes the alarm) or deletes an event on a calendar where the user turned on Agents can edit. calendar is the calendar key; update, delete and reply take eventId and occurrence from the event’s ref. span future changes a recurring macOS event from this occurrence on. On Google only: create takes meet (adds a Google Meet link) and guests (emails; Google emails each an invitation), and reply answers an invitation (accepted, tentative, declined; Google tells the organiser). Follows the agent mode with a card showing the change before and after; guests, a reply, an event with other people and a shared calendar always ask.',
   input: {
-    action: editOpSchema,
+    action: calendarEditOpSchema,
     calendar: z.uuid(),
     eventId: z.string().max(500).optional(),
     occurrence: z.string().max(40).optional(),
@@ -191,6 +215,9 @@ export const calendarEditTool = sparkTool({
     notes: z.string().max(20_000).optional(),
     location: z.string().max(2_000).optional(),
     alarmMinutes: z.number().int().min(0).max(CALENDAR_ALARM_MAX_MINUTES).nullable().optional(),
+    guests: z.array(z.email().max(300)).max(CALENDAR_GUESTS_MAX).default([]),
+    meet: z.boolean().default(false),
+    reply: calendarReplySchema.optional(),
   },
   run: (args, context) =>
     auditFailures(context, { tool: TOOL, action: args.action }, () => edit(args, context)),

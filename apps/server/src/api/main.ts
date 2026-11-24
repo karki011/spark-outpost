@@ -14,12 +14,8 @@ import { scheduleWorkflows } from '../crew-flows/scheduler.ts';
 import { reviewRunnerDeps, startReviewRunner } from '../github-inbox/review/runner.ts';
 import { startMorningBrief } from '../digest/morning.ts';
 import { startWeekRecap } from '../recap/schedule.ts';
-import { followAssistantChat } from '../companion/assistant.ts';
 import { ensureLocalWorkspace } from '../persistence/conversations.ts';
-import { acceptRulesBaseline } from '../spark-rules/rules-store.ts';
 import { crewSparksDir } from '../crew/folders.ts';
-import { moveInstructionsToFolders } from '../crew/move-instructions.ts';
-import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { startOutcomeSweep } from '../outcomes/sweep.ts';
@@ -42,8 +38,6 @@ import { shellAlerts } from '../terminal/shell-alerts.ts';
 import { recordShellAlert } from '../persistence/shell-alerts.ts';
 import { notifyAttention } from '../persistence/attention-items.ts';
 import { terminalPullTracker } from '../pr-tracking/terminal.ts';
-import { forgetAllShells } from '../persistence/terminal-shells.ts';
-import { stopAllPreviewRows } from '../persistence/preview-servers.ts';
 import { previewRuntime } from '../preview/process.ts';
 import { PreviewServers } from '../preview/servers.ts';
 import { attachTerminalSockets } from '../terminal/websocket.ts';
@@ -61,6 +55,7 @@ import { gitHubAppConfig } from '../ship/github/app-config.ts';
 import { loadInbox } from '../tickets/inbox.ts';
 import { pullRequestChanged } from '../tickets/inbox-snapshot.ts';
 import { RunEventHub } from './run-event-hub.ts';
+import { resetAtStartup } from './startup-reset.ts';
 import { systemPortProbe } from '../terminal/chat-port-probe.ts';
 import { terminalCliLocator } from '../terminal/windows-cli.ts';
 import { chatPortWatcher, type ChatPortWatcher } from '../terminal/chat-port-watcher.ts';
@@ -101,40 +96,26 @@ const db = createDb(config.DATABASE_URL, { max: POOL_MAX.api });
 await migrateOrExit(db, { backup: configuredBackup(config) });
 
 const workspaceId = await ensureLocalWorkspace(db);
-await seedModelStats(db);
-await acceptRulesBaseline().catch((error: unknown) => {
-  console.error("Could not record Spark's accepted rules", error);
-});
-await moveInstructionsToFolders(db).then(
-  ({ failed }) => {
-    if (failed.length > 0) console.error(`Could not move instructions for ${failed.length} Sparks`);
-  },
-  (error: unknown) => console.error("Could not move Sparks' instructions to their folders", error),
-);
 const hub = new RunEventHub();
 const activeWork = new ActiveWork();
 const stopLagMonitor = startLagMonitor({ processName: 'API', work: activeWork });
 ensureSpawnHelperExecutable();
-await forgetAllShells(db, workspaceId);
-await followAssistantChat(db, workspaceId).catch((error: unknown) => {
-  console.error('Could not apply the Ask Spark settings', (error as Error).message);
-});
-await stopAllPreviewRows(db, workspaceId);
 const previews = new PreviewServers(db, workspaceId, previewRuntime());
 const agentTerminals = new AgentTerminals(db, workspaceId, agentTerminalRuntime());
-await agentTerminals.recover();
-const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
-
 const secrets = configuredSecretStore(config);
+const desktopCalendar = connectDesktopCalendar(process.env, process);
+const [listener, clouds] = await Promise.all([
+  listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId)),
+  desktopCalendar ? startCloudCalendars(config, { db, workspaceId, secrets, fetch }) : null,
+  resetAtStartup({ db, workspaceId, agentTerminals }),
+]);
 const { slackSignIn, slackDeps, focus, slackNotifier, slackMentions } = startSlackServices(config, {
   db,
   workspaceId,
   secrets,
 });
-const desktopCalendar = connectDesktopCalendar(process.env, process);
-const { google: googleCalendar, microsoft: microsoftCalendar } = desktopCalendar
-  ? await startCloudCalendars(config, { db, workspaceId, secrets, fetch })
-  : { google: null, microsoft: null };
+const googleCalendar = clouds?.google ?? null;
+const microsoftCalendar = clouds?.microsoft ?? null;
 let calendarTicker: CalendarTicker | null = null;
 let chatPorts: ChatPortWatcher | null = null;
 const { keys: remotePushKeys, notifier: pushNotifier } = startPushServices({
@@ -197,7 +178,6 @@ const meetings = createMeetingService({
   onEnded: (meeting) => void writeMeetingNotes(meeting.id).catch(() => undefined),
   writeNotes: writeMeetingNotes,
 });
-await meetings.recover();
 const cloneDeps = {
   db,
   workspaceId,
@@ -256,7 +236,8 @@ const terminals = new TerminalSessions(
 );
 const desktopBrowser = connectDesktopBrowser(process.env, process);
 const nativeMcpPortFile = join(nativeSessionsDir, `mcp-port${perInstance}`);
-const nativeMcp = await startSparkMcpHost(
+const nativeApprovalWaiters = new ApprovalWaiters();
+const startingNativeMcp = startSparkMcpHost(
   {
     db,
     secrets,
@@ -289,15 +270,15 @@ const nativeMcp = await startSparkMcpHost(
   undefined,
   savedPort(nativeMcpPortFile),
 );
+const [nativeMcp, calendarWrittenListener, nativeApprovalListener] = await Promise.all([
+  startingNativeMcp,
+  listen(config.DATABASE_URL, CALENDAR_WRITTEN_CHANNEL, () => {
+    googleCalendar?.refresh();
+    microsoftCalendar?.refresh();
+  }),
+  listen(config.DATABASE_URL, 'approvals', (id) => nativeApprovalWaiters.notify(id)),
+]);
 savePort(nativeMcpPortFile, nativeMcp.port);
-const nativeApprovalWaiters = new ApprovalWaiters();
-const calendarWrittenListener = await listen(config.DATABASE_URL, CALENDAR_WRITTEN_CHANNEL, () => {
-  googleCalendar?.refresh();
-  microsoftCalendar?.refresh();
-});
-const nativeApprovalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
-  nativeApprovalWaiters.notify(id),
-);
 const nativeTerminals = await createNativeRuntime({
   db,
   workspaceId,
@@ -322,11 +303,15 @@ const startingArtifactPages = startArtifactOrigin({
   console.error('Could not start the artifact page server', (error as Error).message);
   return null;
 });
-const [artifactPages] = await Promise.all([startingArtifactPages, nativeTerminals.recover()]);
+const clones = cloneJobsFor(cloneDeps);
+const [artifactPages] = await Promise.all([
+  startingArtifactPages,
+  nativeTerminals.recover(),
+  meetings.recover(),
+  clones.recover(),
+]);
 sparkPorts.add(nativeMcp.port).add(nativeTerminals.port);
 desktopBrowser?.blockPorts([nativeMcp.port, nativeTerminals.port]);
-const clones = cloneJobsFor(cloneDeps);
-await clones.recover();
 const shares = shareWiring({ db, secrets, origin: config.SPARK_SHARE_URL });
 const { app, reconcileRemote } = createAppParts({
   nudgeReviews: () => reviewRunner?.nudge(),
@@ -378,6 +363,7 @@ const { app, reconcileRemote } = createAppParts({
   pushTest: (deviceId) => pushNotifier.test(deviceId),
   calendarHost: desktopCalendar,
   googleCalendar,
+  zoom: clouds?.zoom ?? null,
   microsoftCalendar,
   meetings,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE

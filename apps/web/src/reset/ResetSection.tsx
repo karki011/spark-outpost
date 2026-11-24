@@ -4,7 +4,7 @@ import { ResetBlob } from './ResetBlob.tsx';
 import { setResetState, useResetState } from './reset-store.ts';
 import { useResetBlobMood } from './use-reset-blob-mood.ts';
 import './reset.css';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { useSettingFocus } from '../settings/setting-focus.ts';
 
 export const KEEP_KEYS_LABEL = 'Keep my API keys';
@@ -59,7 +59,7 @@ export function ResetSection() {
       </div>
       <div ref={keepRow} className="field reset-keep">
         <label ref={keepControl} className="check-row">
-          <BlobToggle
+          <Switch
             size="sm"
             label={KEEP_KEYS_LABEL}
             checked={keepApiKeys}

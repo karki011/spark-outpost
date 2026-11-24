@@ -2,7 +2,7 @@ import './calendar-card.css';
 import './calendar-connector.css';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { GOOGLE_TESTING_LINE, type CalendarStatus } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { CloudIcon, LaptopIcon, LockIcon } from '../ui/icons.tsx';
@@ -45,7 +45,7 @@ function AgentsRead({ on }: { on: boolean }) {
   return (
     <>
       <SettingRow label={AGENTS_READ_LABEL} controlId={id} hint={AGENTS_READ_HINT} hintId={hintId}>
-        <BlobToggle
+        <Switch
           id={id}
           label={AGENTS_READ_LABEL}
           checked={checked}

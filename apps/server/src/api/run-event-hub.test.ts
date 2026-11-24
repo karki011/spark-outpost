@@ -59,3 +59,75 @@ describe('RunEventHub watches', () => {
     watch.close();
   });
 });
+
+describe('RunEventHub shared event loads', () => {
+  function deferredLoads() {
+    const settle: ((batch: StoredRunEvent[]) => void)[] = [];
+    const fail: ((error: Error) => void)[] = [];
+    const load = () =>
+      new Promise<StoredRunEvent[]>((resolve, reject) => {
+        settle.push(resolve);
+        fail.push(reject);
+      });
+    return { settle, fail, load };
+  }
+
+  it('loads once for subscribers waiting at the same cursor of a run', async () => {
+    const hub = new RunEventHub();
+    const loads = deferredLoads();
+    const first = hub.eventsAfter('run', 3, loads.load);
+    const second = hub.eventsAfter('run', 3, loads.load);
+    expect(loads.settle).toHaveLength(1);
+    loads.settle[0]!([stored(4, 'a'), stored(5, 'b')]);
+    expect(await first).toEqual([stored(4, 'a'), stored(5, 'b')]);
+    expect(await second).toBe(await first);
+  });
+
+  it('loads separately for another cursor and for another run', async () => {
+    const hub = new RunEventHub();
+    const loads = deferredLoads();
+    const behind = hub.eventsAfter('run', 0, loads.load);
+    const ahead = hub.eventsAfter('run', 3, loads.load);
+    const other = hub.eventsAfter('other', 3, loads.load);
+    expect(loads.settle).toHaveLength(3);
+    loads.settle[0]!([stored(1, 'a')]);
+    loads.settle[1]!([stored(4, 'd')]);
+    loads.settle[2]!([]);
+    expect(await behind).toEqual([stored(1, 'a')]);
+    expect(await ahead).toEqual([stored(4, 'd')]);
+    expect(await other).toEqual([]);
+  });
+
+  it('never hands a subscriber a load that began before the latest notice', async () => {
+    const hub = new RunEventHub();
+    const loads = deferredLoads();
+    const early = hub.eventsAfter('run', 3, loads.load);
+    hub.notify('other');
+    expect(hub.eventsAfter('run', 3, loads.load)).toBe(early);
+    hub.notify('run');
+    const late = hub.eventsAfter('run', 3, loads.load);
+    expect(loads.settle).toHaveLength(2);
+    loads.settle[0]!([stored(4, 'a')]);
+    loads.settle[1]!([stored(4, 'a'), stored(5, 'b')]);
+    expect(await early).toEqual([stored(4, 'a')]);
+    expect(await late).toEqual([stored(4, 'a'), stored(5, 'b')]);
+  });
+
+  it('loads again once a shared load has settled or failed', async () => {
+    const hub = new RunEventHub();
+    const loads = deferredLoads();
+    const first = hub.eventsAfter('run', 3, loads.load);
+    const joined = hub.eventsAfter('run', 3, loads.load);
+    loads.fail[0]!(new Error('database gone'));
+    await expect(first).rejects.toThrow('database gone');
+    await expect(joined).rejects.toThrow('database gone');
+    const retried = hub.eventsAfter('run', 3, loads.load);
+    expect(loads.settle).toHaveLength(2);
+    loads.settle[1]!([]);
+    expect(await retried).toEqual([]);
+    const after = hub.eventsAfter('run', 3, loads.load);
+    expect(loads.settle).toHaveLength(3);
+    loads.settle[2]!([stored(4, 'a')]);
+    expect(await after).toEqual([stored(4, 'a')]);
+  });
+});

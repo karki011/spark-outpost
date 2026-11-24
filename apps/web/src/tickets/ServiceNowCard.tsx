@@ -12,7 +12,7 @@ import {
   type TicketConnections,
   type UpdateTicketSettingsRequest,
 } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { AccountRow } from '../connectors/AccountRow.tsx';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
@@ -81,7 +81,7 @@ function TypeRow({
   const wanted = save.isPending ? save.variables.serviceNowTypes?.[id] : undefined;
   return (
     <SettingRow label={name} controlId={controlId} hint={typeLine(id, type)} hintId={hintId}>
-      <BlobToggle
+      <Switch
         id={controlId}
         label={name}
         checked={wanted ?? type.on}

@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { mkdirSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
@@ -225,7 +226,7 @@ test.describe('plain chats', () => {
     await longChat(page);
     await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
-      const response = await route.fetch();
+      const response = await fetchFresh(route);
       const detail = (await response.json()) as ConversationDetail;
       const run = detail.runs.filter((candidate) => !candidate.parentRunId)[1]!;
       const steer = {
@@ -272,7 +273,7 @@ test.describe('plain chats', () => {
     await longChat(page, PROMPTS.slice(0, 3));
     await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
-      const response = await route.fetch();
+      const response = await fetchFresh(route);
       const detail = (await response.json()) as ConversationDetail;
       const run = detail.runs[0]!;
       const ask = detail.messages.find((message) => message.id === run.userMessageId)!;
@@ -304,9 +305,14 @@ test.describe('plain chats', () => {
     );
     expect(Math.min(...heights)).toBeGreaterThanOrEqual(4);
 
+    await expect(turns(page)).toHaveCount(303);
+    await expect(turns(page).last().locator('.bubble')).toBeInViewport();
+
     await page.locator('.thread').evaluate((element) => element.scrollTo({ top: 0 }));
     await expect(ticks(page).first()).toHaveAttribute('aria-current', 'location');
     await expect(ticks(page).first()).toBeInViewport();
+    await expect(turns(page).first().locator('.bubble')).toBeInViewport();
+    await expect(page.locator('.thread section[data-deferred]')).toHaveCount(0);
     await page
       .locator('.thread')
       .evaluate((element) => element.scrollTo({ top: element.scrollHeight }));

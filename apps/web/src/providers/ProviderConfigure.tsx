@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import type { AdvisorSetup, ProviderSetup } from '@spark-outpost/contracts';
-import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { ProviderMark } from '../brand/ProviderMark.tsx';
 import { BackIcon } from '../ui/icons.tsx';
 import { burstAt } from '../ui/sparks.ts';
 import { ConfigSection } from './ConfigSection.tsx';
@@ -12,17 +12,11 @@ import { screenState, useSectionState, type SectionId } from './section-state.ts
 import { connectSummary, DefaultsSummary, testSummary } from './SectionSummaries.tsx';
 import { StatusChip } from './StatusChip.tsx';
 import { TestSection } from './TestSection.tsx';
-import { useTestMessage, type TestPhase } from './test-message.ts';
+import { useTestMessage } from './test-message.ts';
 import type { TileStatus } from './tile-status.ts';
-import {
-  useProviderConnect,
-  type ConnectCallbacks,
-  type ProviderMood,
-} from './use-provider-connect.ts';
+import { useProviderConnect, type ConnectCallbacks } from './use-provider-connect.ts';
 import './provider-configure.css';
 import './provider-compact.css';
-
-const TEST_MOOD: Partial<Record<TestPhase, ProviderMood>> = { answered: 'happy', failed: 'sad' };
 
 interface ProviderConfigureProps extends ConnectCallbacks {
   setup: ProviderSetup | AdvisorSetup;
@@ -115,12 +109,7 @@ export function ProviderConfigure({
           className={test.phase === 'idle' ? 'plogo' : `plogo test-${test.phase}`}
           layoutId={`pblob-${setup.id}`}
         >
-          <ProviderBlob
-            providerId={setup.id}
-            size={compact ? 34 : 48}
-            expression={TEST_MOOD[test.phase] ?? connect.mood}
-            animate="always"
-          />
+          <ProviderMark providerId={setup.id} size={compact ? 34 : 48} />
         </motion.span>
         <span className="pconf-name">
           <h3 id={titleId}>{setup.name}</h3>

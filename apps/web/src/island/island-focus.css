@@ -17,8 +17,8 @@
   animation: isl-focus-in 0.32s var(--out) both;
 }
 
-.isl-focus[data-seen] .isl-focus-ask {
-  background: var(--faint);
+.isl-focus[data-seen] .isl-focus-need {
+  color: var(--faint);
 }
 
 @keyframes isl-focus-in {
@@ -40,29 +40,14 @@
   min-width: 0;
 }
 
-.isl-focus-blob {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 120px;
-  height: 120px;
-  margin-bottom: 10px;
-}
-
-.isl-focus-ask {
-  position: absolute;
-  top: 2px;
-  left: 0;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  corner-shape: round;
-  background: var(--warn);
-  color: var(--accent-ink);
-  font-size: 15px;
-  font-weight: 800;
+.isl-focus-need {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .isl-focus-chat {

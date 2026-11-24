@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { QueryClient, type QueryKey } from '@tanstack/react-query';
 import type { AppEvent } from '@spark-outpost/contracts';
-import { isLiveQueryKey, isStepEvent, mergeInvalidations } from './app-event-keys.ts';
+import { isLiveQueryKey, isStepEvent, mergeInvalidations, usageChats } from './app-event-keys.ts';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -158,9 +158,16 @@ describe('app event invalidation', () => {
     expect(await invalidatedWhile(covered, { ...event('step'), runId: RUN })).toContain('detailA');
   });
 
-  it('a new usage reading refreshes the open chat even while its run is streamed', async () => {
+  it('a new usage reading refetches nothing and names the chat whose runs to patch', async () => {
     const reading: AppEvent = { ...event('usage'), runId: RUN };
-    expect(await invalidatedWhile((runId) => runId === RUN, reading)).toEqual(['detailA']);
+    expect(await invalidatedWhile((runId) => runId === RUN, reading)).toEqual([]);
+    expect(usageChats([reading, reading, event('usage', B)], [])).toEqual([A, B]);
+  });
+
+  it('skips the runs patch for a chat whose detail the same batch refetches', () => {
+    const events = [event('usage'), event('run'), event('usage', B), event('usage', null)];
+    expect(usageChats(events, mergeInvalidations(events))).toEqual([B]);
+    expect(usageChats([event('run'), event('step')], [])).toEqual([]);
   });
 
   it('a sub-agent starting or ending refreshes the sidebar row and the open chat, outside the step lane', async () => {

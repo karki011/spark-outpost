@@ -28,6 +28,7 @@ import { shownApprovalsForConversation } from './approvals.ts';
 import { attachmentsForMessages, linkAttachments } from './attachments.ts';
 import { resolveChatSettings } from './chat-settings.ts';
 import { withChatBranches } from './chat-worktrees.ts';
+import { bounded } from './bounded.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { conversationTopics } from './assistant-topics.ts';
 import { listCompactions, listContinuations } from './compactions.ts';
@@ -163,6 +164,8 @@ export async function pruneEmptyConversations(db: Queryable, workspaceId: string
   );
 }
 
+const DETAIL_QUERIES_AT_ONCE = 4;
+
 export async function getConversationDetail(
   db: Queryable,
   id: string,
@@ -197,18 +200,21 @@ export async function getConversationDetail(
     promptCache,
     asks,
     subChatStarts,
-  ] = await Promise.all([
-    db.query<MessageRow>(
-      `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE conversation_id = $1 ORDER BY created_at, id`,
-      [id],
-    ),
-    db.query<RunRow>(
-      `SELECT r.*, ${RUN_FROM_CHAT_COLUMN} FROM runs r
+  ] = await bounded(DETAIL_QUERIES_AT_ONCE, [
+    () =>
+      db.query<MessageRow>(
+        `SELECT ${MESSAGE_COLUMNS} FROM messages WHERE conversation_id = $1 ORDER BY created_at, id`,
+        [id],
+      ),
+    () =>
+      db.query<RunRow>(
+        `SELECT r.*, ${RUN_FROM_CHAT_COLUMN} FROM runs r
        WHERE r.conversation_id = $1 ORDER BY r.created_at`,
-      [id],
-    ),
-    db.query<StepEventRow>(
-      `SELECT e.run_id, e.type,
+        [id],
+      ),
+    () =>
+      db.query<StepEventRow>(
+        `SELECT e.run_id, e.type,
          COALESCE(e.payload->>'stepName', e.payload->>'messageId') AS name,
          e.payload ? 'subagentRunId' AS subagent,
          e.payload->'metadata'->'spark' AS mark,
@@ -220,30 +226,30 @@ export async function getConversationDetail(
          AND e.type IN ('STEP_STARTED', 'STEP_FINISHED', 'REASONING_START')
          AND ${STEP_NOT_INTERRUPTED}
        ORDER BY e.run_id, e.seq`,
-      [id],
-    ),
-    resolveChatSettings(db, id),
-    taskOverviews(db, id),
-    shownApprovalsForConversation(db, id),
-    conversationAdvice(db, id),
-    conversationOrchestrations(db, id),
-    conversationPlans(db, id),
-    listCompactions(db, id),
-    listContinuations(db, id),
-    conversationTopics(db, id),
-    listQueue(db, id),
-    listMemberMessages(db, id),
-    listRailFlags(db, id),
-    listBrowserShots(db, id),
-    listChatFiles(db, id),
-    listArtifactPages(db, id),
-    listCommands(db, id),
-    findInterruption(db, id),
-    conversationSubagents(db, id),
-    nativeStepActivity(db, id),
-    promptCacheFor(db, id),
-    listChatAsks(db, id),
-    listSubChatStarts(db, id),
+        [id],
+      ),
+    () => resolveChatSettings(db, id),
+    () => taskOverviews(db, id),
+    () => shownApprovalsForConversation(db, id),
+    () => conversationAdvice(db, id),
+    () => conversationOrchestrations(db, id),
+    () => conversationPlans(db, id),
+    () => listCompactions(db, id),
+    () => listContinuations(db, id),
+    () => conversationTopics(db, id),
+    () => listQueue(db, id),
+    () => listMemberMessages(db, id),
+    () => listRailFlags(db, id),
+    () => listBrowserShots(db, id),
+    () => listChatFiles(db, id),
+    () => listArtifactPages(db, id),
+    () => listCommands(db, id),
+    () => findInterruption(db, id),
+    () => conversationSubagents(db, id),
+    () => nativeStepActivity(db, id),
+    () => promptCacheFor(db, id),
+    () => listChatAsks(db, id),
+    () => listSubChatStarts(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,

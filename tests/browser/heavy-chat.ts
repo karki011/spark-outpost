@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { createHash } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type { ConversationDetail, Message } from '../../packages/contracts/src/conversations.ts';
@@ -100,7 +101,7 @@ export async function openHeavyChat(page: Page, keepLive = false): Promise<void>
   await expect(page.locator('.todo-line')).toContainText('3 of 3 done', { timeout: 30_000 });
   await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch();
+    const response = await fetchFresh(route);
     const detail = (await response.json()) as ConversationDetail;
     const grown = keepLive ? inflateKeepingLive(detail) : inflate(detail);
     await route.fulfill({ response, json: detail.tasks.length > 0 ? grown : detail });

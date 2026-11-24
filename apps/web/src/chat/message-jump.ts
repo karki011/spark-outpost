@@ -51,11 +51,13 @@ export function useMessageJump(
   scroller: RefObject<HTMLDivElement | null>,
   release: () => void,
   revision: unknown,
+  revealMessage: (messageId: string) => boolean,
 ): void {
   const jump = useSyncExternalStore(subscribe, snapshot);
   useEffect(() => {
     const root = scroller.current;
     if (!jump || jump.conversationId !== conversationId || !root) return;
+    if (!revealMessage(jump.match.messageId)) return;
     const target = takeJump(jump, root);
     if (!target) return;
     release();
@@ -63,5 +65,5 @@ export function useMessageJump(
     target.classList.remove('flash');
     void target.offsetWidth;
     target.classList.add('flash');
-  }, [jump, conversationId, scroller, release, revision]);
+  }, [jump, conversationId, scroller, release, revision, revealMessage]);
 }

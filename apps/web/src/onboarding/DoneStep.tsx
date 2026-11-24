@@ -13,8 +13,8 @@ import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { modeSummary } from '../chat/composer/mode-summary.ts';
 import { currentModel } from '../chat/composer/model-options.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
-import { ProviderBlob } from '../brand/ProviderBlob.tsx';
-import { UserBlob } from '../brand/UserBlob.tsx';
+import { ProviderMark } from '../brand/ProviderMark.tsx';
+import { UserAvatar } from '../brand/UserAvatar.tsx';
 import { readAppearance, systemLook } from '../theme/appearance.ts';
 import { appearanceSummary, resolveSkin, tintOf } from '../theme/theme.ts';
 import { burstAt } from '../ui/sparks.ts';
@@ -63,7 +63,7 @@ function providerItem(
   );
   return {
     key: provider.id,
-    icon: <ProviderBlob providerId={provider.id} size={30} expression="happy" animate="always" />,
+    icon: <ProviderMark providerId={provider.id} size={30} />,
     title: (
       <>
         <b>{provider.name}</b> via {connection.method === 'api_key' ? 'API key' : 'local CLI'}
@@ -100,7 +100,7 @@ export function DoneStep({ displayName, providers, defaultProvider, level }: Don
   const items: SummaryItem[] = [
     {
       key: 'you',
-      icon: <UserBlob displayName={displayName} size={30} expression="happy" animate="always" />,
+      icon: <UserAvatar displayName={displayName} size={30} />,
       title: <b>{displayName.trim()}</b>,
       detail: 'This is you in chats',
     },

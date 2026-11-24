@@ -233,6 +233,7 @@ export const SPEC_GROUPS = {
     'calendar-microsoft',
     'calendar-month',
     'calendar-nudges',
+    'calendar-week',
     'companion',
     'digest',
     'home',
@@ -338,6 +339,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/app-lock/', groups: ['island-desktop'] },
   { prefix: 'apps/web/src/attention/', groups: ['island-desktop', 'chat', 'home'] },
   { prefix: 'apps/web/src/calendar/', groups: ['home', 'island-desktop'] },
+  { prefix: 'apps/web/src/zoom/', groups: ['home'] },
   { prefix: 'apps/web/src/meetings/', groups: ['home'] },
   { prefix: 'apps/web/src/categories/', groups: ['chat', 'sidebar-projects'] },
   {
@@ -423,6 +425,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/audit/', groups: ['analytics-audit', 'approvals'] },
   { prefix: 'apps/server/src/browser/', groups: ['terminal-preview-browser'] },
   { prefix: 'apps/server/src/calendar/', groups: ['home'] },
+  { prefix: 'apps/server/src/zoom/', groups: ['home'] },
   { prefix: 'apps/server/src/meetings/', groups: ['home'] },
   { prefix: 'apps/server/src/mac-control/', groups: ['settings-providers'] },
   { prefix: 'apps/server/src/chat-files/', groups: ['chat'] },

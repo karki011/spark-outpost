@@ -49,9 +49,29 @@ export async function loadUserMcp(
     .map(launchOf);
 }
 
+export type McpBearer = (
+  server: { id: string; url: string },
+  options?: { renew?: boolean },
+) => Promise<string | null>;
+
+async function signedHeaders(
+  server: UserMcpLaunch,
+  headers: Record<string, string>,
+  bearer: McpBearer | undefined,
+  renew: boolean,
+): Promise<Record<string, string>> {
+  if (!bearer || !server.url || server.transport === 'stdio') return headers;
+  const token = await bearer({ id: server.id, url: server.url }, { renew }).catch(() => null);
+  if (!token) return headers;
+  const others = Object.entries(headers).filter(([name]) => name.toLowerCase() !== 'authorization');
+  return { ...Object.fromEntries(others), Authorization: `Bearer ${token}` };
+}
+
 export async function resolveUserServer(
   server: UserMcpLaunch,
   secrets: Pick<SecretStore, 'get'> | undefined,
+  bearer?: McpBearer,
+  renew = false,
 ): Promise<McpServerConfig> {
   const values = keepNames(
     await readMcpSecrets(secrets, server.id),
@@ -65,7 +85,7 @@ export async function resolveUserServer(
     args: server.args,
     url: server.url,
     env: values.env,
-    headers: values.headers,
+    headers: await signedHeaders(server, values.headers, bearer, renew),
     fingerprint: server.fingerprint,
   };
 }
@@ -73,6 +93,7 @@ export async function resolveUserServer(
 export function resolveUserMcp(
   servers: readonly UserMcpLaunch[],
   secrets: Pick<SecretStore, 'get'> | undefined,
+  bearer?: McpBearer,
 ): Promise<McpServerConfig[]> {
-  return Promise.all(servers.map((server) => resolveUserServer(server, secrets)));
+  return Promise.all(servers.map((server) => resolveUserServer(server, secrets, bearer)));
 }

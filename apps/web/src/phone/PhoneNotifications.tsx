@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { RemoteSession } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import {
   NOTIFY_BLOCKED,
   NOTIFY_HOME_SCREEN,
@@ -25,7 +25,7 @@ function NotifyToggle({ allowed }: { allowed: boolean }) {
       <ul className="ph-switches">
         <li className="ph-switch">
           <label htmlFor={switchId}>{NOTIFY_LABEL}</label>
-          <BlobToggle
+          <Switch
             id={switchId}
             size="sm"
             label={NOTIFY_LABEL}

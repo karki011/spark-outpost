@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { mkdirSync } from 'node:fs';
 import { expect, test, type Page, type Route } from '@playwright/test';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
@@ -111,7 +112,7 @@ async function richTools(page: Page) {
   });
   await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch();
+    const response = await fetchFresh(route);
     const detail = (await response.json()) as ConversationDetail;
     const runs = detail.runs.map((run) =>
       run.parentRunId ? run : { ...run, following: ['CLAUDE.md', 'AGENTS.md'] },

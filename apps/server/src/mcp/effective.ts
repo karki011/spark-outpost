@@ -49,5 +49,6 @@ export function userServerView(server: UserMcpRow, rows: readonly EnablementRow[
       .filter((row) => row.scope === 'project')
       .map((row) => ({ projectId: row.scopeKey, ...enablementOf(server, row) })),
     check: server.check,
+    signIn: server.signIn,
   };
 }

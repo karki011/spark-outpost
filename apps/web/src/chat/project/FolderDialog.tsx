@@ -7,7 +7,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { FolderListing, Project } from '@spark-outpost/contracts';
 import { formatBytes } from '../../api/attachments.ts';
 import { projectKeys, projectsApi, type FolderPick } from '../../api/projects.ts';
-import { BlobToggle } from '../../brand/BlobToggle.tsx';
+import { Switch } from '../../ui/Switch.tsx';
 import { FileIcon } from '../attachments/attachment-icons.tsx';
 import { ClonePanel } from './clone/ClonePanel.tsx';
 import { useCloneNeedsAttention } from './clone/use-clone-jobs.ts';
@@ -285,7 +285,7 @@ export function FolderDialog({
       </div>
       {picksFile && (
         <label className="fdlg-hidden">
-          <BlobToggle
+          <Switch
             size="sm"
             label="Show hidden folders and files"
             checked={hidden}

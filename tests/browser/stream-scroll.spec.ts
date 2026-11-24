@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { expect, test, type Page } from '@playwright/test';
 import { fakeReply } from '../../apps/server/src/providers/fake.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
@@ -85,7 +86,7 @@ async function refetchWithFinalText(page: Page, conversationPath: string, finalT
   await page.route(`**${conversationPath}`, async (route) => {
     if (!pending || route.request().method() !== 'GET') return route.fallback();
     pending = false;
-    const response = await route.fetch();
+    const response = await fetchFresh(route);
     const detail = await response.json();
     const run = detail.runs.at(-1);
     run.status = 'succeeded';

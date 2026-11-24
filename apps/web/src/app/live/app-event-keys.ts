@@ -166,7 +166,7 @@ function invalidationsFor(event: AppEvent, streamed: RunStreamed): Invalidation[
     case 'step':
       return stepInvalidations(event, streamed);
     case 'usage':
-      return conversationScoped(event, false);
+      return [];
     case 'subagent':
       return [list, ...conversationScoped(event, true)];
     case 'approval':
@@ -257,4 +257,19 @@ export function mergeInvalidations(
   }
   const all = [...unique.values()];
   return all.filter((narrow) => !all.some((broad) => covers(broad, narrow)));
+}
+
+export function usageChats(
+  events: readonly AppEvent[],
+  invalidations: readonly Invalidation[],
+): string[] {
+  const refetched = new Set(
+    invalidations.flatMap(({ queryKey }) =>
+      queryKey.length === 2 && queryKey[0] === queryKeys.conversations[0] ? [queryKey[1]] : [],
+    ),
+  );
+  const chats = events.flatMap((event) =>
+    event.kind === 'usage' && event.conversationId ? [event.conversationId] : [],
+  );
+  return [...new Set(chats)].filter((id) => !refetched.has(id));
 }

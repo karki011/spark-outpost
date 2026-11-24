@@ -14,9 +14,9 @@ const SPARK = {
 afterEach(cleanup);
 
 describe('RowFace', () => {
-  it('draws the chat its own blob', () => {
+  it('draws a plain chat its status glyph', () => {
     const { container } = render(<RowFace chat={chat(FE_CHAT)} state="working" />);
-    expect(container.querySelectorAll('.chat-face')).toHaveLength(1);
+    expect(container.querySelectorAll('.chat-glyph')).toHaveLength(1);
     expect(container.querySelector('.rface')).toBeNull();
   });
 

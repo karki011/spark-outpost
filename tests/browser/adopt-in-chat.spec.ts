@@ -59,9 +59,9 @@ test('a pull request the agent only mentioned can be worked on in this chat', as
   await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText(SEED_TITLE);
   const panel = page.locator('#work-panel');
-  if (!(await panel.isVisible())) {
-    await page.getByRole('button', { name: 'Show work panel' }).click();
-  }
+  const show = page.getByRole('button', { name: 'Show work panel' });
+  await expect(panel.or(show).first()).toBeVisible();
+  if (!(await panel.isVisible())) await show.click();
   await panel.getByRole('tab', { name: 'Links' }).click();
   await expect(panel).toContainText('Mentioned by the agent');
 

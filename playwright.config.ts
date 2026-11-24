@@ -8,6 +8,7 @@ import {
   FAKE_GOOGLE_CLIENT_ID,
   FAKE_GOOGLE_CLIENT_SECRET,
 } from './apps/server/test/fake-google-calendar.ts';
+import { FAKE_ZOOM_CLIENT_ID } from './apps/server/test/fake-zoom.ts';
 import { LINEAR_KEY } from './apps/server/test/fake-linear.ts';
 import { SLACK_BOT_TOKEN, SLACK_USER_TOKEN } from './apps/server/test/fake-slack.ts';
 import { API_TOKEN_ENV, API_TOKEN_HEADER } from './packages/contracts/src/api-token.ts';
@@ -102,6 +103,9 @@ const serverEnv = {
   GOOGLE_ACCOUNTS_URL: `${STUB_URL}/google`,
   GOOGLE_OAUTH_URL: `${STUB_URL}/google`,
   GOOGLE_CALENDAR_API_URL: `${STUB_URL}/google/calendar/v3`,
+  SPARK_ZOOM_CLIENT_ID: FAKE_ZOOM_CLIENT_ID,
+  ZOOM_OAUTH_URL: `${STUB_URL}/zoom`,
+  ZOOM_API_URL: `${STUB_URL}/zoom/v2`,
   FAKE_ACP_AGENT: path.resolve('apps/server/test/fake-acp-agent.ts'),
   FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
   FAKE_ACP_MODES: JSON.stringify(FAKE_ACP_MODES),

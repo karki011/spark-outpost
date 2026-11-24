@@ -1,6 +1,6 @@
 import './watch-indicator.css';
 import type { Profile, UpdateProfileRequest } from '@spark-outpost/contracts';
-import { BlobToggle } from '../../brand/BlobToggle.tsx';
+import { Switch } from '../../ui/Switch.tsx';
 import { phoneSwitchOff, useRemoteClient } from '../../phone/use-remote-client.ts';
 import { useProfileSetting } from '../../settings/use-profile-setting.ts';
 import { EyeIcon, EyeOffIcon } from '../../ui/icons.tsx';
@@ -47,7 +47,7 @@ function OfferSwitch({ label, saved, toUpdate }: OfferSwitchProps) {
   const allowed = useRemoteClient().allows('settings');
   return (
     <span className="prw-control">
-      <BlobToggle
+      <Switch
         size="sm"
         label={label}
         checked={setting.value}

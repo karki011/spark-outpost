@@ -1,6 +1,6 @@
 import './cost-pane.css';
 import type { Run, TaskDetail } from '@spark-outpost/contracts';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
+import { AgentMark } from '../brand/ProviderMark.tsx';
 import { formatTokens } from '../chat/composer/model-options.ts';
 import { CrewBlob } from '../crew/CrewBlob.tsx';
 import type { CrewAgent } from '../crew/crew-model.ts';
@@ -57,7 +57,7 @@ function CostBar({ slices, total }: { slices: readonly CostSlice[]; total: numbe
 
 function RowBlob({ row }: { row: CostRow }) {
   if (row.crew) return <CrewBlob name={row.name} provider={row.provider} state="done" size={22} />;
-  return <AgentBlob provider={row.provider} size={22} />;
+  return <AgentMark provider={row.provider} size={22} />;
 }
 
 function rowDetail(row: CostRow): string {

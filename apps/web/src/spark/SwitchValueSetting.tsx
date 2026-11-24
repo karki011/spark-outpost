@@ -1,12 +1,11 @@
 import { useId, type ReactNode } from 'react';
-import { BlobToggle, type BlobKind } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import type { DocTarget } from '../ui/DocLink.tsx';
 import type { TipContent } from '../ui/Tooltip.tsx';
 
 interface SwitchValueSettingProps {
   label: string;
-  blob: BlobKind;
   info: TipContent;
   doc?: DocTarget;
   hint: string;
@@ -17,7 +16,6 @@ interface SwitchValueSettingProps {
 
 export function SwitchValueSetting({
   label,
-  blob,
   info,
   doc,
   hint,
@@ -38,14 +36,7 @@ export function SwitchValueSetting({
     >
       <span className="spark-value">
         {on && children(hintId)}
-        <BlobToggle
-          id={switchId}
-          label={label}
-          kind={blob}
-          checked={on}
-          describedBy={hintId}
-          onChange={onToggle}
-        />
+        <Switch id={switchId} label={label} checked={on} describedBy={hintId} onChange={onToggle} />
       </span>
     </SettingRow>
   );

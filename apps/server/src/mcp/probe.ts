@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import {
@@ -17,6 +18,7 @@ export interface ProbeResult {
   ok: boolean;
   tools: string[];
   error: string | null;
+  unauthorized?: boolean;
 }
 
 export interface McpProbeOptions {
@@ -70,7 +72,13 @@ function stderrOf(transport: AnyTransport): () => string {
 function failure(error: unknown, stderr: string): ProbeResult {
   const message = error instanceof Error ? error.message : String(error);
   const detail = stderr ? `${message}\n${stderr}` : message;
-  return { ok: false, tools: [], error: redactText(detail).slice(0, 1200) };
+  const unauthorized = error instanceof UnauthorizedError || /\b401\b|unauthorized/i.test(message);
+  return {
+    ok: false,
+    tools: [],
+    error: redactText(detail).slice(0, 1200),
+    ...(unauthorized ? { unauthorized } : {}),
+  };
 }
 
 export async function probeMcpServer(
