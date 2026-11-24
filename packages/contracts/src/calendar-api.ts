@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { calendarChoiceSchema, calendarEventSchema, dayShapeSchema } from './calendar.ts';
 import { calendarHelperStateSchema } from './calendar-bridge.ts';
-import { calendarAuthorizationSchema, calendarSourceKindSchema } from './calendar-helper.ts';
+import {
+  calendarAuthorizationSchema,
+  calendarMyStatusSchema,
+  calendarSourceKindSchema,
+} from './calendar-helper.ts';
 import { calendarGoogleStatusSchema } from './calendar-google.ts';
 import { calendarMicrosoftStatusSchema } from './calendar-microsoft.ts';
 
@@ -204,7 +208,43 @@ export type CalendarOccurrence = z.infer<typeof calendarOccurrenceSchema>;
 export const calendarPersonSchema = z.object({
   name: z.string().max(300),
   email: z.string().max(300).nullable(),
+  reply: calendarMyStatusSchema.optional(),
 });
+
+export const calendarReplySchema = z.enum(['accepted', 'tentative', 'declined']);
+export type CalendarReply = z.infer<typeof calendarReplySchema>;
+
+export const calendarReplyRequestSchema = z
+  .object({
+    eventId: z.string().min(1).max(500),
+    start: z.iso.datetime({ offset: true }),
+    calendarKey: z.uuid(),
+    reply: calendarReplySchema,
+  })
+  .strict();
+export type CalendarReplyRequest = z.infer<typeof calendarReplyRequestSchema>;
+
+export const CALENDAR_GUESTS_MAX = 50;
+
+export const calendarVideoSchema = z.enum(['none', 'meet', 'zoom']);
+export type CalendarVideo = z.infer<typeof calendarVideoSchema>;
+
+export const calendarCreateRequestSchema = z
+  .object({
+    calendarKey: z.uuid(),
+    title: z.string().trim().min(1).max(300),
+    start: z.iso.datetime({ offset: true }),
+    end: z.iso.datetime({ offset: true }),
+    guests: z.array(z.email().max(300)).max(CALENDAR_GUESTS_MAX),
+    video: calendarVideoSchema,
+    location: z.string().max(500),
+    notes: z.string().max(5_000),
+  })
+  .strict()
+  .refine((request) => Date.parse(request.end) > Date.parse(request.start), {
+    message: 'The end must be after the start.',
+  });
+export type CalendarCreateRequest = z.infer<typeof calendarCreateRequestSchema>;
 export type CalendarPerson = z.infer<typeof calendarPersonSchema>;
 
 export const calendarEventDetailSchema = z.object({

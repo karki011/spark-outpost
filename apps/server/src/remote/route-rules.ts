@@ -118,6 +118,7 @@ DELETE /api/conversations/:id/steers/:itemId
 GET /api/conversations
 GET /api/conversations/:id
 GET /api/conversations/:id/annotations
+GET /api/conversations/:id/runs
 GET /api/conversations/:id/sub-chats
 GET /api/runs/:id
 GET /api/run-events
@@ -231,6 +232,8 @@ GET /api/mcp/servers/:id/sign-in
 POST /api/mcp/servers/:id/sign-in
 DELETE /api/mcp/servers/:id/sign-in
 POST /api/mcp/servers/:id/sign-out
+POST /api/calendar/reply
+POST /api/calendar/events
 GET /api/calendar/google/sign-in
 POST /api/calendar/google/sign-in
 DELETE /api/calendar/google/sign-in
@@ -239,6 +242,10 @@ GET /api/calendar/microsoft/sign-in
 POST /api/calendar/microsoft/sign-in
 DELETE /api/calendar/microsoft/sign-in
 DELETE /api/calendar/microsoft/accounts/:id
+GET /api/zoom/status
+POST /api/zoom/sign-in
+DELETE /api/zoom/sign-in
+DELETE /api/zoom/account
 GET /api/island/requests
 POST /api/island/requests/:id/claim
 GET /api/remote/access

@@ -123,12 +123,17 @@ export function mapGoogleEvent(
   };
 }
 
+function replyOf(status: string | undefined): CalendarMyStatus {
+  return RESPONSE[status ?? ''] ?? 'none';
+}
+
 export function googleInvitees(attendees: GoogleEvent['attendees']): Invitee[] {
   return (attendees ?? []).slice(0, CALENDAR_ATTENDEES_MAX * 2).map((attendee) => ({
     name: (attendee.displayName ?? '').slice(0, 300),
     email: attendee.email?.slice(0, 300) ?? null,
     isMe: attendee.self === true,
     room: attendee.resource === true,
+    reply: replyOf(attendee.responseStatus),
   }));
 }
 

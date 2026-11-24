@@ -1,10 +1,14 @@
 :root {
   --jet: #111316;
+  --cta: var(--brand);
+  --cta-ink: var(--brand-ink);
 }
 
 [data-accent='blaze'] {
   --brand: #ff5a1f;
   --brand-ink: #111316;
+  --cta: #c2410c;
+  --cta-ink: #fff;
 }
 
 [data-accent='acid'] {

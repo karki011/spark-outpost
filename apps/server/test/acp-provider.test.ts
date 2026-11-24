@@ -368,6 +368,13 @@ async function recordTurn(prompt: string, stopWhen?: (output: ProviderOutput) =>
   return { written, outputs, toolCalls: audit.toolCallCount() };
 }
 
+interface SentUpdate {
+  sessionUpdate: string;
+  messageId?: string;
+  toolCallId?: string;
+  content?: { text?: string };
+}
+
 const protocolOnly = (entries: ProtocolEntry[]) =>
   entries.filter((entry) => entry.kind !== 'stderr');
 
@@ -390,7 +397,21 @@ describe('ACP protocol audit against the fake agent', { timeout: 20_000 }, () =>
     );
     expect(calls.indexOf('from_agent notification session/update')).toBeGreaterThan(prompt);
     expect(calls.at(-1)).toBe('from_agent response session/prompt');
-    expect(calls.filter((call) => call.includes('session/update'))).toHaveLength(7);
+    const updates = entries
+      .filter((entry) => entry.method === 'session/update')
+      .map((entry) => (entry.payload as { params: { update: SentUpdate } }).params.update);
+    const steps = updates.map(
+      (update) => `${update.sessionUpdate} ${update.messageId ?? update.toolCallId ?? ''}`,
+    );
+    expect(steps.filter((step, index) => step !== steps[index - 1])).toEqual([
+      'agent_thought_chunk ',
+      'tool_call r1',
+      'tool_call_update r1',
+      'agent_message_chunk m1',
+      'agent_message_chunk m2',
+    ]);
+    const firstReply = updates.filter((update) => update.messageId === 'm1');
+    expect(firstReply.map((update) => update.content?.text).join('')).toBe('Hello there');
     const times = entries.map((entry) => entry.at.getTime());
     expect(times).toEqual([...times].sort((a, b) => a - b));
     for (const entry of entries) {

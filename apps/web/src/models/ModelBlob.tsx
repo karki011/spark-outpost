@@ -1,30 +1,18 @@
 import type { ModelTier, ProviderId } from '@spark-outpost/contracts';
-import type { BlobExpression } from '../brand/blob-expression.ts';
-import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { ProviderMark } from '../brand/ProviderMark.tsx';
 import { SparkleIcon } from '../ui/icons.tsx';
 
-const TIER_LOOK: Record<ModelTier, { size: number; expression: BlobExpression }> = {
-  small: { size: 16, expression: 'sleepy' },
-  mid: { size: 20, expression: 'idle' },
-  top: { size: 22, expression: 'thinking' },
-  frontier: { size: 22, expression: 'happy' },
-};
+const TIER_SIZE: Record<ModelTier, number> = { small: 16, mid: 20, top: 22, frontier: 22 };
 
 interface ModelBlobProps {
   provider: ProviderId;
   tier: ModelTier;
-  retiring: boolean;
 }
 
-export function ModelBlob({ provider, tier, retiring }: ModelBlobProps) {
-  const look = TIER_LOOK[tier];
+export function ModelBlob({ provider, tier }: ModelBlobProps) {
   return (
     <span className="mc-blob" aria-hidden="true">
-      <ProviderBlob
-        providerId={provider}
-        size={look.size}
-        expression={retiring ? 'sad' : look.expression}
-      />
+      <ProviderMark providerId={provider} size={TIER_SIZE[tier]} />
       {tier === 'frontier' && (
         <span className="mc-spark">
           <SparkleIcon />

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CALENDAR_GUESTS_MAX, calendarReplySchema, type CalendarReply } from './calendar-api.ts';
 import { calendarEditSpanSchema, calendarEventFieldsSchema } from './calendar-helper.ts';
 
 const instant = z.iso.datetime({ offset: true });
@@ -24,10 +25,10 @@ export const calendarEventFactsSchema = z.object({
 });
 export type CalendarEventFacts = z.infer<typeof calendarEventFactsSchema>;
 
-export const calendarEditOpSchema = z.enum(['create', 'update', 'delete']);
+export const calendarEditOpSchema = z.enum(['create', 'update', 'delete', 'reply']);
 export type CalendarEditOp = z.infer<typeof calendarEditOpSchema>;
 
-export const calendarFloorReasonSchema = z.enum(['delete', 'others', 'shared']);
+export const calendarFloorReasonSchema = z.enum(['delete', 'others', 'shared', 'invites', 'reply']);
 export type CalendarFloorReason = z.infer<typeof calendarFloorReasonSchema>;
 
 export const calendarEditActionSchema = z.object({
@@ -45,7 +46,10 @@ export const calendarEditActionSchema = z.object({
   fields: calendarEventFieldsSchema,
   before: calendarEventFactsSchema.nullable(),
   after: calendarEventFactsSchema.nullable(),
-  floor: z.array(calendarFloorReasonSchema).max(3),
+  floor: z.array(calendarFloorReasonSchema).max(5),
+  meet: z.boolean().default(false),
+  guests: z.array(z.email().max(300)).max(CALENDAR_GUESTS_MAX).default([]),
+  reply: calendarReplySchema.nullable().default(null),
 });
 export type CalendarEditAction = z.infer<typeof calendarEditActionSchema>;
 
@@ -59,12 +63,20 @@ const EDIT_QUESTIONS: Record<CalendarEditOp, string> = {
   create: 'Add this event?',
   update: 'Change this event?',
   delete: 'Delete this event?',
+  reply: 'Answer this invitation?',
 };
 
 const EDIT_CONFIRMS: Record<CalendarEditOp, string> = {
   create: 'Add event',
   update: 'Save change',
   delete: 'Delete event',
+  reply: 'Send reply',
+};
+
+export const CALENDAR_REPLY_WORDS: Record<CalendarReply, string> = {
+  accepted: 'Yes',
+  tentative: 'Maybe',
+  declined: 'No',
 };
 
 export function calendarEditQuestion(action: CalendarEditAction): string {
@@ -72,6 +84,7 @@ export function calendarEditQuestion(action: CalendarEditAction): string {
 }
 
 export function calendarEditConfirm(action: CalendarEditAction): string {
+  if (action.op === 'create' && action.guests.length > 0) return 'Add and invite';
   return EDIT_CONFIRMS[action.op];
 }
 
@@ -87,5 +100,8 @@ export function calendarAuditFacts(action: CalendarAction): Record<string, unkno
     span: action.span,
     changed: Object.keys(action.fields).toSorted(),
     floor: action.floor,
+    meet: action.meet,
+    guests: action.guests.length,
+    reply: action.reply,
   };
 }

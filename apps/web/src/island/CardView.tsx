@@ -290,13 +290,7 @@ export function CardView({
           cardRef.current?.focus({ preventScroll: true });
       }}
     >
-      <Who
-        name={agent.name}
-        role={agent.role}
-        provider={agent.provider}
-        title={card.chat.title}
-        expression="unsure"
-      />
+      <Who name={agent.name} role={agent.role} provider={agent.provider} title={card.chat.title} />
       <div className="isl-ttl">{title}</div>
       {card.loading && (
         <div className="isl-skl" aria-hidden="true">

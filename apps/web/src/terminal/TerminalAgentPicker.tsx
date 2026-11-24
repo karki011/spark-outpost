@@ -7,7 +7,7 @@ import {
   type NativeTerminalProvider,
   type ProviderCapabilities,
 } from '@spark-outpost/contracts';
-import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { ProviderMark } from '../brand/ProviderMark.tsx';
 import { ModeOptions } from '../chat/composer/ModeOptions.tsx';
 import { PermissionChip } from '../chat/composer/PermissionChip.tsx';
 import { ProviderSwitch } from '../chat/composer/ProviderSwitch.tsx';
@@ -109,11 +109,7 @@ export function TerminalAgentPicker({
           disabled={disabled}
           onClick={() => openFrom(agentButton.current)}
         >
-          {tracked ? (
-            <ProviderBlob providerId={tracked} size={18} animate="hover" />
-          ) : (
-            <TerminalIcon />
-          )}
+          {tracked ? <ProviderMark providerId={tracked} size={18} /> : <TerminalIcon />}
           <span className="mname">{name}</span>
           <ChevronIcon />
         </button>

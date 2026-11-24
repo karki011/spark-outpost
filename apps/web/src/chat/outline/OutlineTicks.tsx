@@ -10,6 +10,7 @@ import {
   type PointerEvent,
   type RefObject,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationDetail } from '@spark-outpost/contracts';
 import { diffApi, diffKeys } from '../../diff/diff-api.ts';
@@ -19,14 +20,22 @@ import { MarkIcon } from '../rail/RailIcons.tsx';
 import { OUTLINE_MARK_LABELS, chatOutline, type OutlineEntry } from './outline-model.ts';
 import { scrollToShow, tickAfterKey, tickReach } from './tick-model.ts';
 import { useActiveAnchor } from './use-active-turn.ts';
+import { revealAllTurns } from '../turn-window/reveal-turns.ts';
 
 interface Preview {
   id: string;
   top: number;
 }
 
+function anchorElement(anchor: string): HTMLElement | null {
+  const mounted = document.getElementById(anchor);
+  if (mounted && !mounted.hasAttribute('data-deferred')) return mounted;
+  flushSync(revealAllTurns);
+  return document.getElementById(anchor);
+}
+
 function scrollToAnchor(anchor: string): boolean {
-  const target = document.getElementById(anchor);
+  const target = anchorElement(anchor);
   if (!target) return false;
   target.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   target.closest<HTMLElement>('section[data-turn]')?.focus({ preventScroll: true });
@@ -73,9 +82,10 @@ function tickTone(entry: OutlineEntry): string | undefined {
 interface TicksProps {
   entries: readonly OutlineEntry[];
   scroller: RefObject<HTMLElement | null>;
+  mountedTurns: number;
 }
 
-function Ticks({ entries, scroller }: TicksProps) {
+function Ticks({ entries, scroller, mountedTurns }: TicksProps) {
   const nav = useRef<HTMLElement>(null);
   const strip = useRef<HTMLOListElement>(null);
   const touching = useRef(false);
@@ -84,6 +94,7 @@ function Ticks({ entries, scroller }: TicksProps) {
   const { active, jumped } = useActiveAnchor(
     scroller,
     entries.map((entry) => entry.anchor),
+    mountedTurns,
   );
   const activeIndex = entries.findIndex((entry) => entry.anchor === active);
   const tabStop = activeIndex < 0 ? 0 : activeIndex;
@@ -208,14 +219,16 @@ interface OutlineTicksProps {
   detail: ConversationDetail;
   taskId: string | null;
   scroller: RefObject<HTMLElement | null>;
+  mountedTurns: number;
 }
 
 export const OutlineTicks = memo(function OutlineTicks({
   detail,
   taskId,
   scroller,
+  mountedTurns,
 }: OutlineTicksProps) {
   const entries = useChatOutline(detail, taskId);
   if (entries.length === 0) return null;
-  return <Ticks entries={entries} scroller={scroller} />;
+  return <Ticks entries={entries} scroller={scroller} mountedTurns={mountedTurns} />;
 });

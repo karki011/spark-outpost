@@ -1,5 +1,6 @@
 import './quotes.css';
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { flushSync } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { TextAnchor } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../../api/client.ts';
@@ -7,6 +8,7 @@ import { resolveAnchor } from './anchor.ts';
 import { paintHighlight } from './highlight.ts';
 import { sourcesFor, userMessageElement } from './selection.ts';
 import type { Quote } from './use-quotes.ts';
+import { revealAllTurns } from '../turn-window/reveal-turns.ts';
 
 const SENT_HIGHLIGHT = 'spark-annotation';
 const UNSENT_HIGHLIGHT = 'spark-quote-note';
@@ -75,6 +77,7 @@ function hitMark(
 }
 
 function flashMessage(root: Element, messageId: string) {
+  if (!userMessageElement(root, messageId)) flushSync(revealAllTurns);
   const bubble = userMessageElement(root, messageId)?.querySelector('.bubble');
   if (!bubble) return;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

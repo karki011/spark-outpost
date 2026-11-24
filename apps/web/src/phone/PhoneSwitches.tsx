@@ -7,7 +7,7 @@ import {
   type RemoteSwitch,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneGroup, PhoneSection } from './PhoneSection.tsx';
 import {
@@ -51,7 +51,7 @@ export function SwitchRow({
   return (
     <li className="ph-switch">
       <label htmlFor={switchId}>{label}</label>
-      <BlobToggle
+      <Switch
         id={switchId}
         size="sm"
         label={label}

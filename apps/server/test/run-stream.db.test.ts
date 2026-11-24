@@ -142,6 +142,36 @@ describe('the shared run stream', () => {
     expect(endOf(live.frames, second)).toEqual({ runId: second, end: 'done' });
   });
 
+  it('gives subscribers at different cursors of one run exactly what each is missing', async () => {
+    const runId = await liveRun();
+    await append(runId, text('one'), text('two'), text('three'));
+    const fromStart = await stream(`${runId}:0`);
+    const twin = await stream(`${runId}:0`);
+    const resumed = await stream(`${runId}:2`);
+    hub.notify(runId);
+    await eventually(async () => eventsOf(fromStart.frames, runId).length === 3);
+    await eventually(async () => eventsOf(twin.frames, runId).length === 3);
+    await eventually(async () => eventsOf(resumed.frames, runId).length === 1);
+
+    await append(runId, text('four'));
+    const joined = await stream(`${runId}:3`);
+    await append(runId, text('five'), text('six'));
+    await finish(runId);
+    for (const live of [fromStart, twin, resumed, joined]) await live.ended;
+
+    const all = ['one', 'two', 'three', 'four', 'five', 'six', undefined].map((delta, index) => ({
+      seq: index + 1,
+      delta,
+    }));
+    expect(eventsOf(fromStart.frames, runId)).toEqual(all);
+    expect(eventsOf(twin.frames, runId)).toEqual(all);
+    expect(eventsOf(resumed.frames, runId)).toEqual(all.slice(2));
+    expect(eventsOf(joined.frames, runId)).toEqual(all.slice(3));
+    for (const live of [fromStart, twin, resumed, joined]) {
+      expect(endOf(live.frames, runId)).toEqual({ runId, end: 'done' });
+    }
+  });
+
   it('resumes each run after its own cursor, with nothing sent twice', async () => {
     const first = await liveRun();
     const second = await liveRun();

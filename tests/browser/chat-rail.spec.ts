@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
@@ -424,7 +425,7 @@ test.describe('working chats', () => {
     }
     await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
-      const response = await route.fetch();
+      const response = await fetchFresh(route);
       const detail = (await response.json()) as ConversationDetail;
       const tasks = detail.tasks.map((task) => ({
         ...task,

@@ -14,7 +14,7 @@ import {
   sessionState,
   type IslandInputs,
 } from './island-model.ts';
-import { crewQuirk, scoutMoodFor, sessionExpression } from './island-mood.ts';
+import { crewQuirk, scoutMoodFor } from './island-mood.ts';
 
 function chat(id: string, patch: Partial<ConversationSummary> = {}): ConversationSummary {
   return {
@@ -239,15 +239,6 @@ describe('island state machine', () => {
     expect(sessionState(chat('c', latest('succeeded')))).toBe('done');
     expect(sessionState(chat('d', latest('failed')))).toBe('failed');
     expect(sessionState(chat('e'))).toBe('idle');
-  });
-
-  it('gives each chat state its own face, sleepy only when quiet at night', () => {
-    expect(sessionExpression('working', true)).toBe('thinking');
-    expect(sessionExpression('waiting', false)).toBe('unsure');
-    expect(sessionExpression('done', false)).toBe('happy');
-    expect(sessionExpression('failed', true)).toBe('sad');
-    expect(sessionExpression('idle', false)).toBe('idle');
-    expect(sessionExpression('idle', true)).toBe('sleepy');
   });
 });
 

@@ -16,7 +16,11 @@ interface CloudStatus {
   signIn: GoogleSignInFlow;
 }
 
-function useCloudSignIn(provider: CloudProvider, initial: GoogleSignInFlow, enabled: boolean) {
+export function useCloudSignIn(
+  provider: CloudProvider,
+  initial: GoogleSignInFlow,
+  enabled: boolean,
+) {
   const queryClient = useQueryClient();
   const key = calendarKeys.signIn(provider);
   const flow = useQuery({

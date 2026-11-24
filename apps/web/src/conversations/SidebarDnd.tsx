@@ -1,7 +1,5 @@
 import './drag-card.css';
 import { createPortal } from 'react-dom';
-import { Blobatar } from 'blobatar/react';
-import * as expressions from 'blobatar/expression';
 import {
   DndContext,
   DragOverlay,
@@ -13,7 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
-import { chatBlob } from '../brand/ChatFace.tsx';
+import { ChatGlyph } from '../brand/ChatGlyph.tsx';
 import { ChevronIcon, FolderIcon } from '../ui/icons.tsx';
 import type { SidebarDnd } from './use-sidebar-dnd.ts';
 
@@ -64,13 +62,7 @@ function ChatCard({ chat, happy, moodKey }: ChatCardProps) {
   return (
     <div className={classes.filter(Boolean).join(' ')}>
       <span key={moodKey} className="dc-blob">
-        <Blobatar
-          {...chatBlob(chat.id)}
-          size={22}
-          animate="always"
-          expression={happy ? expressions.happy : expressions.surprised}
-          aria-hidden="true"
-        />
+        <ChatGlyph size="row" />
       </span>
       <span className="dc-title">{chat.title}</span>
     </div>

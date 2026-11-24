@@ -1,7 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import { motion } from 'motion/react';
 import type { ProviderId, ProviderSetup } from '@spark-outpost/contracts';
-import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
+import { ProviderMark } from '../../brand/ProviderMark.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 
@@ -45,12 +45,7 @@ function SwitchTab({ provider, selected, focusable, onSelect }: SwitchTabProps) 
         whileHover={{ scale: selected ? 1.16 : 1.08 }}
         whileTap={{ scale: 0.92 }}
       >
-        <ProviderBlob
-          providerId={provider.id}
-          size={24}
-          expression={selected ? 'happy' : 'idle'}
-          animate="hover"
-        />
+        <ProviderMark providerId={provider.id} size={24} />
       </motion.span>
       {tooltip}
     </button>

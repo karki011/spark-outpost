@@ -1,13 +1,11 @@
 import './today.css';
 import { useId, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Blobatar } from 'blobatar/react';
-import * as expressions from 'blobatar/expression';
 import type { TodayChat } from '@spark-outpost/contracts';
-import { chatBlob } from '../../brand/ChatFace.tsx';
+import { ChatGlyph } from '../../brand/ChatGlyph.tsx';
 import { homeApi, homeKeys } from '../../home/home-api.ts';
 import { quietToday, type Voice } from '../../spark/voice.ts';
-import { chatExpression, chatNote, todayStats } from './today-model.ts';
+import { chatGlyphState, chatNote, todayStats } from './today-model.ts';
 
 const SKELETON_ROWS = [62, 48, 55];
 const SKELETON_STATS = [52, 84, 44];
@@ -50,13 +48,7 @@ function ChatRow({
         onClick={() => onOpen(chat.id)}
       >
         <span className="today-blob" aria-hidden="true">
-          <Blobatar
-            {...chatBlob(chat.id)}
-            size={20}
-            animate="hover"
-            expression={expressions[chatExpression(chat.state)]}
-            aria-hidden="true"
-          />
+          <ChatGlyph size="post" state={chatGlyphState(chat.state)} />
         </span>
         <span className="t">{chat.title}</span>
         <span className="k">{chatNote(chat)}</span>

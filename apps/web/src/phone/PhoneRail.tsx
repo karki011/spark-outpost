@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { RemoteDevice, RemoteSwitches, TailscaleState } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
 import { CheckIcon, CopyIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
@@ -128,7 +128,7 @@ export function PhoneRail({
             <i className="ph-dot" aria-hidden="true" />
             {statusHeadline(state, devices ? active.length : null)}
           </h2>
-          <BlobToggle
+          <Switch
             label="Remote control"
             checked={on}
             disabled={turning}

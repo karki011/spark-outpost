@@ -82,15 +82,22 @@ export function CrewTab({ loading, error, sparks, starters, remote, onOpen }: Cr
   }
   if (sparks.length === 0) return <NoSparks starters={starters} remote={remote} />;
   return (
-    <ul className="spk-grid" aria-label="Your Sparks">
-      {sparks.map((spark) => (
-        <SparkCard
-          key={spark.id}
-          spark={spark}
-          skills={skills.get(spark.id)}
-          onOpen={() => onOpen(spark.id)}
-        />
-      ))}
-    </ul>
+    <div className="spk-list">
+      <div className="spk-list-head" aria-hidden="true">
+        <span>Name</span>
+        <span>Agent and mode</span>
+        <span>Skills</span>
+      </div>
+      <ul aria-label="Your Sparks">
+        {sparks.map((spark) => (
+          <SparkCard
+            key={spark.id}
+            spark={spark}
+            skills={skills.get(spark.id)}
+            onOpen={() => onOpen(spark.id)}
+          />
+        ))}
+      </ul>
+    </div>
   );
 }

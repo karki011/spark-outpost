@@ -1,6 +1,6 @@
 import '../spark/spark.css';
 import type { Profile } from '@spark-outpost/contracts';
-import { UserBlob } from '../brand/UserBlob.tsx';
+import { UserAvatar } from '../brand/UserAvatar.tsx';
 import { NameSetting, PersonalitySetting } from '../spark/SparkSettings.tsx';
 import { SparkPreview } from '../spark/SparkPreview.tsx';
 import { useReducedMotion } from '../ui/motion.ts';
@@ -49,7 +49,7 @@ export function MeetSparkStep({
       <div className={`greet${named ? ' in' : ''}`}>
         {named ? (
           <>
-            <UserBlob displayName={displayName} size={36} animate="always" />
+            <UserAvatar displayName={displayName} size={36} />
             <p>This little one is you. It’s made from your name.</p>
           </>
         ) : (

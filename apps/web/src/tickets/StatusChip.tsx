@@ -3,22 +3,20 @@ import type {
   PullRequestChecks,
   TicketStatus,
 } from '@spark-outpost/contracts';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
+import { AgentMark } from '../brand/ProviderMark.tsx';
 import { TeammateFace } from '../teammates/TeammateFace.tsx';
-import { useReducedMotion } from '../ui/motion.ts';
 import { Glyph, type GlyphName } from './ticket-icons.tsx';
 import { statusBadge } from './ticket-status.ts';
 
 const FACE_SIZE = 16;
 
 export function SparkFace({ chat }: { chat: ConversationSummary | null }) {
-  const reduced = useReducedMotion();
   if (chat?.teammate) {
     return <TeammateFace face={chat.teammate.face} size={FACE_SIZE} state="working" />;
   }
   const provider = chat?.latestRun?.provider;
   if (!provider) return <i className="sev run" aria-hidden="true" />;
-  return <AgentBlob provider={provider} size={FACE_SIZE} animate={reduced ? 'hover' : 'always'} />;
+  return <AgentMark provider={provider} size={FACE_SIZE} />;
 }
 
 export function StatusBadge({ status, name }: { status: TicketStatus; name: string }) {

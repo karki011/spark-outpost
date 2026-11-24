@@ -7,7 +7,6 @@ import {
   type ConversationDetail,
   type Project,
 } from '@spark-outpost/contracts';
-import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { greeting } from '../spark/voice.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
@@ -19,6 +18,7 @@ import { AssistantTopicDivider, TopicDivider } from './compaction/DividerLine.ts
 import { placeTopics } from './compaction/topic-model.ts';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
+import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { useChatPane } from './split/chat-pane.ts';
 import { useMessageJump } from './message-jump.ts';
 import { QuoteMarks } from './quotes/QuoteMarks.tsx';
@@ -32,6 +32,7 @@ import { CommandDockContext } from './commands/command-dock.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { usePendingArrival } from './status/status-context.ts';
 import { useRestoredAgentTabs } from '../terminal/dock/use-agent-tabs.ts';
+import { useTurnWindow } from './turn-window/use-turn-window.ts';
 
 interface ThreadProps {
   detail: ConversationDetail;
@@ -54,8 +55,31 @@ export const Thread = memo(function Thread({
   const { remote } = useRemoteClient();
   useRestoredAgentTabs(remote ? null : detail.conversation.id);
   const { scrollerRef, scroller, away, follow, release, jumpToLatest } = useStickToBottom();
-  useMessageJump(detail.conversation.id, scroller, release, detail.messages.length);
   const turns = buildTurns(detail);
+  const turnWindow = useTurnWindow(
+    detail.conversation.id,
+    turns.map((turn) => turn.run.id),
+    scroller,
+  );
+  const revealMessage = useStableCallback((messageId: string) => {
+    const turn = turns.find(
+      ({ userMessage, assistantMessage, laterMessages }) =>
+        userMessage?.id === messageId ||
+        assistantMessage?.id === messageId ||
+        laterMessages.some((message) => message.id === messageId),
+    );
+    const owners = turn ? [turn.run.id] : turns.map(({ run }) => run.id);
+    if (owners.every((id) => turnWindow.mounted.has(id))) return true;
+    turnWindow.reveal(owners);
+    return false;
+  });
+  useMessageJump(
+    detail.conversation.id,
+    scroller,
+    release,
+    `${detail.messages.length}:${turnWindow.mounted.size}`,
+    revealMessage,
+  );
   const topics = placeTopics(
     detail.topics ?? [],
     turns.map(({ run, userMessage }) => ({
@@ -80,7 +104,6 @@ export const Thread = memo(function Thread({
       <div className="thread-wrap">
         <div className="thread">
           <div className="empty">
-            <BlobScout size={64} />
             <h2>{greeting(voice, new Date().getHours())}</h2>
             {!intro && <p className="empty-ask">What should we work on?</p>}
             {intro ? (
@@ -115,7 +138,12 @@ export const Thread = memo(function Thread({
     <div className="thread-wrap">
       <div className="thread" ref={scrollerRef}>
         <div className="col">
-          <OutlineTicks detail={detail} taskId={taskId} scroller={scroller} />
+          <OutlineTicks
+            detail={detail}
+            taskId={taskId}
+            scroller={scroller}
+            mountedTurns={turnWindow.mounted.size}
+          />
           <CommandDockContext value={remote ? null : detail.conversation.id}>
             {turns.map(({ run, userMessage, assistantMessage, laterMessages }, index) => (
               <Fragment key={run.id}>
@@ -131,6 +159,7 @@ export const Thread = memo(function Thread({
                   detail={detail}
                   repo={repos[0] ?? null}
                   onOpenChat={onOpenChat}
+                  deferred={!turnWindow.mounted.has(run.id)}
                 />
               </Fragment>
             ))}

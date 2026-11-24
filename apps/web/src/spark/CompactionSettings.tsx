@@ -159,7 +159,6 @@ function CompactAtSetting({ profile }: { profile: Profile }) {
   return (
     <SwitchValueSetting
       label={COMPACT_LABEL}
-      blob="plain"
       info={COMPACT_INFO}
       doc={{ page: 'compaction', heading: 'change-when-spark-compacts' }}
       hint={hint}

@@ -13,6 +13,8 @@ export const microsoftCalendarSecret = (subject: string): MicrosoftCalendarSecre
   `calendar:microsoft:${subject}`;
 export type McpOAuthSecretId = `mcp-oauth:${string}`;
 export const mcpOAuthSecret = (serverId: string): McpOAuthSecretId => `mcp-oauth:${serverId}`;
+export type ZoomSecretId = `zoom:${string}`;
+export const zoomSecret = (subject: string): ZoomSecretId => `zoom:${subject}`;
 export type ShareSecretId = `share:${string}`;
 export const shareSecret = (shareId: string): ShareSecretId => `share:${shareId}`;
 export const googleCalendarSecret = (subject: string): GoogleCalendarSecretId =>
@@ -30,6 +32,7 @@ export type SecretId =
   | `signin:${string}`
   | GoogleCalendarSecretId
   | MicrosoftCalendarSecretId
+  | ZoomSecretId
   | ShareSecretId;
 
 export interface SecretStore {

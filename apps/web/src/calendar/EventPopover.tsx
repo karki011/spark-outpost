@@ -7,6 +7,7 @@ import { clampStart, useKeepInViewport } from '../ui/viewport-clamp.ts';
 import { ClashTag } from './ClashTag.tsx';
 import { EventInfo } from './EventDetails.tsx';
 import { EventActions, EventMeta } from './EventPanel.tsx';
+import { EventReply } from './EventReply.tsx';
 import { localDate } from './use-calendar.ts';
 
 const GAP = 10;
@@ -83,6 +84,7 @@ export function EventPopover(props: EventPopoverProps) {
         </button>
       </div>
       <EventMeta event={event} date={date} calendars={props.calendars} />
+      <EventReply event={event} />
       {props.clashes && (
         <p className="td-panel-clash">
           <ClashTag titles={props.clashes} />

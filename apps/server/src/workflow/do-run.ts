@@ -125,14 +125,25 @@ function doGate(options: DoRunOptions, backup: (paths: readonly string[]) => Pro
   };
 }
 
-export async function prepareDoRun(options: DoRunOptions): Promise<ApprovalGate | undefined> {
+type SnapshotOptions = Pick<
+  DoRunOptions,
+  'db' | 'runId' | 'projectRoots' | 'keepsCopies' | 'snapshot'
+>;
+
+export async function doRunSnapshot(options: SnapshotOptions): Promise<RunSnapshot | undefined> {
   const root = options.projectRoots[0];
-  if (!root) return undefined;
-  if (options.keepsCopies === false) return createApprovalGate(doGate(options, async () => {}));
-  const snapshot =
+  if (!root || options.keepsCopies === false) return undefined;
+  return (
     options.snapshot ??
     (await savedSnapshot(options.db, options.runId, root)) ??
-    (await takeSnapshot(options.db, options.runId, root));
+    (await takeSnapshot(options.db, options.runId, root))
+  );
+}
+
+export async function prepareDoRun(options: DoRunOptions): Promise<ApprovalGate | undefined> {
+  if (!options.projectRoots[0]) return undefined;
+  const snapshot = await doRunSnapshot(options);
+  if (!snapshot) return createApprovalGate(doGate(options, async () => {}));
   return createApprovalGate(
     doGate(options, async (paths) => {
       await backupBeforeEdit(options.db, options.runId, snapshot, paths);

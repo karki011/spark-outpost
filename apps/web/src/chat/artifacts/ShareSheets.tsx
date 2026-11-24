@@ -8,7 +8,7 @@ import {
   type ArtifactShareDays,
 } from '@spark-outpost/contracts';
 import { formatBytes } from '../../api/attachments.ts';
-import { BlobToggle } from '../../brand/BlobToggle.tsx';
+import { Switch } from '../../ui/Switch.tsx';
 import { CheckIcon } from '../../ui/icons.tsx';
 import { ModalFrame } from '../../ui/ModalFrame.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
@@ -90,7 +90,7 @@ export function ShareConfirmSheet(props: ConfirmSheetProps) {
             Spark makes the code. Send it separately from the link.
           </small>
         </span>
-        <BlobToggle
+        <Switch
           label="Require a passcode"
           size="sm"
           checked={passcode}
