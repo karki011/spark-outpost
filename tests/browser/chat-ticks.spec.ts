@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { mkdirSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
@@ -225,7 +226,7 @@ test.describe('plain chats', () => {
     await longChat(page);
     await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
-      const response = await route.fetch();
+      const response = await fetchFresh(route);
       const detail = (await response.json()) as ConversationDetail;
       const run = detail.runs.filter((candidate) => !candidate.parentRunId)[1]!;
       const steer = {
@@ -272,7 +273,7 @@ test.describe('plain chats', () => {
     await longChat(page, PROMPTS.slice(0, 3));
     await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
       if (route.request().method() !== 'GET') return route.continue();
-      const response = await route.fetch();
+      const response = await fetchFresh(route);
       const detail = (await response.json()) as ConversationDetail;
       const run = detail.runs[0]!;
       const ask = detail.messages.find((message) => message.id === run.userMessageId)!;
