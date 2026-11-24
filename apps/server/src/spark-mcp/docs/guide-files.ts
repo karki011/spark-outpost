@@ -17,7 +17,9 @@ export function guideDirectory(): string {
 let cached: Promise<GuidePage[]> | null = null;
 
 async function readGuide(directory: string): Promise<GuidePage[]> {
-  const names = (await readdir(directory)).filter((name) => name.endsWith('.md'));
+  const names = (await readdir(directory, { recursive: true })).filter((name) =>
+    name.endsWith('.md'),
+  );
   const files: Record<string, string> = {};
   for (const name of names) files[name] = await readFile(path.join(directory, name), 'utf8');
   return loadGuidePages(files);
