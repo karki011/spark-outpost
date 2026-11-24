@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, win32 } from 'node:path';
 import { promisify } from 'node:util';
 import { RulesFileError } from './rules-file.ts';
+import { windowsManagedWrite } from './managed-writer-windows.ts';
 import { rulesTextHash } from './accepted.ts';
 import {
   managedRulesFile,
@@ -87,9 +88,7 @@ function scriptError(error: unknown): Error {
 export function adminManagedWrite(runner: ScriptRunner = osascript): ManagedWrite {
   return async (target, text, previousHash) => {
     if (process.platform === 'win32') {
-      throw new RulesFileError(
-        `Spark can't change company rules on Windows yet. An administrator can edit ${target}.`,
-      );
+      return windowsManagedWrite(STALE_COMPANY)(target, text, previousHash);
     }
     if (process.platform !== 'darwin') {
       throw new RulesFileError('Company rules can only be changed on a Mac.');

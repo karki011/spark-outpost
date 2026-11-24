@@ -22,11 +22,15 @@ You'll cover Spark Outpost's windows when you step away. About 2 minutes.
 | **Hide notification text while locked**          | Notifications name no chat.                      |
 | **Code**                                         | **Change code…** asks for the current one first. |
 
+On Windows the sleep row reads **Lock when the computer sleeps or its screen locks**, and there's no Touch ID row.
+
 ## Lock and unlock
 
 **⇧⌘L**, **Spark Outpost → Lock Spark Outpost** or a lock button locks at once. The button sits above the left bar's clock, in a narrow window's **More**, in the Settings window and on Spark Island.
 
-Unlock with Touch ID or your code. Five wrong codes wait a minute.
+On Windows, press **Ctrl+Shift+L**.
+
+Unlock with Touch ID or your code. Five wrong codes wait a minute. On Windows only the code unlocks.
 
 ## What it covers
 
@@ -39,5 +43,7 @@ Spark's windows are covered and Spark Island hides. Work keeps running and notif
 3. Set a new code in **Settings**. The privacy screen stays off until you do.
 
 No **Forgot code?** link? Quit Spark and delete `app-lock.json` in `~/Library/Application Support/Spark Outpost`. That removes the privacy screen.
+
+Windows has no **Forgot code?** yet. Quit Spark and delete `app-lock.json` in `%APPDATA%\Spark Outpost`.
 
 **Next:** [Manage providers, models and Jev](providers-and-models.md)
