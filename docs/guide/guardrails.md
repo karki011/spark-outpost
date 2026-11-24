@@ -19,7 +19,9 @@ A guardrail is a rule Spark enforces itself, in every chat and agent mode. Every
 | The audit                                                     | Every action is recorded; one no card covered is marked [ran without review](approvals.md#actions-that-ran-without-review). |
 | Revert                                                        | **Revert to before this run** undoes a run's own edits.                                                                     |
 
-A run's full audit log is kept 14 days, then deleted for good; its messages and steps stay. To keep logs longer, set `AUDIT_RETENTION_DAYS` before you update, or export the chat's audit first.
+A run's protocol log is kept 14 days, then deleted for good when Spark next starts; messages and steps stay. Slack and remote control logs keep 90 days.
+
+To keep protocol logs, set `AUDIT_RETENTION_DAYS=90` before you update, or export the chat's audit as JSONL first.
 
 Sub-chats add their own: [stacked pull requests](stacked-pull-requests.md).
 

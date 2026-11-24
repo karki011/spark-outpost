@@ -47,7 +47,7 @@ describe('terminal seed after adoption', () => {
     expect(seedText([['0 0 0 0 0 [25]'], [], [], [link]])).toContain(link);
   });
 
-  it('drops the oldest history first to stay within a byte budget and always keeps the screen', () => {
+  it('drops the oldest history first to stay within a byte budget and keeps the screen', () => {
     const history = Array.from({ length: 50 }, (_, index) => `old ${index} ${'x'.repeat(100)}`);
     const replies = [['50 0 0 0 0 [25]'], history, [], ['now 1', 'now 2']];
     const whole = seedText(replies);
@@ -58,5 +58,13 @@ describe('terminal seed after adoption', () => {
     expect(cut.endsWith(whole.slice(whole.indexOf('now 1') - 4))).toBe(true);
     expect(seedText(replies, 10)).toContain('now 2');
     expect(seedText(replies, 10)).not.toContain('old');
+  });
+
+  it('keeps only the newest rows of a screen that alone is over the budget', () => {
+    const screen = Array.from({ length: 40 }, (_, index) => `row ${index} ${'y'.repeat(100)}`);
+    const cut = seedText([['0 0 0 0 0 [25]'], [], [], screen], 1500);
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(1500);
+    expect(cut).toContain('row 39 ');
+    expect(cut).not.toContain('row 0 ');
   });
 });

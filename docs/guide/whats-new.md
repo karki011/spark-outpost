@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| Faster chats, terminals; audit kept 14 days     | [Run logs](guardrails.md) over 14 days old are deleted.    |
+| Faster chats, terminals; audit kept 14 days     | Older [protocol logs](guardrails.md) go at first start.    |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |
