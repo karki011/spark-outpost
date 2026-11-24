@@ -493,8 +493,7 @@ const shutdown = async (keepTerminals = false) => {
   ]);
   process.exit(0);
 };
-process.once('SIGINT', () => void shutdown());
-process.once('SIGTERM', () => void shutdown());
+for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => void shutdown());
 process.on('message', (message) => {
   if (isKeepTerminalsStop(message)) void shutdown(true);
   else if (isEndTerminalsStop(message)) void shutdown();
