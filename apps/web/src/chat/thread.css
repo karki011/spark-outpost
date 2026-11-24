@@ -29,6 +29,10 @@
   scroll-margin-top: 8px;
 }
 
+.col > section:nth-last-child(-n + 3) {
+  content-visibility: visible;
+}
+
 .col > section[data-deferred] {
   min-height: 360px;
 }
