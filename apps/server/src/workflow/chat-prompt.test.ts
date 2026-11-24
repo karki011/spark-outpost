@@ -140,6 +140,10 @@ describe('chatPrompt', () => {
     expect(build({ level: 'hands-off' })).not.toContain(text.PUBLISH_FOLLOW_UP);
   });
 
+  it('tells the agent to run long commands in the background so it can still read the user', () => {
+    expect(build({ level: 'hands-off' })).toContain(text.LONG_COMMAND_LINE);
+  });
+
   it('tells the lead to stop and re-brief a worker when the user changes its work', () => {
     expect(build({ level: 'hands-off' })).toContain(REDIRECT_WORK_LINE);
   });
