@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| Windows: privacy screen, company rules          | [Privacy](privacy-screen.md).                              |
+| Windows: privacy screen, Hello, company rules   | [Privacy](privacy-screen.md).                              |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |
@@ -53,7 +53,7 @@ summary: What changed in recent releases and what to do next.
 | Meeting alerts while locked; deleted links die; HTML folds | Nothing to do.                                                                           |
 | Agents manage and run Sparks and workflows                 | [When it asks](build-with-an-agent.md#when-it-asks).                                     |
 | **Share…** artifacts; the rail lists them                  | [Share one](share-an-artifact.md).                                                       |
-| Mac app: privacy screen, left-bar lock                     | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.                                      |
+| Mac app: privacy screen, left-bar lock                     | [Turn it on](privacy-screen.md); **⇧⌘L** locks.                                          |
 | **GitHub** page, reviews, auto-review, resizing            | [Guide](github-page.md).                                                                 |
 | **⌘1**–**⌘9** open chats                                   | [Keyboard shortcuts](keyboard-shortcuts.md#chats).                                       |
 | Agent terminal card; compact workflows; more redaction     | Nothing to do.                                                                           |

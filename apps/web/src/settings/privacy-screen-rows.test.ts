@@ -13,11 +13,12 @@ describe('privacy screen rows', () => {
     ]);
   });
 
-  it('names the computer and has no Touch ID row on Windows', () => {
+  it('names the computer and Windows Hello on Windows', () => {
     expect(privacyScreenRows(true)).toEqual([
       'Lock Spark when I’m away',
       'Lock after',
       'Lock when the computer sleeps or its screen locks',
+      'Unlock with Windows Hello',
       'Hide notification text while locked',
       'Code',
     ]);

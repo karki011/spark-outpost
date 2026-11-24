@@ -14,6 +14,7 @@ const LOCK_AFTER = 'Lock after';
 const MAC_LOCK_ON_SLEEP = 'Lock when the Mac sleeps or its screen locks';
 const WINDOWS_LOCK_ON_SLEEP = 'Lock when the computer sleeps or its screen locks';
 const TOUCH_ID = 'Unlock with Touch ID';
+const WINDOWS_HELLO = 'Unlock with Windows Hello';
 const HIDE_NOTIFICATIONS = 'Hide notification text while locked';
 const CODE = 'Code';
 
@@ -21,6 +22,8 @@ interface PlatformCopy {
   lockOnSleep: string;
   computer: string;
   lockFrom: string;
+  unlock: string;
+  noUnlock: string;
   shownWhenOn: string[];
 }
 
@@ -30,13 +33,17 @@ function platformCopy(windows: boolean): PlatformCopy {
       lockOnSleep: WINDOWS_LOCK_ON_SLEEP,
       computer: 'computer',
       lockFrom: 'or with Ctrl+Shift+L',
-      shownWhenOn: [LOCK_AFTER, WINDOWS_LOCK_ON_SLEEP, HIDE_NOTIFICATIONS],
+      unlock: WINDOWS_HELLO,
+      noUnlock: 'Windows Hello isn’t set up on this computer',
+      shownWhenOn: [LOCK_AFTER, WINDOWS_LOCK_ON_SLEEP, WINDOWS_HELLO, HIDE_NOTIFICATIONS],
     };
   }
   return {
     lockOnSleep: MAC_LOCK_ON_SLEEP,
     computer: 'Mac',
     lockFrom: 'or from Spark Outpost → Lock Spark Outpost (⇧⌘L)',
+    unlock: TOUCH_ID,
+    noUnlock: 'This Mac has no Touch ID',
     shownWhenOn: [LOCK_AFTER, MAC_LOCK_ON_SLEEP, TOUCH_ID, HIDE_NOTIFICATIONS],
   };
 }
@@ -68,8 +75,7 @@ export function PrivacyScreenSection() {
   const afterHintId = useId();
   const codeHintId = useId();
   if (!status || phone.remote) return null;
-  const windows = onWindows();
-  const copy = platformCopy(windows);
+  const copy = platformCopy(onWindows());
 
   const turn = (on: boolean) => {
     if (on && !status.hasCode) setSheet('set');
@@ -131,19 +137,15 @@ export function PrivacyScreenSection() {
             checked={status.onSleep}
             onChange={(on) => void updateAppLock({ onSleep: on })}
           />
-          {!windows && (
-            <SwitchRow
-              id={touchId}
-              label={TOUCH_ID}
-              doc={DOC}
-              hint={
-                status.touchIdAvailable ? 'Your code always works too' : 'This Mac has no Touch ID'
-              }
-              checked={status.touchId && status.touchIdAvailable}
-              disabled={!status.touchIdAvailable}
-              onChange={(on) => void updateAppLock({ touchId: on })}
-            />
-          )}
+          <SwitchRow
+            id={touchId}
+            label={copy.unlock}
+            doc={DOC}
+            hint={status.touchIdAvailable ? 'Your code always works too' : copy.noUnlock}
+            checked={status.touchId && status.touchIdAvailable}
+            disabled={!status.touchIdAvailable}
+            onChange={(on) => void updateAppLock({ touchId: on })}
+          />
           <SwitchRow
             id={hideId}
             label={HIDE_NOTIFICATIONS}
