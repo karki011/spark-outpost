@@ -1,8 +1,9 @@
-import type {
-  CalendarAction,
-  CalendarEditAction,
-  CalendarEventFacts,
-  SparkAction,
+import {
+  CALENDAR_REPLY_WORDS,
+  type CalendarAction,
+  type CalendarEditAction,
+  type CalendarEventFacts,
+  type SparkAction,
 } from '@spark-outpost/contracts';
 import { span } from '../../calendar/calendar-format.ts';
 
@@ -101,7 +102,27 @@ export function CalendarFacts({ action }: { action: CalendarAction }) {
           <dd>{repeat}</dd>
         </>
       )}
-      {others > 0 && (
+      {action.reply && (
+        <>
+          <dt>Reply</dt>
+          <dd>
+            <b>{CALENDAR_REPLY_WORDS[action.reply]}</b>
+          </dd>
+        </>
+      )}
+      {action.guests.length > 0 && (
+        <>
+          <dt>Guests</dt>
+          <dd>{action.guests.join(', ')}</dd>
+        </>
+      )}
+      {action.meet && (
+        <>
+          <dt>Video</dt>
+          <dd>Google Meet link</dd>
+        </>
+      )}
+      {others > 0 && action.op !== 'reply' && (
         <>
           <dt>People</dt>
           <dd>
@@ -118,12 +139,15 @@ export function calendarByline(action: SparkAction, agent: string): string | nul
   if (action.action === 'calendar_read') return `${agent} wants to read your calendar.`;
   if (action.op === 'create') return `${agent} wants to add an event.`;
   if (action.op === 'delete') return `${agent} wants to delete an event.`;
+  if (action.op === 'reply') return `${agent} wants to answer an invitation.`;
   return `${agent} wants to change an event.`;
 }
 
 const FLOOR_NOTES: Record<CalendarEditAction['floor'][number], string> = {
   delete: 'Spark asks before every delete, in every mode.',
   others: 'This event has other people, so Spark asks in every mode.',
+  invites: 'Google emails each guest an invitation, so Spark asks in every mode.',
+  reply: 'Google tells the organiser and guests, so Spark asks in every mode.',
   shared: 'This calendar is shared or Spark can’t tell who owns it, so Spark asks in every mode.',
 };
 

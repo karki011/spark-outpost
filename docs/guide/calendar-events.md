@@ -25,6 +25,6 @@ Google tells the organiser and the other guests. Each guest's own reply shows be
 
 Leave **Guests** empty and nobody is told.
 
-Agents can't reply or invite. Events from Mac Calendar or Microsoft show your reply without the buttons.
+Agents can do the same on calendars with **Agents can edit** on; inviting guests and answering an invitation always show you a card first. Events from Mac Calendar or Microsoft show your reply without the buttons.
 
 **Next:** [See your day](calendar.md)

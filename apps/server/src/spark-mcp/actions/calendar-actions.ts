@@ -1,7 +1,8 @@
-import type { CalendarEditAction } from '@spark-outpost/contracts';
+import { joinLink, type CalendarEditAction } from '@spark-outpost/contracts';
 import {
   agentDetail,
   agentRemove,
+  agentReply,
   agentSave,
   cloudCanEdit,
   type AgentCalendar,
@@ -11,6 +12,7 @@ import {
   editRefusal,
   factsOf,
   floorReasons,
+  googleOnlyProblem,
   othersRefusal,
   sameEvent,
 } from '../../calendar/agent/edit-rules.ts';
@@ -45,11 +47,19 @@ const DELETE_KEPT: Record<string, string> = {
   microsoft: ' Outlook keeps it in Deleted Items.',
 };
 
-const DONE: Record<CalendarEditAction['op'], string> = {
-  create: 'Added the event to',
-  update: 'Changed the event on',
-  delete: 'Deleted the event from',
+const DONE = { create: 'Added the event to', update: 'Changed the event on' };
+
+const REPLIED: Record<NonNullable<CalendarEditAction['reply']>, string> = {
+  accepted: 'Answered Yes to',
+  tentative: 'Answered Maybe to',
+  declined: 'Answered No to',
 };
+
+function createdNote(action: CalendarEditAction): string {
+  const count = action.guests.length;
+  const invited = count > 0 ? ` and invited ${count} ${count === 1 ? 'guest' : 'guests'}` : '';
+  return `${invited}${action.meet ? ', with a Google Meet link' : ''}`;
+}
 
 export async function performCalendarEdit(
   context: SparkToolContext,
@@ -66,6 +76,13 @@ export async function performCalendarEdit(
     span: action.span,
   });
   if (refusal) throw new CalendarAgentError(refusal);
+  const unfit = googleOnlyProblem({
+    op: action.op,
+    choice,
+    guests: action.guests.length,
+    meet: action.meet,
+  });
+  if (unfit) throw new CalendarAgentError(unfit);
   const target =
     action.eventId && action.occurrence
       ? { eventId: action.eventId, occurrence: action.occurrence }
@@ -80,8 +97,14 @@ export async function performCalendarEdit(
     const crowded = othersRefusal(choice, others);
     if (crowded) throw new CalendarAgentError(crowded);
   }
-  if (!within(floorReasons(action.op, choice, others), action.floor)) {
+  if (!within(floorReasons(action.op, choice, others, action.guests.length), action.floor)) {
     throw new CalendarAgentError(CALENDAR_CHANGED);
+  }
+  if (action.op === 'reply') {
+    if (!target || !action.reply) throw new CalendarAgentError('The card has no reply to send.');
+    await agentReply(calendar, choice, target, action.reply);
+    const title = action.before?.title || 'the event';
+    return { message: `${REPLIED[action.reply]} ${title}. Google told the organiser.`, url: null };
   }
   if (action.op === 'delete') {
     await agentRemove(calendar, choice, target!, action.span);
@@ -96,12 +119,16 @@ export async function performCalendarEdit(
     fields: action.fields,
     span: action.span,
     after: action.after,
+    guests: action.guests,
+    meet: action.meet,
   });
+  const join = joinLink(after.event);
   return {
-    message: `${DONE[action.op]} ${choice.title}.`,
+    message: `${DONE[action.op]} ${choice.title}${createdNote(action)}.`,
     url: null,
     output: {
       ref: { calendar: choice.key, eventId: after.event.id, occurrence: after.event.start },
+      ...(join ? { joinLink: join.url } : {}),
     },
   };
 }

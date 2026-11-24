@@ -1,10 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import type {
   CalendarChoice,
   CalendarEditSpan,
   CalendarEventFacts,
   CalendarEventFields,
+  CalendarReply,
 } from '@spark-outpost/contracts';
 import type { Db } from '../../persistence/db.ts';
+import { withGuestsAndMeet } from '../google/api.ts';
 import { CalendarHostError, type CalendarHost } from '../host-client.ts';
 import type { CalendarReadDeps } from '../service.ts';
 import { CalendarAgentError, helperAgentDetail, type AgentEventDetail } from './detail.ts';
@@ -151,6 +154,8 @@ export interface AgentSave {
   fields: CalendarEventFields;
   span: CalendarEditSpan;
   after: CalendarEventFacts;
+  guests?: readonly string[];
+  meet?: boolean;
 }
 
 async function announceWrite(db: Db): Promise<void> {
@@ -171,7 +176,11 @@ export async function agentSave(
         calendar.workspaceId,
         choice.calendarId,
         eventId,
-        googleWriteBody(fields, save.after),
+        withGuestsAndMeet(
+          googleWriteBody(fields, save.after),
+          save.guests ?? [],
+          save.meet ? randomUUID() : null,
+        ),
       )
     : isMicrosoft(choice)
       ? await needMicrosoft(calendar).save(
@@ -216,5 +225,15 @@ export async function agentRemove(
       }),
     );
   }
+  await announceWrite(calendar.db);
+}
+
+export async function agentReply(
+  calendar: AgentCalendar,
+  choice: CalendarChoice,
+  target: EventTarget,
+  reply: CalendarReply,
+): Promise<void> {
+  await needGoogle(calendar).reply(calendar.workspaceId, choice.calendarId, target.eventId, reply);
   await announceWrite(calendar.db);
 }
