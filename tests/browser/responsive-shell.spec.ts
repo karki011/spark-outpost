@@ -59,6 +59,7 @@ test.beforeEach(async ({ page }) => {
 async function asRemote(
   page: Page,
   switches: Partial<RemoteSession['switches']> = {},
+  host: RemoteSession['host'] = 'mac',
 ): Promise<void> {
   await page.route('**/api/remote/session', async (route) => {
     const response = await route.fetch();
@@ -71,6 +72,7 @@ async function asRemote(
         device: { id: '00000000-0000-4000-8000-000000000001', name: 'Maya’s iPhone' },
         address: 'https://mac.tail.test',
         switches: { ...session.switches, ...switches },
+        host,
       } satisfies RemoteSession,
     });
   });
@@ -225,6 +227,18 @@ test('a paired phone hides what only works on the Mac', async ({ browser }) => {
   await expect(phone.getByRole('switch')).toHaveAccessibleName('Notify this device');
   await expect(phone.getByText(/Change these on your Mac/)).toBeVisible();
   await shot(phone, 'remote-phone-page');
+  await phone.close();
+});
+
+test('a phone paired to a Windows PC names the PC', async ({ browser }) => {
+  const phone = await openTouch(browser, PHONE, 'chats', (opened) =>
+    asRemote(opened, {}, 'windows'),
+  );
+  await navButton(phone, 'More').click();
+  await navButton(phone, 'Remote control').click();
+  await expect(phone.getByRole('heading', { name: 'Connected to your PC' })).toBeVisible();
+  await expect(phone.getByText(/Change these on your PC/)).toBeVisible();
+  await expect(phone.getByText(/your Mac/)).toHaveCount(0);
   await phone.close();
 });
 

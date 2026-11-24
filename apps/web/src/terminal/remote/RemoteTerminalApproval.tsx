@@ -5,7 +5,8 @@ import {
   type TerminalApproval,
   type TerminalApprovalDecision,
 } from '@spark-outpost/contracts';
-import { PHONE_SWITCH_OFF } from '../../phone/use-remote-client.ts';
+import { phoneSwitchOff } from '../../phone/use-remote-client.ts';
+import { hostWords } from '../../desktop/host-words.ts';
 
 type Answer = Omit<TerminalApprovalDecision, 'id'>;
 
@@ -26,7 +27,7 @@ export function RemoteTerminalApproval({
         <ApprovalActions denyLabel={denyLabel(approval)} onDecide={onDecide} />
       ) : (
         <p className="rt-note">
-          {PHONE_SWITCH_OFF}: approving in Terminal sessions. Answer on your Mac.
+          {phoneSwitchOff()}: approving in Terminal sessions. Answer on your {hostWords().computer}.
         </p>
       )}
     </section>

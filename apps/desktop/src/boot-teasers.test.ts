@@ -139,7 +139,7 @@ describe('teaser lines', () => {
 
   it('names the Windows quick chat keys on Windows', () => {
     expect(lines(quiet, true, 'win32').at(-1)?.text).toBe(
-      'Ctrl+Alt+Space starts a chat from anywhere',
+      'Ctrl+Shift+Space starts a chat from anywhere',
     );
   });
 });

@@ -17,11 +17,12 @@ const native = vi.hoisted(() => {
     minimized = false;
     events = new Map<string, () => void>();
     url = '';
-    webContents = { id: this.id, send: vi.fn(), getURL: () => this.url };
+    webContents = { id: this.id, send: vi.fn(), getURL: () => this.url, on: vi.fn() };
     loadURL = vi.fn(async () => undefined);
     show = vi.fn();
     focus = vi.fn();
     restore = vi.fn();
+    removeMenu = vi.fn();
     destroy = vi.fn(() => {
       this.destroyed = true;
     });

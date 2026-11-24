@@ -104,7 +104,7 @@ const MAC_ISLAND_SHORTCUTS: Readonly<Record<IslandAction, string>> = {
 };
 
 const WINDOWS_ISLAND_SHORTCUTS: Readonly<Record<IslandAction, string>> = {
-  quick: 'Control+Alt+Space',
+  quick: 'Control+Shift+Space',
   sessions: 'Alt+Shift+Space',
 };
 

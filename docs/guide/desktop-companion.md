@@ -35,7 +35,7 @@ Spark Island and Spark share one inbox: opening a request or its chat anywhere m
 
 **Open requests by themselves** opens a card once until answered.
 
-1. Press **⌥Space** (Windows: **Ctrl+Alt+Space**) to focus it.
+1. Press **⌥Space** (Windows: **Ctrl+Shift+Space**) to focus it.
 2. Press **Y** to allow once or **N** to deny (also on Home).
 
 Edit cards show the first changed lines, never secret files.

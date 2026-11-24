@@ -78,7 +78,9 @@ export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
           </details>
         )}
         {remote && profile.agentInstructionsFileSet && (
-          <p className="spark-instructions-remote">An instruction file is set on your Mac.</p>
+          <p className="spark-instructions-remote">
+            An instruction file is set on your {hostWords().computer}.
+          </p>
         )}
         <div className="spark-instructions-save">
           <button type="submit" className="btn line sm" disabled={!changed}>

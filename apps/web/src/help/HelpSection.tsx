@@ -118,7 +118,7 @@ export function HelpSection() {
       <p className="lede">
         Tell the Spark Outpost team what went wrong or what you'd like.{' '}
         {remote
-          ? 'Feedback leaves your Mac only when you send it.'
+          ? `Feedback leaves your ${hostWords().computer} only when you send it.`
           : `Diagnostics and feedback leave your ${hostWords().computer} only when you send them.`}
       </p>
       {desktop &&

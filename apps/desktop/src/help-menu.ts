@@ -20,7 +20,7 @@ export interface HelpActions {
 
 type WindowAction = (window: BaseWindow) => void;
 
-const ZOOM_LEVEL_STEP = 0.5;
+export const ZOOM_LEVEL_STEP = 0.5;
 
 export function windowContents(window: BaseWindow) {
   return 'webContents' in window

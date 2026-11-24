@@ -6,7 +6,7 @@ order: 417
 summary: Pair a device over Tailscale and choose what it may do.
 ---
 
-Use Spark elsewhere; work stays on the Mac. About 5 minutes. Needs Tailscale.
+Use Spark elsewhere; work stays on the Mac or PC. About 5 minutes. Needs Tailscale.
 
 1. Open **Remote control** above **Settings**: Tailscale, HTTPS, turn on.
 2. Under **Devices**, select **Pair a device**; scan or type the code at the address.
@@ -18,7 +18,7 @@ Each device's **Actions** menu has **Rename**, **Send a test notification**, **R
 
 **What paired devices can do** groups switches by risk. A phone's **More** holds Remote control and Settings.
 
-The right panel has the address, QR code and **Hold to disconnect all**.
+The right panel: address, QR code, **Hold to disconnect all**.
 
 Devices read the [**Sub-chats**](sub-chats.md#find-a-sub-chat) tab.
 

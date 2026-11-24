@@ -21,7 +21,7 @@ vi.mock('../../api/setup.ts', () => ({
   },
 }));
 vi.mock('../../phone/use-remote-client.ts', () => ({
-  PHONE_SWITCH_OFF: 'Switched off on the Mac.',
+  phoneSwitchOff: () => 'Switched off on the Mac.',
   useRemoteClient: () => ({ remote: false, allows: () => true }),
 }));
 const { OpenedPullRequests } = await import('./OpenedPullRequests.tsx');

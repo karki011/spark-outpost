@@ -3,6 +3,7 @@ import { PhoneNotifications } from './PhoneNotifications.tsx';
 import { PhonePasskey } from './PhonePasskey.tsx';
 import { PhoneSwitchesReadOnly } from './PhoneSwitches.tsx';
 import { PhoneCardAnsweringReadOnly } from './PhoneCardAnswering.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 export function RemotePhonePage({ session }: { session: RemoteSession }) {
   return (
@@ -10,7 +11,7 @@ export function RemotePhonePage({ session }: { session: RemoteSession }) {
       <section className="ph-card" aria-labelledby="ph-status-title">
         <h2 id="ph-status-title" data-status="on">
           <i className="ph-dot" aria-hidden="true" />
-          Connected to your Mac
+          Connected to your {hostWords().computer}
         </h2>
         {session.address && (
           <div className="ph-address">
@@ -23,7 +24,7 @@ export function RemotePhonePage({ session }: { session: RemoteSession }) {
         <h2 id="ph-device-title">This device</h2>
         <p className="ph-note">
           {session.device ? <b>{session.device.name}</b> : 'This device'} is paired. To rename or
-          remove it, or change what it can do, open Remote control on your Mac.
+          remove it, or change what it can do, open Remote control on your {hostWords().computer}.
         </p>
       </section>
       <PhoneNotifications session={session} />

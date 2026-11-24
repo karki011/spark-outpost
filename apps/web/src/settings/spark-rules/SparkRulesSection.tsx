@@ -12,8 +12,7 @@ import { RuleRow } from './RuleRow.tsx';
 import { RulesActions } from './RulesActions.tsx';
 import { RulesFileProblems, UnusedEntries } from './UnusedEntries.tsx';
 import { useRulesWrite, useSparkRules } from './use-spark-rules.ts';
-
-const ON_THE_MAC = 'Spark rules change on the Mac.';
+import { hostWords } from '../../desktop/host-words.ts';
 
 function RuleGroups({ rules, editable }: { rules: SparkRules; editable: boolean }) {
   const save = useRulesWrite((change: SetSparkRuleRequest) => sparkRulesApi.setRule(change));
@@ -72,7 +71,7 @@ function RulesPage({ rules }: { rules: SparkRules }) {
   return (
     <>
       {remote ? (
-        <p className="set-hint">{ON_THE_MAC}</p>
+        <p className="set-hint">Spark rules change on the {hostWords().computer}.</p>
       ) : (
         <RulesActions malformed={rules.malformed} />
       )}

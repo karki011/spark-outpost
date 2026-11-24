@@ -20,7 +20,7 @@ describe('companion shortcut keys', () => {
   });
 
   it('names the keys on Windows', () => {
-    expect(shortcutLabel('Control+Alt+Space', false)).toBe('Ctrl+Alt+Space');
+    expect(shortcutLabel('Control+Shift+Space', false)).toBe('Ctrl+Shift+Space');
     expect(shortcutLabel('Alt+Shift+Space', false)).toBe('Alt+Shift+Space');
     expect(shortcutLabel('CommandOrControl+K', false)).toBe('Ctrl+K');
     expect(shortcutLabel('Super+K', false)).toBe('Win+K');

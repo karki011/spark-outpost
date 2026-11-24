@@ -7,7 +7,7 @@ import { NO_PROJECT, listIn, pinnedIn, LOOSE } from './sidebar-order.ts';
 import type { SidebarDnd } from './use-sidebar-dnd.ts';
 import type { SidebarFolds } from './use-sidebar-folds.ts';
 import { listSorting, projectDragId } from './sidebar-dnd-geometry.ts';
-import { PHONE_SWITCH_OFF } from '../phone/use-remote-client.ts';
+import { phoneSwitchOff } from '../phone/use-remote-client.ts';
 
 interface ActiveChatsProps {
   search: string;
@@ -66,7 +66,7 @@ export function ActiveChats({
           type="button"
           className="icon-btn"
           aria-label="Add project"
-          title={canAddProject ? 'Add project' : PHONE_SWITCH_OFF}
+          title={canAddProject ? 'Add project' : phoneSwitchOff()}
           disabled={!canAddProject}
           onClick={onAddProject}
         >

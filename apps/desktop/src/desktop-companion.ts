@@ -35,7 +35,7 @@ import { isSize } from './island-geometry.ts';
 import { dockTemplate, trayTemplate } from './island-options.ts';
 import { islandSupported } from './island-platform.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
-import { jumpTaskIn, type JumpTask } from './deep-link.ts';
+import type { JumpTask } from './deep-link.ts';
 import { jumpListTasks, type JumpLaunch } from './jump-list.ts';
 import { appLayout } from './layout.ts';
 import { menuBarItem, type MenuBarTray } from './menu-bar.ts';
@@ -421,8 +421,6 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     if (task === 'lock') appLockGate.lockNow();
     else void companion.setEnabled(task === 'show-island');
   };
-  const launchTask = jumpTaskIn(process.argv);
-  if (launchTask) runJumpTask(launchTask);
 
   return {
     companion,

@@ -10,6 +10,7 @@ import { Segmented } from '../ui/Segmented.tsx';
 import { PULL_REQUEST_ROWS, PullRequestSettings } from './PullRequestSettings.tsx';
 import { SettingRow } from './SettingRow.tsx';
 import type { SettingsClient } from './settings-sections.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 const SHOW_FROM = 'Show pull requests from';
 
@@ -70,7 +71,9 @@ export function GithubSection({ profile }: { profile: Profile }) {
       {onMac ? (
         <MacOnlyGroups />
       ) : (
-        <p className="set-hint">The GitHub page and auto-review are set on your Mac.</p>
+        <p className="set-hint">
+          The GitHub page and auto-review are set on your {hostWords().computer}.
+        </p>
       )}
       <section className="spark-group" aria-labelledby="github-own-pulls">
         <h4 id="github-own-pulls">Your pull requests</h4>

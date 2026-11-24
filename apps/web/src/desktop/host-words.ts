@@ -1,3 +1,4 @@
+import { rememberedRemoteHost } from '../app/connection/remote-hint.ts';
 import { onWindows } from './desktop-bridge.ts';
 
 export interface HostWords {
@@ -5,6 +6,7 @@ export interface HostWords {
   tray: string;
   taskbar: string;
   fileManager: string;
+  app: string;
 }
 
 const MAC_WORDS: HostWords = {
@@ -12,6 +14,7 @@ const MAC_WORDS: HostWords = {
   tray: 'menu bar',
   taskbar: 'Dock',
   fileManager: 'Finder',
+  app: 'Mac app',
 };
 
 const WINDOWS_WORDS: HostWords = {
@@ -19,8 +22,14 @@ const WINDOWS_WORDS: HostWords = {
   tray: 'system tray',
   taskbar: 'taskbar',
   fileManager: 'File Explorer',
+  app: 'Windows app',
 };
 
-export function hostWords(windows = onWindows()): HostWords {
+export function hostOnWindows(): boolean {
+  const host = rememberedRemoteHost();
+  return host === null ? onWindows() : host === 'windows';
+}
+
+export function hostWords(windows = hostOnWindows()): HostWords {
   return windows ? WINDOWS_WORDS : MAC_WORDS;
 }

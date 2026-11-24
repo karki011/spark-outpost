@@ -250,8 +250,16 @@ export const pairingClaimRequestSchema = z.object({ claim: z.string().min(1).max
 export const pairingClaimResponseSchema = z.object({ status: z.enum(['waiting', 'paired']) });
 export type PairingClaimResponse = z.infer<typeof pairingClaimResponseSchema>;
 
+export const remoteHostSchema = z.enum(['mac', 'windows']);
+export type RemoteHost = z.infer<typeof remoteHostSchema>;
+
+export function remoteHostOf(platform: string): RemoteHost {
+  return platform === 'win32' ? 'windows' : 'mac';
+}
+
 export const remoteSessionSchema = z.object({
   remote: z.boolean(),
+  host: remoteHostSchema.optional(),
   device: z.object({ id: z.uuid(), name: z.string() }).nullable(),
   address: z.string().nullable(),
   switches: remoteSwitchesSchema,

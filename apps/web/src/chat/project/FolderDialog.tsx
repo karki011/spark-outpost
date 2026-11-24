@@ -35,23 +35,24 @@ const WAYS = [
   { id: 'clone', label: 'Clone a repository' },
 ];
 
-const CLONE_COPY: Record<
+function cloneCopy(): Record<
   Exclude<Mode, 'browse'>,
   { title: string; lede: string; remoteLede?: string; use: string }
-> = {
-  clone: {
-    title: 'Clone a repository',
-    lede: `Spark runs git clone on this ${hostWords().computer}, straight from the git host, then adds the new folder as a project.`,
-    remoteLede:
-      'Spark runs git clone on your Mac, straight from the git host, then adds the new folder as a project.',
-    use: '',
-  },
-  'clone-parent': {
-    title: 'Choose where to clone',
-    lede: 'Spark creates the repository’s folder inside the folder you pick.',
-    use: 'Clone into this folder',
-  },
-};
+> {
+  return {
+    clone: {
+      title: 'Clone a repository',
+      lede: `Spark runs git clone on this ${hostWords().computer}, straight from the git host, then adds the new folder as a project.`,
+      remoteLede: `Spark runs git clone on your ${hostWords().computer}, straight from the git host, then adds the new folder as a project.`,
+      use: '',
+    },
+    'clone-parent': {
+      title: 'Choose where to clone',
+      lede: 'Spark creates the repository’s folder inside the folder you pick.',
+      use: 'Clone into this folder',
+    },
+  };
+}
 
 const COPY: Record<FolderPurpose, { title: string; lede: string; use: string }> = {
   instructions: {
@@ -121,10 +122,10 @@ export function FolderDialog({
   if (cloneWaiting && chosenMode === null) setMode('clone');
   const mode = chosenMode ?? 'browse';
   const [cloneParent, setCloneParent] = useState<string | null>(null);
-  const copy = mode === 'browse' ? COPY[purpose] : CLONE_COPY[mode];
+  const copy = mode === 'browse' ? COPY[purpose] : cloneCopy()[mode];
   const { remote, allows } = useRemoteClient();
   const canMakeFolder = purpose === 'project' && allows('projects');
-  const remoteLede = remote && mode !== 'browse' ? CLONE_COPY[mode].remoteLede : undefined;
+  const remoteLede = remote && mode !== 'browse' ? cloneCopy()[mode].remoteLede : undefined;
   const lede = remoteLede ?? copy.lede;
   const picksFile = purpose === 'instructions';
   const [path, setPath] = useState<string | null>(startPath);

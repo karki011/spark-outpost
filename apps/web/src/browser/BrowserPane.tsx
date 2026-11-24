@@ -41,7 +41,7 @@ import { PageWidthMenu } from './PageWidthMenu.tsx';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
-import { shortcutText } from '../ui/shortcuts.ts';
+import { MAC, shortcutText } from '../ui/shortcuts.ts';
 
 const COPIED_MS = 1600;
 const REFOCUS_MS = 1500;
@@ -247,7 +247,8 @@ export function BrowserPane({
         )}
         {tab?.picking ? (
           <p className="bp-picking" role="status">
-            Click to select, ⇧ click for more, ↑↓ parent or child, drag a box. Esc finishes.
+            Click to select, {MAC ? '⇧ click' : 'Shift+click'} for more, ↑↓ parent or child, drag a
+            box. Esc finishes.
           </p>
         ) : (
           <AddressBar key={tabKey} commands={commands} tab={tab} history="work" />

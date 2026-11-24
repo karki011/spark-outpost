@@ -7,7 +7,7 @@ import { XIcon } from '../ui/icons.tsx';
 import { dismissPasskeyOffer, passkeyOfferDismissed } from './passkey-offer-store.ts';
 import { passkeysSupported } from './passkey-browser.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
-import { PASSKEY_PURPOSE, PASSKEY_SAVE, PASSKEY_SAVED } from './phone-copy.ts';
+import { passkeyPurpose, PASSKEY_SAVE, PASSKEY_SAVED } from './phone-copy.ts';
 import { useRemoteClient } from './use-remote-client.ts';
 import { useSavePasskey } from './use-save-passkey.ts';
 import './passkey-offer.css';
@@ -31,7 +31,7 @@ function Offer({ onDismiss }: { onDismiss: () => void }) {
           >
             {PASSKEY_SAVE}
           </button>
-          . {PASSKEY_PURPOSE}
+          . {passkeyPurpose()}
           {save.error && (
             <span className="passkey-offer-problem" role="alert">
               {' '}
