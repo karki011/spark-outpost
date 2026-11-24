@@ -172,6 +172,7 @@ export * from './browser-actions.ts';
 export * from './home-seen.ts';
 export * from './crew-files.ts';
 export * from './crew-workflow.ts';
+export * from './crew-workflow-nesting.ts';
 export * from './crew-run.ts';
 export * from './spark-means.ts';
 export * from './spark-usage.ts';

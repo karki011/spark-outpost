@@ -1,9 +1,9 @@
 import {
   mergeCostSource,
   type WorkflowTriggerKind,
-  workflowSchema,
+  expandedWorkflowSchema,
+  type ExpandedWorkflow,
   type CostSource,
-  type Workflow,
   type WorkflowRun,
   type WorkflowRunKind,
   type WorkflowRunSource,
@@ -19,7 +19,7 @@ export const STEP_OUTCOME_UNKNOWN = 'Outcome unknown: the worker stopped while t
 export interface NewWorkflowRun {
   id: string;
   workspaceId: string;
-  workflow: Workflow;
+  workflow: ExpandedWorkflow;
   kind: WorkflowRunKind;
   source: WorkflowRunSource;
   conversationId: string;
@@ -278,7 +278,7 @@ export async function listWorkflowRuns(
 
 export interface TurnWorkflowRun {
   run: WorkflowRun;
-  workflow: Workflow;
+  workflow: ExpandedWorkflow;
   message: string;
   continues: boolean;
   edits: boolean;
@@ -289,7 +289,7 @@ export interface TurnWorkflowRun {
 async function turnRunOf(db: Queryable, row: RunRow | undefined) {
   if (!row) return null;
   const [run] = await assemble(db, [row]);
-  const workflow = workflowSchema.safeParse(row.definition);
+  const workflow = expandedWorkflowSchema.safeParse(row.definition);
   if (!run || !workflow.success) return null;
   return {
     run,

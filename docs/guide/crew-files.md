@@ -58,11 +58,13 @@ A skill folder without a valid `SKILL.md` is not offered to the Spark.
 | ----------- | ---------------------------------------------------------------------------------- |
 | `id`        | The file's name, in the same form as a skill name                                  |
 | `name`      | Up to 60 characters                                                                |
-| `steps`     | 1 to 100, each with its own `id` and a `sparkId`                                   |
+| `steps`     | 1 to 100, each with an `id` and a `sparkId` or a `workflowId`                      |
 | `prompt`    | Optional extra words for the step, up to 4,000 characters                          |
 | `dependsOn` | Steps this one runs after. Steps with none start together. No step waits on itself |
 | `join`      | `all` (default) waits for every parent; `any` starts after the first               |
 | `onFailure` | `stop` (default) stops the workflow; `continue` lets later steps run               |
+
+See [Use a workflow as a step](workflow-as-step.md).
 
 ## What an agent can do
 
@@ -74,7 +76,7 @@ A skill folder without a valid `SKILL.md` is not offered to the Spark.
 
 In `spark_workflow`, `triggers` takes `chatStarted`, `turnChanged`, `beforePublish`, `holdOnFindings`, `commit`, `branchGlob`, `pullRequest`, `debounceMinutes` and `edits`; fields you leave out keep their value.
 
-In `spark_crew_edit`, a step may name its Spark with `spark`, `text: null` deletes a file, `remove` deletes a skill folder or a workflow, and `removeFolder` deletes every file under any folder of the Spark.
+In `spark_crew_edit`, a step may name its Spark with `spark` or another workflow's id with `workflow`, `text: null` deletes a file, `remove` deletes a skill folder or a workflow, and `removeFolder` deletes every file under any folder of the Spark.
 
 `withdraw` (draft ids, or `["all"]`) closes the chat's own waiting drafts. Workflow names are unique.
 

@@ -1,7 +1,12 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { workflowStepSchema, type WorkflowRun, type WorkflowStep } from '@spark-outpost/contracts';
+import {
+  expandedStepSchema,
+  type ExpandedStep,
+  type WorkflowRun,
+  type WorkflowStep,
+} from '@spark-outpost/contracts';
 import { workflowRunForTurn } from '../src/crew-flows/run-records.ts';
 import { workspaceSparkIds } from '../src/crew-flows/step-sparks.ts';
 import { workflowStore } from '../src/crew-flows/workflow-store.ts';
@@ -33,8 +38,8 @@ export function newSpark(t: TestDb, name: string, extra: Record<string, unknown>
   });
 }
 
-export function step(id: string, sparkId: string, extra: Partial<WorkflowStep> = {}): WorkflowStep {
-  return workflowStepSchema.parse({ id, sparkId, ...extra });
+export function step(id: string, sparkId: string, extra: Partial<ExpandedStep> = {}): ExpandedStep {
+  return expandedStepSchema.parse({ id, sparkId, ...extra });
 }
 
 export async function saveFlow(t: TestDb, id: string, steps: WorkflowStep[]): Promise<void> {

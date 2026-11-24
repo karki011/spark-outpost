@@ -22,7 +22,9 @@ import { RunStepList } from './RunStepList.tsx';
 import { RunStepPanel } from './RunStepPanel.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
 import { useNow, useRunChat, useStopWorkflowRun, useWorkflowRun } from './use-workflow-runs.ts';
-import { stepLabels } from './workflow-model.ts';
+import { useOtherWorkflows } from './use-other-workflows.ts';
+import { useWorkflow } from './use-workflows.ts';
+import { namesInside, stepLabels } from './workflow-model.ts';
 import { revealStep } from '../chat/workflow-card/reveal-steps.ts';
 
 const FlowGraph = lazy(() => import('./FlowGraph.tsx'));
@@ -64,7 +66,13 @@ function Loaded({
       })),
     [run.steps],
   );
-  const labels = useMemo(() => stepLabels(graphSteps, sparks), [graphSteps, sparks]);
+  const nested = graphSteps.some((step) => step.id.includes('.'));
+  const file = useWorkflow(nested ? run.workflowId : null);
+  const others = useOtherWorkflows(run.workflowId);
+  const labels = useMemo(
+    () => stepLabels(graphSteps, sparks, [], namesInside(file.data?.workflow ?? null, others.find)),
+    [graphSteps, sparks, file.data, others],
+  );
   const states = useMemo(() => stepStates(run.steps), [run.steps]);
   const finished = useMemo(() => finishedEdges(run.steps), [run.steps]);
   const approvals = chat.data?.approvals;

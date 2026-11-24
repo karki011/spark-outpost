@@ -258,3 +258,18 @@
     flex-wrap: wrap;
   }
 }
+
+.wf-flowdot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--line);
+  border-radius: 40%;
+  color: var(--muted);
+}
+
+.wf-flowdot svg {
+  width: 60%;
+  height: 60%;
+}

@@ -1,4 +1,4 @@
-import { decideDue, workflowProblems, type DueAction } from '@spark-outpost/contracts';
+import { decideDue, type DueAction } from '@spark-outpost/contracts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import { withTransaction, type Db, type DbClient } from '../persistence/db.ts';
 import { sparkPaused } from '../persistence/spark-pause.ts';
@@ -25,6 +25,7 @@ import { startWorkflowRun, type StartRunDeps } from './start-run.ts';
 import { runEditsAllowed } from './trigger-records.ts';
 import { checkTriggers } from './trigger-runner.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
+import { runnableWorkflow } from './runnable.ts';
 import { workflowStore } from './workflow-store.ts';
 
 const CHECK_EVERY_MS = 30_000;
@@ -47,9 +48,13 @@ async function startBlocker(
   stored: StoredSchedule,
 ): Promise<Blocker | null> {
   const file = await deps.store.read(stored.workflowId);
-  const problems = file
-    ? workflowProblems(file.workflow.steps, await workspaceSparkIds(client, deps.workspaceId))
-    : [];
+  const { problems } = file
+    ? await runnableWorkflow(
+        deps.store,
+        file.workflow,
+        await workspaceSparkIds(client, deps.workspaceId),
+      )
+    : { problems: [] };
   if (problems[0]) return { state: 'not_started', reason: 'problem', detail: problems[0].text };
   const { projectId } = stored.schedule;
   if (projectId !== null && !(await projectLinked(client, deps.workspaceId, projectId))) {

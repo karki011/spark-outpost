@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { providerIdSchema, providerName, type WorkflowStep } from '@spark-outpost/contracts';
+import { providerIdSchema, providerName, type ExpandedStep } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { Switch } from '../ui/Switch.tsx';
 import { modeLabel } from '../chat/composer/mode-summary.ts';
@@ -101,7 +101,7 @@ function ModeWords({ spark }: { spark: CrewSpark }) {
 }
 
 interface MayDoCardProps {
-  steps: readonly WorkflowStep[];
+  steps: readonly Pick<ExpandedStep, 'sparkId'>[];
   sparkById: ReadonlyMap<string, CrewSpark>;
   edits: boolean;
   onEdits: (edits: boolean) => void;

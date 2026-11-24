@@ -10,6 +10,26 @@ export interface SparkName {
   name: string;
 }
 
+export interface StepTarget extends SparkName {
+  workflow?: boolean;
+}
+
+type Targeted = Pick<WorkflowStep, 'sparkId' | 'workflowId'>;
+
+const WORKFLOW_TARGET = 'workflow:';
+
+export function workflowTarget(workflowId: string): string {
+  return `${WORKFLOW_TARGET}${workflowId}`;
+}
+
+export function targetKey(step: Targeted): string {
+  return step.workflowId === undefined ? (step.sparkId ?? '') : workflowTarget(step.workflowId);
+}
+
+function targetFields(target: StepTarget): Targeted {
+  return target.workflow ? { workflowId: target.id } : { sparkId: target.id };
+}
+
 export type MoveDirection = 'earlier' | 'later';
 
 function uniqueSlug(name: string, taken: ReadonlySet<string>): string {
@@ -28,12 +48,12 @@ export function workflowId(name: string, taken: readonly string[]): string {
 
 function newStep(
   steps: readonly WorkflowStep[],
-  spark: SparkName,
+  target: StepTarget,
   dependsOn: string[],
 ): WorkflowStep {
   return {
-    id: uniqueSlug(spark.name, new Set(steps.map((step) => step.id))),
-    sparkId: spark.id,
+    id: uniqueSlug(target.name, new Set(steps.map((step) => step.id))),
+    ...targetFields(target),
     prompt: '',
     dependsOn,
     join: 'all',
@@ -44,14 +64,14 @@ function newStep(
 export function addStep(
   steps: readonly WorkflowStep[],
   stage: number,
-  spark: SparkName,
+  spark: StepTarget,
 ): WorkflowStep[] {
   const stages = workflowStages(steps);
   const parents = stage > 0 ? (stages[stage - 1] ?? []) : [];
   return [...steps, newStep(steps, spark, [...parents])];
 }
 
-export function addStage(steps: readonly WorkflowStep[], spark: SparkName): WorkflowStep[] {
+export function addStage(steps: readonly WorkflowStep[], spark: StepTarget): WorkflowStep[] {
   return addStep(steps, workflowStages(steps).length, spark);
 }
 
@@ -129,34 +149,93 @@ export function toggleParent(
 export function updateStep(
   steps: readonly WorkflowStep[],
   id: string,
-  change: Partial<Pick<WorkflowStep, 'sparkId' | 'prompt' | 'join' | 'onFailure'>>,
+  change: Partial<Pick<WorkflowStep, 'prompt' | 'join' | 'onFailure'>>,
 ): WorkflowStep[] {
   return steps.map((step) => (step.id === id ? { ...step, ...change } : step));
 }
 
+export function retargetStep(
+  steps: readonly WorkflowStep[],
+  id: string,
+  target: StepTarget,
+): WorkflowStep[] {
+  return steps.map((step) => {
+    if (step.id !== id) return step;
+    const { id: stepId, prompt, dependsOn, join, onFailure } = step;
+    return { id: stepId, ...targetFields(target), prompt, dependsOn, join, onFailure };
+  });
+}
+
+export interface StagePreviewStep {
+  stepId: string;
+  sparkId: string | null;
+  workflowId: string | null;
+}
+
 export function stagePreview(
-  steps: readonly Pick<WorkflowStep, 'id' | 'dependsOn' | 'sparkId'>[],
-): { stepId: string; sparkId: string }[][] {
-  const sparkOf = new Map(steps.map((step) => [step.id, step.sparkId]));
+  steps: readonly (Pick<WorkflowStep, 'id' | 'dependsOn'> & Targeted)[],
+): StagePreviewStep[][] {
+  const stepOf = new Map(steps.map((step) => [step.id, step]));
   return workflowStages(steps).map((stage) =>
-    stage.map((stepId) => ({ stepId, sparkId: sparkOf.get(stepId)! })),
+    stage.map((stepId) => ({
+      stepId,
+      sparkId: stepOf.get(stepId)?.sparkId ?? null,
+      workflowId: stepOf.get(stepId)?.workflowId ?? null,
+    })),
   );
 }
 
+function targetName(
+  step: Targeted,
+  sparks: ReadonlyMap<string, string>,
+  workflows: ReadonlyMap<string, string>,
+): string {
+  if (step.workflowId !== undefined) return workflows.get(step.workflowId) ?? 'Missing workflow';
+  return sparks.get(step.sparkId ?? '') ?? 'Missing Spark';
+}
+
+export type NamesInside = (path: readonly string[]) => string[];
+
+interface NamedSteps {
+  name: string;
+  steps: readonly (Pick<WorkflowStep, 'id'> & Targeted)[];
+}
+
+export function namesInside(
+  workflow: NamedSteps | null,
+  find: (id: string) => NamedSteps | null,
+): NamesInside {
+  return (path) => {
+    let current = workflow;
+    return path.map((segment) => {
+      const used = current?.steps.find((step) => step.id === segment)?.workflowId;
+      current = used === undefined ? null : find(used);
+      return current?.name ?? segment;
+    });
+  };
+}
+
 export function stepLabels(
-  steps: readonly Pick<WorkflowStep, 'id' | 'sparkId'>[],
+  steps: readonly (Pick<WorkflowStep, 'id'> & Targeted)[],
   sparks: readonly SparkName[],
+  workflows: readonly SparkName[] = [],
+  inside: NamesInside = (path) => [...path],
 ): Map<string, string> {
-  const names = new Map(sparks.map((spark) => [spark.id, spark.name]));
+  const sparkNames = new Map(sparks.map((spark) => [spark.id, spark.name]));
+  const workflowNames = new Map(workflows.map((workflow) => [workflow.id, workflow.name]));
+  const named = steps.map((step) => {
+    const path = inside(step.id.split('.').slice(0, -1));
+    const name = targetName(step, sparkNames, workflowNames);
+    return { id: step.id, name: [...path, name].join(' › ') };
+  });
   const uses = new Map<string, number>();
-  for (const step of steps) uses.set(step.sparkId, (uses.get(step.sparkId) ?? 0) + 1);
+  for (const { name } of named) uses.set(name, (uses.get(name) ?? 0) + 1);
   const seen = new Map<string, number>();
   const labels = new Map<string, string>();
-  for (const step of steps) {
-    const name = names.get(step.sparkId) ?? 'Missing Spark';
-    const count = (seen.get(step.sparkId) ?? 0) + 1;
-    seen.set(step.sparkId, count);
-    labels.set(step.id, (uses.get(step.sparkId) ?? 0) > 1 ? `${name} (${count})` : name);
+  for (const { id, name } of named) {
+    const count = (seen.get(name) ?? 0) + 1;
+    seen.set(name, count);
+    labels.set(id, (uses.get(name) ?? 0) > 1 ? `${name} (${count})` : name);
   }
   return labels;
 }

@@ -1,5 +1,4 @@
 import {
-  workflowProblems,
   type StartSparkTestRun,
   type StartWorkflowRun,
   type WorkflowRun,
@@ -18,6 +17,7 @@ import { copyChatAgent } from '../persistence/chat-settings.ts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { getWorkflowRun, insertWorkflowRun } from './run-records.ts';
+import { runnableWorkflow } from './runnable.ts';
 import { stepSparks, workspaceSparkIds } from './step-sparks.ts';
 import { oneSparkWorkflow, startTestRun } from './test-run.ts';
 import {
@@ -97,12 +97,12 @@ export async function startWorkflowRun(deps: StartRunDeps, start: StartRun): Pro
   if (repeated) return repeated;
   const file = await deps.store.read(start.workflowId);
   if (!file) throw new WorkflowNotFoundError(start.workflowId);
-  const { workflow } = file;
-  const problems = workflowProblems(
-    workflow.steps,
+  const { workflow, problems } = await runnableWorkflow(
+    deps.store,
+    file.workflow,
     await workspaceSparkIds(deps.db, deps.workspaceId),
   );
-  if (problems.length > 0) throw new WorkflowProblemsError(problems);
+  if (!workflow) throw new WorkflowProblemsError(problems);
   if (start.kind === 'test') {
     return startTestRun(deps, {
       workflow,

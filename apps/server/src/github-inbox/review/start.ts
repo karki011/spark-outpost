@@ -1,5 +1,6 @@
-import { TEST_RUN_CHAT_KIND, workflowProblems, type Workflow } from '@spark-outpost/contracts';
+import { TEST_RUN_CHAT_KIND, type ExpandedWorkflow } from '@spark-outpost/contracts';
 import { insertWorkflowRun } from '../../crew-flows/run-records.ts';
+import { runnableWorkflow } from '../../crew-flows/runnable.ts';
 import { stepSparks, workspaceSparkIds } from '../../crew-flows/step-sparks.ts';
 import { oneSparkWorkflow } from '../../crew-flows/test-run.ts';
 import type { WorkflowStore } from '../../crew-flows/workflow-store.ts';
@@ -53,7 +54,10 @@ async function autoReviewStillNeeded(
   return !(await headCoveredByAnother(deps.db, claim, detail.head.sha, before));
 }
 
-async function reviewerWorkflow(deps: ReviewStartDeps, claim: ClaimedReview): Promise<Workflow> {
+async function reviewerWorkflow(
+  deps: ReviewStartDeps,
+  claim: ClaimedReview,
+): Promise<ExpandedWorkflow> {
   if (claim.reviewer.kind === 'spark') {
     const spark = (await stepSparks(deps.db, deps.workspaceId, [claim.reviewer.id])).get(
       claim.reviewer.id,
@@ -64,9 +68,9 @@ async function reviewerWorkflow(deps: ReviewStartDeps, claim: ClaimedReview): Pr
   const file = await deps.store.read(claim.reviewer.id);
   if (!file) throw new ReviewSetupError(REVIEWER_GONE);
   const sparkIds = await workspaceSparkIds(deps.db, deps.workspaceId);
-  const [problem] = workflowProblems(file.workflow.steps, sparkIds);
-  if (problem) throw new ReviewSetupError(`The workflow can’t run: ${problem.text}`);
-  return file.workflow;
+  const { workflow, problems } = await runnableWorkflow(deps.store, file.workflow, sparkIds);
+  if (!workflow) throw new ReviewSetupError(`The workflow can’t run: ${problems[0].text}`);
+  return workflow;
 }
 
 async function alreadyStarted(deps: ReviewStartDeps, claim: ClaimedReview): Promise<boolean> {

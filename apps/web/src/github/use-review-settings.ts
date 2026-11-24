@@ -82,7 +82,7 @@ export function useReviewerGroups(): { groups: ReviewerGroups; loading: boolean 
           id: workflow.id,
           name: workflow.name,
           detail: `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}`,
-          faces: steps.flatMap((step) => faceOf.get(step.sparkId) ?? []).slice(0, 3),
+          faces: steps.flatMap((step) => faceOf.get(step.sparkId ?? '') ?? []).slice(0, 3),
         };
       }),
     };
