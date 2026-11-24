@@ -56,7 +56,14 @@ States: disagreements → `needs_user` (always the user's call); addressed/infor
 
 ## Rounds
 
-When items are queued, follow-up is not stopped (below), and the branch is in sync, Spark sends one chat message (`source = 'pr_follow_up'`, `startAs = 'change'`) so an ordinary chat turn runs in the chat's worktree on the chat's own session and model. The turn's publish step uses the follow-up prompt: push fixes to the same branch, no new pull request, no replies and no resolved threads.
+When items are queued, follow-up is not stopped (below), and the branch is in sync, Spark sends one chat message (`source = 'pr_follow_up'`, `startAs = 'change'`) and its run works in the chat's worktree on the chat's model, but outside the chat's own turns (since November 24, 2026):
+
+- **Own session.** The run carries `route.resumeKey = pr-follow-up:<watch id>` (`deps.ts` `startRoundWith`), so it uses a keyed provider session (`usesConversationSession` is false for `RunInput.followUpLane`), resumed from round to round, and never the chat's `chat:<provider>` session or its live connection (`liveTurn`).
+- **Not the chat's turn.** `persistence/chat-turns.ts` `chatTurn()` leaves follow-up runs out of every "is this chat's turn active" check that decides where a message goes (`queue-drain.ts`, `deliver-ask.ts`, agent cycles, Ask Spark's and a parent's stop): a message the user sends during a round starts an ordinary turn on the chat's session, and is never steered into or queued behind the round. The web does the same for the composer (`chat/turns.ts` `activeRun`); the round's card keeps its own **Stop turn**.
+- **Two agents, one folder.** A turn that starts while a round runs gets a turn note naming the round (`roundRunningNote`). The chat's agent stops the round with `spark_pr_follow_up_round` `action: "stop"` (`stopRun`; the round settles as stopped and its items go to the user) or sends its agent a note with `action: "message"` (a `member_messages` row steered into the round run, prefixed "From this chat's main agent, not typed by the user:"; never restarted as a turn if the round ends first). Both run at once, with no card, only on the chat's own running round. The round prompt (`SEPARATE_AGENT_RULE`) tells the round agent it is separate, to do the work itself, to touch only what the round needs and to stop editing when the main agent says so. Spark cannot block either agent's edits in modes the gate doesn't see, so this is by instruction; as a backstop, a Full auto → PR turn that overlapped a round skips its automatic publish with one line (`publish-step.ts` `roundOverlapped`), while a publish the user asked for still runs.
+- Rounds still start only in an idle chat (below), so the overlap is always a message sent after the round began.
+
+The turn's publish step uses the follow-up prompt: push fixes to the same branch, no new pull request, no replies and no resolved threads.
 
 Before a round starts (`round.ts`, `rounds.ts`):
 

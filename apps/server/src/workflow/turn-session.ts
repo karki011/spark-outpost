@@ -22,6 +22,7 @@ import { recordSessionCommands, sessionCommands } from '../persistence/session-c
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
 import { sameModel, type KnownWindow } from '../usage/context-window.ts';
+import { usesConversationSession } from './conversation-session.ts';
 import type { RunInput } from './run-input.ts';
 import { insertSessionEvent, recordAppliedSettings } from '../persistence/session-events.ts';
 import { modelChange, sessionEvent, type SessionFacts } from './session-events.ts';
@@ -96,7 +97,7 @@ export async function prepareTurnSession(
   limits: SweepLimits = DEFAULT_SWEEP_LIMITS,
   now = new Date(),
 ): Promise<TurnSession | null> {
-  const chatTurn = input.parentRunId === null;
+  const chatTurn = usesConversationSession(input);
   const resumeKey = input.resumeKey ?? null;
   if (!chatTurn && !resumeKey) return null;
   const conversationId = input.identity.threadId;

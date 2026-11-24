@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { delegationPolicy } from '../agents/delegation-policy.ts';
-import { ASSIGNED_WORK_LINE } from '../agents/delegation-policy.ts';
+import { ASSIGNED_WORK_LINE, REDIRECT_WORK_LINE } from '../agents/delegation-policy.ts';
 import {
   chatPrompt,
   chatTurnNote,
@@ -138,6 +138,23 @@ describe('chatPrompt', () => {
     const before = build({});
     expect(chatPrompt({ ...base, project: worktree, followUpRound: true } as never)).toBe(before);
     expect(build({ level: 'hands-off' })).not.toContain(text.PUBLISH_FOLLOW_UP);
+  });
+
+  it('tells the lead to stop and re-brief a worker when the user changes its work', () => {
+    expect(build({ level: 'hands-off' })).toContain(REDIRECT_WORK_LINE);
+  });
+
+  it('tells the chat agent how to stop or message a follow-up round running in its folder', () => {
+    const note = chatTurnNote({
+      project: worktree,
+      followUpRound: false,
+      taskTurn: false,
+      roundRunning: { number: 7, round: 2, doing: 'Fixing 2 items\n(round 2)' },
+    });
+    expect(note).toContain(text.TURN_NOTE_INTRO);
+    expect(note).toContain('PR #7 (round 2; Fixing 2 items (round 2))');
+    expect(note).toContain('spark_pr_follow_up_round (action "stop")');
+    expect(chatTurnNote({ project: worktree, followUpRound: false, taskTurn: false })).toBeNull();
   });
 
   it('puts the follow-up push line in the turn note at any level where there is a remote', () => {
