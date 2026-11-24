@@ -5,9 +5,11 @@ import {
   useQueryClient,
   type Mutation,
 } from '@tanstack/react-query';
-import { api } from '../../api/client.ts';
+import type { ConversationDetail } from '@spark-outpost/contracts';
+import { api, queryKeys } from '../../api/client.ts';
 import { useStableCallback } from '../../ui/use-stable-callback.ts';
 import { queueDraft } from '../composer/pending-draft.ts';
+import { withSavedSend } from './saved-send.ts';
 import {
   nextSlowAt,
   pendingSends,
@@ -59,7 +61,11 @@ export function useChatSend(
         message.attachments.map((attachment) => attachment.id),
         message.annotations,
       ),
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      queryClient.setQueryData<ConversationDetail>(
+        queryKeys.conversation(conversationId),
+        (detail) => detail && withSavedSend(detail, saved),
+      );
       void Promise.resolve()
         .then(onSent)
         .catch(() => undefined);
