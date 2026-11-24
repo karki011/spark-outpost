@@ -1,7 +1,7 @@
 import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { resolveRunTarget } from '../api/run-target.ts';
-import { sendUserMessage } from '../persistence/conversations.ts';
-import type { Db } from '../persistence/db.ts';
+import { sendInTransaction, type RunTarget } from '../persistence/conversations.ts';
+import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import type { Watch } from '../persistence/pr-watches.ts';
 import { connectionFor, type GitHubDeps } from '../ship/github/access.ts';
@@ -36,19 +36,38 @@ export function connectTo(
 
 export const nowOf = (deps: FollowUpDeps) => deps.now?.() ?? new Date();
 
+export function roundResumeKey(watchId: string): string {
+  return `pr-follow-up:${watchId}`;
+}
+
+export async function startRoundWith(
+  db: Db,
+  watch: Pick<Watch, 'id' | 'conversationId'>,
+  content: string,
+  target: RunTarget,
+): Promise<string> {
+  return withTransaction(db, async (client) => {
+    const sent = await sendInTransaction(
+      client,
+      watch.conversationId,
+      { id: newId(), content, source: 'pr_follow_up', startAs: 'change' },
+      target,
+    );
+    await client.query('UPDATE runs SET route = $2 WHERE id = $1', [
+      sent.run.id,
+      JSON.stringify({ resumeKey: roundResumeKey(watch.id) }),
+    ]);
+    return sent.run.id;
+  });
+}
+
 export async function sendRoundMessage(db: Db, watch: Watch, content: string): Promise<string> {
   const target = await resolveRunTarget(
     { db, workspaceId: watch.workspaceId },
     watch.conversationId,
   );
   const level = target.level === 'full-auto' ? 'hands-off' : (target.level ?? null);
-  const sent = await sendUserMessage(
-    db,
-    watch.conversationId,
-    { id: newId(), content, source: 'pr_follow_up', startAs: 'change' },
-    { ...target, level },
-  );
-  return sent.run.id;
+  return startRoundWith(db, watch, content, { ...target, level });
 }
 
 export function startRoundRun(deps: FollowUpDeps, watch: Watch, content: string) {

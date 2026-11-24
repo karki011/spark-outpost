@@ -4,12 +4,13 @@ import { getChatAsk } from '../persistence/chat-asks.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { insertMemberMessage } from '../persistence/member-messages.ts';
 import { drainQueue, type ResolveTarget } from '../workflow/queue-drain.ts';
+import { chatTurn } from '../persistence/chat-turns.ts';
 
 type Handed = 'steered' | 'queued' | 'started' | 'closed';
 
 async function activeTurn(db: Queryable, conversationId: string): Promise<string | null> {
   const { rows } = await db.query<{ id: string }>(
-    `SELECT id FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+    `SELECT id FROM runs WHERE conversation_id = $1 AND ${chatTurn()}
        AND status IN ('queued', 'running', 'awaiting_approval')
      ORDER BY created_at DESC LIMIT 1`,
     [conversationId],

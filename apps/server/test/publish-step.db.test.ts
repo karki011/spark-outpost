@@ -273,6 +273,21 @@ describe('the publish step after the agent’s reply', { timeout: 120_000 }, () 
     expect((await repliesOf(t, runId)).at(-1)).toContain('Pushed the fix to pull request #1.');
   });
 
+  it('a Full auto turn that overlapped a follow-up round is not published by itself', async () => {
+    const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto');
+    await turn(chat, BUILD, 'full-auto');
+    const roundId = await followUpRound(chat, '#build');
+    await t.db.query("UPDATE runs SET finished_at = now() + interval '1 hour' WHERE id = $1", [
+      roundId,
+    ]);
+    const before = git(chat.repo.bare, 'rev-parse', CHAT_BRANCH);
+    const { replies, prompts } = await turn(chat, BUILD, 'full-auto');
+
+    expect(prompts).toBe(1);
+    expect(replies.at(-1)).toContain('Not published: a PR follow-up round was working');
+    expect(git(chat.repo.bare, 'rev-parse', CHAT_BRANCH)).toBe(before);
+  });
+
   it("a follow-up round's reply on the chat's own thread gets the mode's ordinary card, and is refused by name once follow-up is off", async () => {
     const chat = await chatOnItsBranch(t, base, `widgets-${chats}`, 'full-auto');
     await turn(chat, BUILD, 'full-auto');

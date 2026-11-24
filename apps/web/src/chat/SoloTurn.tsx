@@ -68,7 +68,7 @@ import { canFold } from './rows/turn-fold.ts';
 import { useTurnChanges } from './rows/use-turn-changes.ts';
 import { AgentMark, TurnMeta, agentChanged } from './turn/TurnParts.tsx';
 import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
-import { turnMood } from './turn/turn-mood.ts';
+import { STARTING, turnMood } from './turn/turn-mood.ts';
 import { SteerGroup } from './steer/SteeredMessage.tsx';
 import { seenAfter, steerMarks, steersReadByNone, turnSteers } from './steer/steer-model.ts';
 
@@ -201,13 +201,14 @@ export function SoloTurn({
     outputAt,
   });
   useReportLeadStep(run.id, working && !waiting ? lead : null);
+  const unstarted = steps.length === 0 && text === '';
   useLiveReport(
     {
       id: run.id,
       name: providerName(provider),
       provider,
       kind: 'agent',
-      ...(waitingText ? { doing: waitingText } : {}),
+      ...(waitingText ? { doing: waitingText } : unstarted ? { doing: STARTING } : {}),
       ...(doingTodo ? { todo: doingTodo } : {}),
     },
     working,
@@ -303,7 +304,7 @@ export function SoloTurn({
     live: stream.status,
     waiting,
     waitingText,
-    started: steps.length > 0 || text !== '',
+    started: !unstarted,
   });
   const fold = foldable
     ? { open: foldOpen, seconds: runSeconds(run), onToggle: () => setFoldOpen(!foldOpen) }

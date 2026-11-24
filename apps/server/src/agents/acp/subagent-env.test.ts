@@ -3,6 +3,7 @@ import { agentEnvironment } from './agent-env.ts';
 import { agentDefinitions } from './agents.ts';
 import { withBackgroundSubagents } from './subagent-env.ts';
 import { CLAUDE_WINDOWS_ENV } from './claude-windows-env.fixture.ts';
+import { FOREGROUND_COMMAND_ENV } from './claude-env.ts';
 
 const inherited = { PATH: '/bin', CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1' };
 
@@ -12,7 +13,12 @@ describe('how a chat session is told to run sub-agents', () => {
       { definition: agentDefinitions.claude, env: inherited },
       '/runs/1',
     );
-    expect(env).toEqual({ PATH: '/bin', CLAUDE_CODE_FORK_SUBAGENT: '1', ...CLAUDE_WINDOWS_ENV });
+    expect(env).toEqual({
+      PATH: '/bin',
+      CLAUDE_CODE_FORK_SUBAGENT: '1',
+      ...FOREGROUND_COMMAND_ENV,
+      ...CLAUDE_WINDOWS_ENV,
+    });
   });
 
   it('does the same for Z.ai, which runs through the same CLI', () => {

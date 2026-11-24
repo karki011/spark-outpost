@@ -306,6 +306,16 @@ describe('while the agent works', () => {
     expect(status().querySelector('.cs-time')?.textContent).toBe('12s');
   });
 
+  it('says how long a turn has been starting without output', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    const starting = { ...CLAUDE, doing: 'starting', working: true, step: null, outputSeq: 1 };
+    act(() => view.store.report(starting));
+    expect(shown()).toBe('Claude is starting…');
+    await act(() => vi.advanceTimersByTimeAsync(3 * 60_000));
+    expect(shown()).toBe('Claude is starting… · No output for 3m');
+  });
+
   it('says how long the agent has been quiet, and drops it when output arrives', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });

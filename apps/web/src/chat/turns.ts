@@ -51,13 +51,17 @@ function isActive(run: Run | undefined): run is Run {
   );
 }
 
+function ownTurns(detail: Pick<ConversationDetail, 'runs'>): Run[] {
+  return topLevelRuns(detail).filter((run) => run.prFollowUp !== true);
+}
+
 export function activeRun(detail: ConversationDetail | undefined): Run | null {
-  const latest = detail ? topLevelRuns(detail).at(-1) : undefined;
+  const latest = detail ? ownTurns(detail).at(-1) : undefined;
   return isActive(latest) ? latest : null;
 }
 
 export function activeRuns(detail: ConversationDetail | undefined): Run[] {
-  return detail ? topLevelRuns(detail).filter(isActive) : [];
+  return detail ? ownTurns(detail).filter(isActive) : [];
 }
 
 export function runSeconds(run: Run): number | null {

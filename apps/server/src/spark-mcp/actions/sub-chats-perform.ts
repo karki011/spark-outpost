@@ -9,6 +9,7 @@ import {
 import { stopRun } from '../../workflow/stop-run.ts';
 import type { SparkToolContext } from '../tool.ts';
 import type { Performed } from './performed.ts';
+import { chatTurn } from '../../persistence/chat-turns.ts';
 
 export async function performStartSubChats(
   { deps, scope }: SparkToolContext,
@@ -38,7 +39,7 @@ export async function performStartSubChats(
 async function activeTurn(context: SparkToolContext, action: StopSubChatAction) {
   const { rows } = await context.deps.db.query<{ run_id: string | null }>(
     `SELECT (SELECT r.id FROM runs r
-             WHERE r.conversation_id = s.conversation_id AND r.parent_run_id IS NULL
+             WHERE r.conversation_id = s.conversation_id AND ${chatTurn('r')}
                AND r.status IN ('queued', 'running', 'awaiting_approval')
              ORDER BY r.created_at DESC LIMIT 1) AS run_id
      FROM sub_chats s WHERE s.conversation_id = $1 AND s.parent_conversation_id = $2`,
