@@ -17,7 +17,6 @@ import { mountPhone } from './features/phone.ts';
 import { mountPrivacy } from './features/privacy.ts';
 import { mountWaterfall } from './features/waterfall.ts';
 import { setUpAccentPicker } from './accent.ts';
-import { setUpHero } from './hero/hero.ts';
 import { reducedMotion } from './motion.ts';
 
 const DEMOS: Record<string, (host: HTMLElement, still: boolean) => void> = {
@@ -40,5 +39,4 @@ function mountDemos(): void {
 
 setUpAccentPicker();
 void setUpDownloads();
-setUpHero();
 mountDemos();

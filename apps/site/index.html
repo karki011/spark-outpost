@@ -48,10 +48,11 @@
     <main id="main">
       <section class="hero wrap" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <h1 id="hero-title">Run Claude Code and Codex on your Mac.</h1>
+          <p class="pill">Free beta · macOS 13 and later</p>
+          <h1 id="hero-title">Run Claude Code and Codex in parallel, on your Mac.</h1>
           <p class="lead">
-            Follow every step, answer the approvals your agent's mode asks for, and see the time,
-            tokens and cost of each turn.
+            Every chat works on its own branch. You answer the approvals that matter and get pull
+            requests back.
           </p>
           <div class="download-row">
             <a
@@ -61,50 +62,54 @@
             >
               Download for Mac · <span data-download-arch>Apple silicon</span>
             </a>
+            <a class="button large quiet" href="/docs/">Read the docs</a>
+          </div>
+          <p class="hero-other">
             <a
               class="text-link"
               data-download-other
               href="https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-latest-x64.dmg"
               >Intel Mac?</a
             >
-          </div>
-          <p class="fine">Free beta · macOS 13+ · Apple silicon and Intel</p>
+          </p>
+          <ul class="trust">
+            <li>
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <rect x="4.5" y="9" width="11" height="8" rx="1.5" />
+                <path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
+              </svg>
+              Runs on your Mac. No Spark cloud.
+            </li>
+            <li>
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M10 2.5 3.5 5v5c0 3.7 2.6 6.6 6.5 7.5 3.9-.9 6.5-3.8 6.5-7.5V5z" />
+              </svg>
+              Approval rules you and your company set
+            </li>
+            <li>
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4 10.5 8.2 14.5 16 6" />
+              </svg>
+              Every tool call audited
+            </li>
+          </ul>
         </div>
-        <div class="hero-visual">
-          <figure class="product">
-            <picture>
-              <source
-                srcset="/docs/images/chats-and-modes-permissions-dark.png"
-                media="(prefers-color-scheme: dark)"
-              />
-              <img
-                src="/docs/images/chats-and-modes-permissions-light.png"
-                alt="Spark Outpost with a chat open and Claude's agent modes listed: Manual, Accept edits, Plan, Auto and Bypass permissions"
-                width="1280"
-                height="800"
-                fetchpriority="high"
-              />
-            </picture>
-          </figure>
-          <img
-            class="island-card"
-            src="/docs/images/companion-island-card-dark.png"
-            alt="Spark Island asking: Claude wants to run a command, pnpm test, with Deny, Allow once and Always in this project"
-            width="600"
-            height="260"
-          />
-          <div class="scout-stage" data-scout-stage>
-            <svg
-              class="scout-poster scout-mark"
-              viewBox="0 0 64 64"
-              role="img"
-              aria-label="Scout, the Spark Outpost mascot: a round blob with two eyes and a spark on its antenna"
-            >
-              <use href="#scout" />
-            </svg>
-            <button class="poke" type="button" data-scout-poke hidden>Squish Scout</button>
-          </div>
-        </div>
+        <figure class="product">
+          <div class="product-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+          <picture>
+            <source
+              srcset="/docs/images/chats-and-modes-new-chat-dark.png"
+              media="(prefers-color-scheme: dark)"
+            />
+            <img
+              src="/docs/images/chats-and-modes-new-chat-light.png"
+              alt="Spark Outpost with the chat list on the left, today's chats in the middle and a new message ready to send to Claude"
+              width="1280"
+              height="800"
+              fetchpriority="high"
+            />
+          </picture>
+        </figure>
         <ul class="claims">
           <li>
             <span class="claim-icon" aria-hidden="true"
