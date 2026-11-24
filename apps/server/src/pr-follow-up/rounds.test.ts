@@ -155,6 +155,17 @@ describe('round prompt', () => {
     expect(roundPrompt({ ...target, reviewers: [] }, [])).not.toContain('re-request');
   });
 
+  it('asks for the round to run as sub-agent work, with or without feedback items', () => {
+    const target = { repo: 'acme/widgets', number: 7, branch: 'spark/x', round: 1, base: 'main' };
+    for (const prompt of [
+      roundPrompt(target, [item('F1', 'Fix it.')]),
+      roundPrompt({ ...target, mergeState: 'behind' }, []),
+    ]) {
+      expect(prompt).toContain('Run this round as sub-agent work');
+      expect(prompt).toContain('answer a message from the user at once');
+    }
+  });
+
   it('prefixes every quoted line', () => {
     expect(quoted('one\ntwo')).toBe('> one\n> two');
   });
