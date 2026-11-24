@@ -68,7 +68,8 @@ Markers are never deleted. Each is a zero-byte object with no metadata: one R2 w
 - The unlock page has no title of the page and no content. The code is typed into one field drawn as 8 boxes; the caret hides once 8 characters are in, and the form won't submit fewer. Spaces, dashes and lower case are accepted. The field holds 12 characters, so a pasted `ABCD-2345` with a space on either side is not cut short.
 - A correct code answers with a Verified page (CSS animation only, the final state at once with reduced motion) that sets the cookie `__Secure-spark-share-<id>` (`HttpOnly; Secure; SameSite=Lax; Path=/a/<id>`, 12 hours, signed with `SIGNING_KEY`) and moves on to the page with a meta refresh after 2 seconds, or 1 second when a Chromium browser sends `Sec-CH-Prefers-Reduced-Motion: reduce`. An **Open the page** link appears after 4 seconds, for browsers that block the refresh.
 - Each unlock attempt is counted per client before its code is checked. A client's 5th attempt locks the share for that client for 15 minutes; it is still checked, and that client's later attempts answer `429` until the lock ends, so at most 5 codes per client are checked per 15 minutes however many arrive at once. Other visitors are not locked out. A correct code clears that client's count and lock. Wrong codes never delete a share.
-- A share also checks at most 50 codes an hour from all clients together; past that every attempt answers `429` until the hour ends. That keeps guessing bounded when an attacker has many addresses, and it means such an attacker can still lock a share for everyone for the rest of an hour.
+- A share also checks at most 50 wrong codes an hour from all clients together; past that every attempt answers `429` until the hour ends. A correct code is not counted, so a share opened by many people does not use the budget up. That keeps guessing bounded when an attacker has many addresses, and it means such an attacker can still lock a share for everyone for the rest of that hour.
+- A share's counts are cleared by an alarm 15 minutes after its hour ends, once no lock from that hour can still be running.
 - The attempt counts live in a Durable Object (`ShareCounters`), one per share, which counts each attempt in one step.
 
 ## What gets stored
@@ -90,7 +91,7 @@ An expired share is deleted the next time someone opens it, and every day at 03:
 - Pages up to 2 MiB of HTML, titles up to 120 characters, expiry 1 or 7 days.
 - 20 creates, 10 reports and 60 retirements of ids with nothing stored per hour per client. A client is an IPv4 address, or the /64 network of an IPv6 address, so rotating addresses inside one IPv6 network does not get past a limit.
 - All clients together: 600 creates per hour and 1 GiB of HTML per day (`ALL_CREATES_PER_HOUR`, `ALL_CREATE_BYTES_PER_DAY` in `src/api.ts`). Past either, creates answer `429 rate_limited` until the window ends. These are a brake on abuse and cost, not a quota for one user: someone with many networks can use them up and stop sharing for everyone for that window, so also set the Cloudflare rule below.
-- 5 passcode attempts per client per 15 minutes and 50 per share per hour.
+- 5 passcode attempts per client per 15 minutes and 50 wrong codes per share per hour.
 - Free plan: the passcode hash runs once when a passcode share is created and once per unlock attempt. Whether 100,000 PBKDF2 iterations fit the free plan's CPU limit has not been measured. If those requests fail with a CPU limit error, move to Workers Paid or lower `PASSCODE_ITERATIONS` in `src/crypto.ts`. A lower value only applies to shares created after the deploy: each share stores the count it was hashed with, so an existing passcode share still costs the old count on every unlock and keeps failing until the worker has enough CPU (Workers Paid) or the share is made again.
 
 ## Analytics
@@ -130,6 +131,8 @@ npx wrangler@4 deploy
 ```
 
 `SIGNING_KEY` must be at least 32 characters. Without it the viewer routes answer `503` (shares can still be created, deleted and reported). Changing it signs everyone out of passcode shares and breaks open frames for a minute; nothing else.
+
+After a deploy that changes how pages are shown or unlocked, open a passcode share in Safari and Firefox as well as a Chromium browser: the content frame needs the unlock cookie, and only Chromium has been checked.
 
 `wrangler deploy` prints the worker's address, for example `https://spark-outpost-share.<your-subdomain>.workers.dev`. Check it:
 

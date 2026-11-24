@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CREATE_BYTES_PER_DAY, ALL_CREATES_PER_HOUR, CREATE_LIMIT_PER_HOUR } from './api.ts';
-import { LOCK_AFTER, SHARE_ATTEMPTS_PER_HOUR } from './counters.ts';
+import { LOCK_AFTER, LOCK_MS, SHARE_ATTEMPTS_PER_HOUR } from './counters.ts';
 import {
   call,
   create,
@@ -126,6 +126,27 @@ describe('passcode attempt limits', () => {
     expect(await capped.text()).toContain('Try again in about 60 minutes');
     expect((await call(fake, `/a/${id}`, { ip: '192.0.2.200' })).status).toBe(429);
     expect((await unlockFrom(fake, id, CODE, '192.0.2.200', START + HOUR)).status).toBe(200);
+  });
+
+  it('spends none of the hourly share budget on correct codes', async () => {
+    const fake = fakeEnv();
+    const id = await lockedShare(fake);
+    for (let index = 0; index < SHARE_ATTEMPTS_PER_HOUR + 10; index++) {
+      expect((await unlockFrom(fake, id, CODE, `198.51.100.${index + 1}`)).status).toBe(200);
+    }
+    expect((await unlockFrom(fake, id, WRONG, '192.0.2.200')).status).toBe(401);
+  });
+
+  it('sets an alarm that clears a share’s counts once its hour and any lock have ended', async () => {
+    const fake = fakeEnv();
+    const id = await lockedShare(fake);
+    await unlockFrom(fake, id, WRONG, '198.51.100.1');
+    const storage = fake.storages.get(`attempts:${id}`)!;
+
+    expect(storage.alarm).toBe(START + HOUR + LOCK_MS);
+    expect(storage.values.size).toBeGreaterThan(0);
+    await fake.alarm(`attempts:${id}`);
+    expect(storage.values.size).toBe(0);
   });
 });
 

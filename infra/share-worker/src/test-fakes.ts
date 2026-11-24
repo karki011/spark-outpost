@@ -135,7 +135,8 @@ export function fakeEnv(
     ...(signingKey === null ? {} : { SIGNING_KEY: signingKey }),
     ...(options.events ? { EVENTS: options.events } : {}),
   };
-  return { env, bucket, storages };
+  const alarm = async (name: string) => counters.get(name)?.alarm();
+  return { env, bucket, storages, alarm };
 }
 
 export type FakeEnv = ReturnType<typeof fakeEnv>;

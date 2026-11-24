@@ -57,7 +57,10 @@ export class ShareCounters {
   }
 
   async alarm(): Promise<void> {
-    await this.storage.deleteAll();
+    const window = await this.storage.get<RateWindow>(SHARE_WINDOW);
+    const keepUntil = window ? window.start + HOUR_MS + LOCK_MS : 0;
+    if (Date.now() < keepUntil) await this.storage.setAlarm(keepUntil);
+    else await this.storage.deleteAll();
   }
 
   private async apply(op: CounterOp): Promise<unknown> {
@@ -69,7 +72,7 @@ export class ShareCounters {
       case 'attempt':
         return this.attempt(op.now, op.client);
       case 'pass':
-        await this.storage.delete(clientAttempts(op.client));
+        await this.pass(op.client);
         return {};
       case 'clear':
         await this.storage.deleteAll();
@@ -87,6 +90,13 @@ export class ShareCounters {
     window.count += amount;
     await this.storage.put('window', window);
     return { allowed: true };
+  }
+
+  private async pass(client: string): Promise<void> {
+    await this.storage.delete(clientAttempts(client));
+    const window = await this.storage.get<RateWindow>(SHARE_WINDOW);
+    if (!window || window.count === 0) return;
+    await this.storage.put(SHARE_WINDOW, { ...window, count: window.count - 1 });
   }
 
   private async attempts(client: string): Promise<Attempts> {
@@ -114,6 +124,7 @@ export class ShareCounters {
     const lockedUntil = await this.lockedUntil(now, client);
     if (lockedUntil) return { allowed: false, lockedUntil };
     const window = await this.shareWindow(now);
+    if (window.count === 0) await this.storage.setAlarm(window.start + HOUR_MS + LOCK_MS);
     window.count += 1;
     await this.storage.put(SHARE_WINDOW, window);
     const attempts = await this.attempts(client);
