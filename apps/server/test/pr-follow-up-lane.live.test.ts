@@ -216,5 +216,6 @@ describe.skipIf(!claudeReady)('the agent sessions of one chat, with real Claude'
     expect(moved.rowCount).toBe(1);
     expect(run.reply).toContain('SLEPT-OK');
     expect(seconds).toBeGreaterThan(40);
+    await rm(base, { recursive: true, force: true });
   }, 300_000);
 });
