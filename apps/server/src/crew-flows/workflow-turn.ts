@@ -106,7 +106,8 @@ async function runOnPlace(
 ): Promise<Placed> {
   const pull = await pullPlaceOf(h, turn);
   const read = await readRunPull(h, turn, pull);
-  if (pullBlocksRun(h, read) && pull.kind === 'unlinked') {
+  const stopped = h.control.signal.aborted;
+  if (!stopped && pullBlocksRun(h, read) && pull.kind === 'unlinked') {
     return { end: 'blocked', line: pullBlockedLine(turn.workflow.name, pull.pull, read.reason) };
   }
   const pullMaterial = read.kind === 'read' ? read.material : null;
