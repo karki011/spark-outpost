@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState, useSyncExternalStore } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   isApprovalEvent,
@@ -10,13 +10,9 @@ import { queryKeys } from '../api/client.ts';
 import { taskKeys } from '../tasks/task-api.ts';
 import { refreshesChat } from './run-refresh.ts';
 import { RunStreamClient } from './run-stream-client.ts';
-import { applyRunEvent, initialRunProjection, type RunProjection } from './run-projection.ts';
+import { initialRunProjection, type RunProjection } from './run-projection.ts';
+import { RunProjections } from './run-projections.ts';
 import { invalidateChatDetail } from '../api/chat-detail.ts';
-
-interface StreamState {
-  runId: string;
-  projection: RunProjection;
-}
 
 const COALESCE_MS = 150;
 
@@ -93,42 +89,28 @@ export function runStreamClient(queryClient: QueryClient): RunStreamClient {
   return client;
 }
 
+const projections = new WeakMap<QueryClient, RunProjections>();
+
+function runProjections(queryClient: QueryClient): RunProjections {
+  let kept = projections.get(queryClient);
+  if (!kept) {
+    kept = new RunProjections(runStreamClient(queryClient));
+    projections.set(queryClient, kept);
+  }
+  return kept;
+}
+
+const NOT_WATCHING = () => () => undefined;
+
 export function useRunStream(runId: string, conversationId: string, live = true): RunProjection {
-  const [state, setState] = useState<StreamState>({ runId, projection: initialRunProjection });
   const [opened, setOpened] = useState(live);
   if (live && !opened) setOpened(true);
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    if (!opened) return;
-    let queued: [number, RunEvent][] = [];
-    let frame = 0;
-    const apply = () => {
-      frame = 0;
-      const events = queued;
-      queued = [];
-      setState((current) => {
-        let projection = current.runId === runId ? current.projection : initialRunProjection;
-        for (const [seq, event] of events) projection = applyRunEvent(projection, seq, event);
-        return { runId, projection };
-      });
-    };
-    const unsubscribe = runStreamClient(queryClient).subscribe(runId, conversationId, {
-      event(seq, event) {
-        queued.push([seq, event]);
-        if (isTerminalRunEvent(event)) {
-          cancelAnimationFrame(frame);
-          apply();
-          return;
-        }
-        frame ||= requestAnimationFrame(apply);
-      },
-    });
-    return () => {
-      unsubscribe();
-      cancelAnimationFrame(frame);
-    };
-  }, [runId, conversationId, queryClient, opened]);
-
-  return state.runId === runId ? state.projection : initialRunProjection;
+  const kept = runProjections(useQueryClient());
+  const watch = useCallback(
+    (onChange: () => void) => kept.watch(runId, conversationId, onChange),
+    [kept, runId, conversationId],
+  );
+  return useSyncExternalStore(opened ? watch : NOT_WATCHING, () =>
+    opened ? kept.read(runId) : initialRunProjection,
+  );
 }
