@@ -25,6 +25,7 @@ type Exit = { exitCode: number; signal?: number | undefined };
 const INPUT_CHUNK_BYTES = 256;
 const LOST_EXIT_CODE = 1;
 const SPLIT_WRITE_MS = 1;
+const LAST_SCREEN_WAIT_MS = 1000;
 const SIGHUP = 1;
 const REDRAW = '\x1bc';
 
@@ -78,12 +79,21 @@ export function controlPty(
   const exit = (result: Exit) => {
     if (ended) return;
     ended = true;
-    flush();
-    const killing = killSession(host, start.sessionId, null);
-    client.close();
-    void killing.then(() => {
-      for (const listener of exitListeners) listener(result);
-    });
+    let finished = false;
+    const finish = (lastScreen: string | null = null) => {
+      if (finished) return;
+      finished = true;
+      if (lastScreen !== null) emit(REDRAW + lastScreen);
+      flush();
+      const killing = killSession(host, start.sessionId, null);
+      client.close();
+      void killing.then(() => {
+        for (const listener of exitListeners) listener(result);
+      });
+    };
+    if (!paused) return finish();
+    setTimeout(finish, LAST_SCREEN_WAIT_MS);
+    requestSeed(client, pane.paneId, finish, FLOW_REDRAW_MAX_BYTES - REDRAW.length);
   };
   const checkDeath = () =>
     client.command(paneQuery(pane.paneId), (lines) => {

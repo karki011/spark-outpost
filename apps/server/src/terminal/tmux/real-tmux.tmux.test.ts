@@ -221,6 +221,16 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
     await run.exit;
   });
 
+  it('delivers the last screen of a command that exits while paused', async () => {
+    const run = start('echo ready; IFS= read -r l; echo last words; exit 3');
+    await until(() => run.output().includes('ready'), 'the command to start');
+    run.pty.pause?.();
+    run.pty.write('go\r');
+    const exit = await run.exit;
+    expect(exit.exitCode).toBe(3);
+    expect(run.output().split('\x1bc')[1]).toContain('last words');
+  });
+
   it('removes sessions that are not Spark terminals', async () => {
     tryTmux(host, ['new-session', '-d', '-s', 'stray', '--', '/bin/sleep', '300']);
     await killUnknownSessions(host);

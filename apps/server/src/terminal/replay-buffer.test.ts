@@ -60,4 +60,12 @@ describe('createReplayBuffer', () => {
     }
     expect(buffer.text()).toBe(expected.text());
   });
+
+  it('drops the part of the oldest chunk that can no longer be replayed', () => {
+    const buffer = createReplayBuffer(8);
+    buffer.push('abcdef');
+    buffer.push('ghijkl');
+    buffer.push('mn');
+    expect(buffer.text()).toBe('ghijklmn');
+  });
 });

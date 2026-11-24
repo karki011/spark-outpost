@@ -1,4 +1,5 @@
 const COMPACT_AFTER = 1024;
+const TRIM_HEAD_FRACTION = 4;
 
 export interface ReplayBuffer {
   push(data: string): void;
@@ -22,6 +23,11 @@ export function createReplayBuffer(
       length -= chunks[head]!.length;
       chunks[head] = '';
       head += 1;
+    }
+    const excess = length - limit;
+    if (excess >= limit / TRIM_HEAD_FRACTION && head < chunks.length) {
+      chunks[head] = ownCopy(chunks[head]!.slice(excess));
+      length = limit;
     }
     if (head >= COMPACT_AFTER) {
       chunks = chunks.slice(head);

@@ -312,6 +312,7 @@ const nativeTerminals = await createNativeRuntime({
   onStartPhase: (conversationId) =>
     appEvents.publish(JSON.stringify({ kind: 'terminal_start', conversationId, runId: null })),
 });
+desktopBrowser?.blockPorts([artifactPortFor(config.API_PORT)]);
 const startingArtifactPages = startArtifactOrigin({
   db,
   chatFolders,
@@ -323,11 +324,7 @@ const startingArtifactPages = startArtifactOrigin({
 });
 const [artifactPages] = await Promise.all([startingArtifactPages, nativeTerminals.recover()]);
 sparkPorts.add(nativeMcp.port).add(nativeTerminals.port);
-desktopBrowser?.blockPorts([
-  nativeMcp.port,
-  nativeTerminals.port,
-  artifactPortFor(config.API_PORT),
-]);
+desktopBrowser?.blockPorts([nativeMcp.port, nativeTerminals.port]);
 const clones = cloneJobsFor(cloneDeps);
 await clones.recover();
 const shares = shareWiring({ db, secrets, origin: config.SPARK_SHARE_URL });
