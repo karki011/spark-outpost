@@ -1,12 +1,12 @@
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { childEnvironment } from '../../setup/environment.ts';
 import type { SessionHostPaths } from './paths.ts';
-import { createdSchema, type CreateRequest } from './protocol.ts';
 
 export const HOST_ENTRY = path.join(import.meta.dirname, 'host-entry.ts');
 const SERVER_DIR = path.resolve(import.meta.dirname, '../../..');
 const CTL_TIMEOUT_MS = 30_000;
+const STDERR_MAX = 64 * 1024;
 const DROPPED_FLAG = /^--(?:watch|env-file)/;
 
 export interface NodeLauncher {
@@ -49,32 +49,43 @@ export function startHostProcess(launcher: NodeLauncher, directory: string): voi
   child.unref();
 }
 
-function ctlFailure(error: unknown): string {
-  const stderr = (error as { stderr?: unknown }).stderr;
-  const line = typeof stderr === 'string' ? stderr.trim().split('\n').pop() : undefined;
-  return line ? line.slice(0, 300) : 'the session host did not start the session';
+function lastLine(text: string): string | null {
+  const line = text.trim().split('\n').pop()?.trim();
+  return line ? line.slice(0, 300) : null;
 }
 
-export function createHostSession(
-  launcher: NodeLauncher,
-  paths: SessionHostPaths,
-  start: CreateRequest,
-): number {
-  let printed: string;
-  try {
-    printed = execFileSync(launcher.file, [...launcher.args, 'ctl', paths.directory], {
+export function runHostHelper(launcher: NodeLauncher, paths: SessionHostPaths): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(launcher.file, [...launcher.args, 'ctl', paths.directory], {
       cwd: SERVER_DIR,
       env: launcher.env,
-      input: JSON.stringify(start),
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: ['ignore', 'ignore', 'pipe'],
       timeout: CTL_TIMEOUT_MS,
       windowsHide: true,
-      maxBuffer: 1024 * 1024,
     });
-  } catch (error) {
-    throw new Error(ctlFailure(error), { cause: error });
-  }
-  const last = printed.trim().split('\n').pop() ?? '';
-  return createdSchema.parse(JSON.parse(last)).pid;
+    let stderr = '';
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', (chunk: string) => {
+      if (stderr.length < STDERR_MAX) stderr += chunk;
+    });
+    child.on('error', (error) => reject(error));
+    child.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(lastLine(stderr) ?? 'the session host did not start'));
+    });
+  });
+}
+
+const starting = new Map<string, Promise<void>>();
+
+export function ensureHost(
+  launcher: NodeLauncher,
+  paths: SessionHostPaths,
+  run: typeof runHostHelper = runHostHelper,
+): Promise<void> {
+  const running = starting.get(paths.directory);
+  if (running) return running;
+  const started = run(launcher, paths).finally(() => starting.delete(paths.directory));
+  starting.set(paths.directory, started);
+  return started;
 }

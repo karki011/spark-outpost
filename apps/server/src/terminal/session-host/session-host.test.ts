@@ -146,14 +146,64 @@ describe('the Spark session host with a real PTY', { timeout: 60_000 }, () => {
     expect(() => start(sessions.spawner(refusedBase), ECHO, { adopt: true })).toThrow(
       'That terminal session is no longer running.',
     );
-    const direct = { pid: 1 } as PtyProcess;
+    let directOutput: (data: string) => void = () => undefined;
+    const typed: string[] = [];
+    const direct = {
+      pid: 4321,
+      write: (data: string) => typed.push(data),
+      resize: () => undefined,
+      onData: (listener: (data: string) => void) => {
+        directOutput = listener;
+      },
+      onExit: () => undefined,
+    } satisfies PtyProcess;
     const broken = hostKept(
       { paths, launcher: { ...launcher, args: ['-e', 'process.exit(1)'] } },
       () => undefined,
     );
-    expect(
-      broken.spawner(() => direct)({ sessionId: 's2', command: 'x', cols: 80, rows: 24 }),
-    ).toBe(direct);
+    const pty = broken.spawner(() => direct)({ sessionId: 's2', command: 'x', cols: 80, rows: 24 });
+    let output = '';
+    pty.onData((data) => {
+      output += data;
+    });
+    pty.write('early\r');
+    await pty.ready;
+    expect(pty.pid).toBe(4321);
+    expect(typed).toEqual(['early\r']);
+    directOutput('from the direct PTY');
+    expect(output).toBe('from the direct PTY');
+  });
+
+  it('returns before the host has created a session and learns its pid afterwards', async () => {
+    const running = start(kept().spawner(refusedBase), ECHO);
+    expect(running.pty.pid).toBe(0);
+    await running.pty.ready;
+    expect(running.pty.pid).toBeGreaterThan(0);
+    await until(() => running.output().includes('ready:'), 'the session to start');
+  });
+
+  it('starts one host for sessions created together while it is cold', async () => {
+    const spawner = kept().spawner(refusedBase);
+    const first = start(spawner, ECHO);
+    const second = start(spawner, ECHO, { sessionId: 's2' });
+    await until(
+      () => first.output().includes('ready:') && second.output().includes('ready:'),
+      'both sessions to start',
+    );
+    const hosts = (await processTable()).filter(
+      (row) => row.args.includes('serve') && row.args.includes(paths.directory),
+    );
+    expect(hosts).toHaveLength(1);
+    expect((await kept().listSessionIds()).sort()).toEqual(['s1', 's2']);
+  });
+
+  it('stops a session that was stopped before the host finished creating it', async () => {
+    const running = start(kept().spawner(refusedBase), ECHO);
+    running.pty.kill?.();
+    expect(await running.exit).toEqual({ exitCode: 0, signal: 1 });
+    await running.pty.ready;
+    await until(async () => (await kept().listSessionIds()).length === 0, 'the session to go');
+    await until(() => !isAlive(running.pty.pid), 'the command to stop');
   });
 
   it('stops every session and exits when Spark quits', async () => {

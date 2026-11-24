@@ -31,7 +31,7 @@ export function tmuxSpawner(
         env: { ...shellEnvironment(process.env), ...options.env },
         ...(options.observer ? { observer: options.observer } : {}),
       });
-      options.observer?.tmux(true);
+      options.observer?.backend('tmux');
       return pty;
     } catch (error) {
       return direct(options, error as Error);

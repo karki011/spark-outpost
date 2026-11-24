@@ -2,6 +2,7 @@ import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { connect, createServer, type Socket } from 'node:net';
 import { spawn as spawnNodePty } from 'node-pty';
 import { killProcessTree } from '../process-group.ts';
+import { cliDeps, cliRun, ptyArgs } from '../windows-cli.ts';
 import { ensureSpawnHelperExecutable } from '../pty-helper.ts';
 import { isPipe, sessionHostPaths, type SessionHostPaths } from './paths.ts';
 import { createSecret, hostProof, sameProof } from './proof.ts';
@@ -29,7 +30,8 @@ export function answers(socket: string): Promise<boolean> {
 }
 
 function spawnPty(start: CreateRequest): HostPty {
-  return spawnNodePty(start.command, start.args, {
+  const run = cliRun(start.command, start.args, process.platform, cliDeps(start.env));
+  return spawnNodePty(run.file, ptyArgs(run), {
     name: 'xterm-256color',
     cols: start.cols,
     rows: start.rows,
@@ -39,7 +41,6 @@ function spawnPty(start: CreateRequest): HostPty {
 }
 
 function writeToken(paths: SessionHostPaths, token: string): void {
-  mkdirSync(paths.directory, { recursive: true, mode: 0o700 });
   const staged = `${paths.token}.${process.pid}`;
   writeFileSync(staged, token, { mode: 0o600 });
   renameSync(staged, paths.token);
@@ -57,10 +58,10 @@ export async function serveSessionHost(
   const exit = options.exit ?? ((code: number) => process.exit(code));
   const paths = sessionHostPaths(directory);
   if (await answers(paths.socket)) return exit(0);
+  mkdirSync(paths.directory, { recursive: true, mode: 0o700 });
   if (!isPipe(paths.socket)) rmSync(paths.socket, { force: true });
   ensureSpawnHelperExecutable();
   const token = createSecret();
-  writeToken(paths, token);
 
   const clients = new Set<Socket>();
   const watchers = new Map<string, Set<Socket>>();
@@ -192,5 +193,6 @@ export async function serveSessionHost(
   });
   server.on('error', () => leave(1));
   await new Promise<void>((resolve) => server.listen(paths.socket, resolve));
+  writeToken(paths, token);
   checkIdle();
 }

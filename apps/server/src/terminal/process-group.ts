@@ -2,6 +2,7 @@ import { execFile, execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { msysTable, msysTableNow, withMsysParents } from './msys-processes.ts';
+import type { PtyProcess } from './pty.ts';
 
 const execFileAsync = promisify(execFile);
 const PS_ARGS = ['-A', '-o', 'pid=,ppid=,tpgid=,args='];
@@ -141,7 +142,7 @@ const WINDOWS_TABLE = [
   'Get-CimInstance Win32_Process | ForEach-Object { $created = 0; if ($_.CreationDate) { $created = ([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds() }; "$($_.ProcessId) $($_.ParentProcessId) $created $($_.CommandLine)" }',
 ].join('; ');
 
-function system32(file: string): string {
+export function system32(file: string): string {
   return path.win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', file);
 }
 
@@ -302,4 +303,24 @@ async function signalTree(
     for (const pid of targets) if (isAlive(pid)) signal(pid, 'SIGKILL');
   }, graceMs);
   escalate.unref();
+}
+
+export function stopPty(pty: PtyProcess): Promise<void> {
+  if (!pty.kill) return killProcessTree(pty.pid);
+  if (process.platform !== 'win32') {
+    pty.kill();
+    return Promise.resolve();
+  }
+  const kill = pty.kill.bind(pty);
+  if (pty.pid <= 0) {
+    kill();
+    return Promise.resolve();
+  }
+  return killProcessTree(pty.pid).finally(() => {
+    try {
+      kill();
+    } catch {
+      return;
+    }
+  });
 }

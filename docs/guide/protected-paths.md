@@ -20,7 +20,7 @@ With no [rules](#spark-rules), the default, the mode decides all of this but out
 | **Force pushes**             | `git push --force-with-lease` to a named, non-default branch                                                                             | Hold to confirm; no "always" option. Claude can't, even in **Bypass permissions**.                                      |
 | **Sending a secret value**   | A push, `gh` upload, or site address or text holding a secret file's value                                                               | Hold to confirm, naming the file.                                                                                       |
 
-On Windows and macOS, any case matches.
+Windows and macOS match any case.
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 

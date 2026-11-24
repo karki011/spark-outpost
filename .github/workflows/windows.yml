@@ -15,6 +15,9 @@ on:
       - 'apps/desktop/src/win-helper/**'
       - 'apps/desktop/src/windows-hello*.ts'
       - 'apps/desktop/src/app-lock*.ts'
+      - 'apps/server/src/terminal/windows-cli*'
+      - 'apps/server/src/terminal/native-hook-command*'
+      - 'apps/server/src/terminal/chat-port-windows*'
 
 permissions:
   contents: read
@@ -45,7 +48,7 @@ jobs:
       - name: Session host
         if: always()
         shell: bash
-        run: pnpm exec vitest run --project unit apps/server/src/terminal/session-host apps/server/src/terminal/kept-choice.test.ts
+        run: pnpm exec vitest run --project unit apps/server/src/terminal/session-host apps/server/src/terminal/kept-choice.test.ts apps/server/src/terminal/windows-cli.test.ts apps/server/src/terminal/native-hook-command.test.ts apps/server/src/terminal/chat-port-windows.test.ts
       - name: Unit tests
         if: always()
         continue-on-error: true
