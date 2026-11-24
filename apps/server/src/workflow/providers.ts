@@ -12,6 +12,7 @@ import type { LoginShellEnv } from '../agents/acp/agent-env.ts';
 const FAKE_ACP_TRIGGER = '#build';
 
 type Secrets = Pick<SecretStore, 'get'>;
+import type { McpBearer } from '../mcp/launch.ts';
 
 const FAKE_AGENT_MODELS: Partial<Record<AgentDefinition['id'], [string, string][]>> = {
   zai: ZAI_MODELS.map((model) => [model.slot, model.label]),
@@ -33,6 +34,7 @@ function fakeAcpProvider(
   script: string,
   secrets?: Secrets,
   sparkTools?: SparkToolsAccess,
+  mcpBearer?: McpBearer,
 ): Provider {
   return createAcpProvider({
     definition: {
@@ -44,6 +46,7 @@ function fakeAcpProvider(
     cancelGraceMs: 2_000,
     ...(secrets ? { secrets } : {}),
     ...(sparkTools ? { sparkTools } : {}),
+    ...(mcpBearer ? { mcpBearer } : {}),
   });
 }
 
@@ -66,6 +69,7 @@ export function createProviders(
   sparkTools?: SparkToolsAccess,
   locateCli?: CliLocator,
   loginEnv?: LoginShellEnv,
+  mcpBearer?: McpBearer,
 ): Map<string, Provider> {
   const fake = createFakeProvider();
   const providers = new Map<string, Provider>([[FAKE_PROVIDER_NAME, fake]]);
@@ -80,12 +84,13 @@ export function createProviders(
           ...(loginEnv ? { loginEnv } : {}),
           ...(secrets ? { secrets } : {}),
           ...(sparkTools ? { sparkTools } : {}),
+          ...(mcpBearer ? { mcpBearer } : {}),
         }),
       );
     } else if (!fakeAcpAgent) {
       providers.set(definition.id, fake);
     } else {
-      const acp = fakeAcpProvider(definition, fakeAcpAgent, secrets, sparkTools);
+      const acp = fakeAcpProvider(definition, fakeAcpAgent, secrets, sparkTools, mcpBearer);
       providers.set(definition.id, crewFake(fake, acp));
     }
   }

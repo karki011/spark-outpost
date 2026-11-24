@@ -135,7 +135,7 @@ export async function planLaunch(
     together([
       browsing ? openProject(definition, roots) : null,
       making,
-      resolveUserMcp(turn.userMcp ?? [], options.secrets),
+      resolveUserMcp(turn.userMcp ?? [], options.secrets, options.mcpBearer),
       definition.repoStyle === 'codex' ? processEnvironment(options).then(codexUserMcpNames) : [],
       definition.repoStyle === 'claude' ? prepareUserPlugins(turn.userPlugins ?? []) : null,
       turnFloor(),

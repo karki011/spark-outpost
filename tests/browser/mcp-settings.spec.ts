@@ -1,12 +1,14 @@
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { fakeMcpAuth } from '../../apps/server/test/fake-mcp-auth.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { clickSettings } from './rail-menu.ts';
 
 const ECHO = path.resolve('apps/server/test/echo-mcp-server.mjs');
 const TOKEN = 'echo-secret-value';
+const SHOTS = process.env.MCP_SHOTS ?? '';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -194,4 +196,54 @@ test('/mcp lists the chat’s servers, switches one for this chat and links to S
   await page.getByRole('button', { name: 'Add files and context' }).click();
   await page.getByRole('menuitem', { name: /^Tools…/ }).click();
   await expect(page.getByRole('dialog', { name: 'Tools in this chat' })).toContainText('echo-mcp');
+});
+
+test('signs in to a server once, keeps it across a reload, and signs out', async ({ page }) => {
+  const auth = await fakeMcpAuth();
+  try {
+    const added = await page.request.post('/api/mcp/servers', {
+      data: {
+        name: 'notes',
+        transport: 'http',
+        command: null,
+        args: [],
+        url: auth.serverUrl,
+        env: {},
+        headers: {},
+      },
+    });
+    expect(added.ok(), await added.text()).toBe(true);
+    const dialog = await openMcpSettings(page);
+    const card = dialog.getByRole('region', { name: 'notes' });
+    await card.getByRole('button', { name: /^notes/ }).click();
+    const signIn = card.getByRole('group', { name: 'Sign-in for notes' });
+    const popup = page.waitForEvent('popup');
+    await signIn.getByRole('button', { name: 'Sign in' }).click();
+    const tab = await popup;
+    await expect(tab.getByRole('heading', { name: 'You can close this tab' })).toBeVisible();
+    await tab.close();
+    await expect(signIn).toContainText('Signed in.');
+    await expect(signIn.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    const scan = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .include('.mcp-sign-in')
+      .analyze();
+    expect(scan.violations).toEqual([]);
+    if (SHOTS) await card.screenshot({ path: `${SHOTS}/mcp-signed-in.png` });
+    expect(JSON.stringify(await (await page.request.get('/api/mcp/servers')).json())).not.toMatch(
+      /access-1|refresh-1/,
+    );
+
+    await page.reload();
+    const again = await openMcpSettings(page);
+    const kept = again.getByRole('region', { name: 'notes' });
+    await kept.getByRole('button', { name: /^notes/ }).click();
+    const keptSignIn = kept.getByRole('group', { name: 'Sign-in for notes' });
+    await expect(keptSignIn).toContainText('Signed in.');
+    expect(auth.registrations).toHaveLength(1);
+    await keptSignIn.getByRole('button', { name: 'Sign out' }).click();
+    await expect(keptSignIn.getByRole('button', { name: 'Sign in' })).toBeVisible();
+  } finally {
+    await auth.close();
+  }
 });

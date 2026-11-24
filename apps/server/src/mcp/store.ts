@@ -4,6 +4,7 @@ import {
   mcpCheckSchema,
   userMcpServerSchema,
   type McpCheck,
+  type McpSignInState,
   type McpScope,
   type McpTransport,
 } from '@spark-outpost/contracts';
@@ -28,6 +29,7 @@ export interface UserMcpRow {
   config: StoredUserConfig;
   fingerprint: string;
   check: McpCheck | null;
+  signIn: McpSignInState;
 }
 
 export interface EnablementRow {
@@ -48,6 +50,7 @@ interface ServerDbRow {
   config: unknown;
   fingerprint: string;
   last_check: unknown;
+  sign_in: McpSignInState;
 }
 
 const serverShape = userMcpServerSchema.shape;
@@ -71,6 +74,7 @@ function toRow(row: ServerDbRow): UserMcpRow {
     fingerprint: row.fingerprint,
     check: storedCheckSchema.parse(row.last_check),
     config: storedConfigSchema.parse(row.config),
+    signIn: row.sign_in,
   };
 }
 
@@ -87,7 +91,7 @@ export function storedUserConfig(
   return { ...storedMcpConfig(server), secretNames };
 }
 
-const SERVER_COLUMNS = 'id, source, name, transport, config, fingerprint, last_check';
+const SERVER_COLUMNS = 'id, source, name, transport, config, fingerprint, last_check, sign_in';
 
 export async function listUserMcp(db: Queryable, workspaceId: string): Promise<UserMcpRow[]> {
   const { rows } = await db.query<ServerDbRow>(

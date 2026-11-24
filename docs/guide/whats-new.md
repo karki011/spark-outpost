@@ -32,6 +32,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| MCP server sign-in, once                        | [Sign in](mcp-sign-in.md).                                 |
 | Zoom links on new events                        | [Connect](connect-zoom.md).                                |
 | **Week**; replies; **New event**; agents invite | [Events](calendar-events.md).                              |
 | Faster; protocol logs kept 14 days              | Older [protocol logs](guardrails.md) go at first start.    |
@@ -64,12 +65,12 @@ summary: What changed in recent releases and what to do next.
 | **Stopped** steps                               | [Follow a turn](follow-a-turn.md).                         |
 | Meeting card buttons on one row                 | —                                                          |
 | **Health** in Settings                          | [Check Health](trouble-setup-and-reset.md#check-health).   |
-| Sent messages show where read                   | —                                                          |
 
 ## Mid-November 2026
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Sent messages show where read                              | —                                                                                        |
 | **Cost** by tool; model switch cache note                  | [Prompt cache](statuses-and-limits.md#prompt-cache).                                     |
 | **Usage limits**; **Compact idle conversations**           | [Limits](statuses-and-limits.md#limits), [Compaction](compaction.md#compact-idle-chats). |
 | Meeting notes (alpha): live tab, delete dialog             | [Take meeting notes](meetings.md).                                                       |
