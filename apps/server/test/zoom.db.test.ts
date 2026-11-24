@@ -135,6 +135,35 @@ describe('Staying signed in to Zoom', () => {
     expect(fake.refreshTokens).toHaveLength(2);
   });
 
+  it('renews by itself once a week, so the sign-in never reaches Zoom’s 90 days', async () => {
+    await connect();
+    clock += 6 * 24 * 60 * 60_000;
+    await zoom.keepAlive();
+    expect(fake.refreshTokens).toHaveLength(1);
+    clock += 2 * 24 * 60 * 60_000;
+    await service().keepAlive();
+    expect(fake.refreshTokens).toHaveLength(2);
+    expect(await secrets.get(zoomSecret('zoom-user-1'))).toBe('zoom-refresh-2');
+    await service().keepAlive();
+    expect(fake.refreshTokens).toHaveLength(2);
+  });
+
+  it('keeps the sign-in when a background renewal cannot reach Zoom', async () => {
+    await connect();
+    clock += 8 * 24 * 60 * 60_000;
+    const offline = createZoomService({
+      db: t.db,
+      workspaceId: t.workspaceId,
+      secrets,
+      now: () => clock,
+      fetch: () => Promise.reject(new Error('offline')),
+      client: { clientId: FAKE_ZOOM_CLIENT_ID, oauthUrl: fake.baseUrl, apiUrl: fake.baseUrl },
+    });
+    await offline.keepAlive();
+    expect((await zoom.status()).account).toMatchObject({ needsSignIn: false });
+    expect(await secrets.get(zoomSecret('zoom-user-1'))).toBe('zoom-refresh-1');
+  });
+
   it('asks to sign in again only when Zoom refuses the refresh token', async () => {
     await connect();
     fake.rejectRefresh();

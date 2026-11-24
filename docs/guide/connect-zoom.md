@@ -17,7 +17,7 @@ The card shows your Zoom email and **Connected**.
 
 You sign in once. Spark keeps the sign-in in your keychain and renews it by itself, also after a restart.
 
-**Sign in again** appears only if Zoom ends the sign-in: after 90 days without use, or when you remove the app in Zoom.
+**Sign in again** appears only if Zoom ends the sign-in: you remove the app in Zoom, or Spark stays closed for 90 days.
 
 ## Add a Zoom link to an event
 

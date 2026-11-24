@@ -25,5 +25,6 @@ export async function startCloudCalendars(
   const microsoft = createMicrosoftSource({ ...deps, client: microsoftClientConfig(env) });
   await Promise.all([google.start(), microsoft.start()]);
   const zoom = createZoomService({ ...deps, client: zoomClientConfig(env) });
+  zoom.start();
   return { google, microsoft, zoom };
 }
