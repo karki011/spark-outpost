@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import type { DocTarget } from '../ui/DocLink.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
@@ -35,10 +35,9 @@ export function SwitchRow({
       disabled={disabled}
       standsFor={standsFor}
     >
-      <BlobToggle
+      <Switch
         id={id}
         label={label}
-        kind="spark"
         checked={checked}
         describedBy={hintId}
         disabled={disabled}

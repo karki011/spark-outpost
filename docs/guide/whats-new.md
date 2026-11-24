@@ -19,7 +19,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                            | What to do           |
 | --------------------------------------- | -------------------- |
-| Blob faces only for Sparks; Sparks list | [Sparks](sparks.md). |
+| Blobs only for Sparks; company logos; plain switches | [Sparks](sparks.md). |
 
 ## 23 November 2026
 

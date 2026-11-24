@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { providerIdSchema, providerName, type WorkflowStep } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { modeLabel } from '../chat/composer/mode-summary.ts';
 import { shortLabel } from '../chat/composer/model-options.ts';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
@@ -144,7 +144,7 @@ export function MayDoCard(props: MayDoCardProps) {
             Commits, pushes and pull requests stay refused. Runs before publish only read.
           </small>
         </span>
-        <BlobToggle
+        <Switch
           label="Triggered and scheduled runs may change files"
           checked={edits}
           describedBy={`${ids}-edits`}
@@ -160,7 +160,7 @@ export function MayDoCard(props: MayDoCardProps) {
             Pushes stay refused. Runs before publish only read.
           </small>
         </span>
-        <BlobToggle
+        <Switch
           label="Steps may update the branch from its base"
           checked={updateBase}
           describedBy={`${ids}-base`}

@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { SlackConnection } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import type { SlackSave } from './use-slack-save.ts';
 
 function slackCanWatchMentions(connection: SlackConnection): boolean {
@@ -23,7 +23,7 @@ export function SlackMentionSettings({
       <div className="tk-sync">
         <div>
           <label className="tk-switch">
-            <BlobToggle
+            <Switch
               size="sm"
               label="Watch for @mentions of me"
               checked={usable && connection.settings.watchMentions}

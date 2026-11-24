@@ -10,7 +10,7 @@ import {
 import { queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { requestChat } from '../app/chat-request.ts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { useAddFolder } from '../projects/use-add-folder.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -238,7 +238,7 @@ export function SlackStartSettings({
       <div className="tk-sync">
         <div>
           <label className="tk-switch">
-            <BlobToggle
+            <Switch
               size="sm"
               label="Start work from the Slack shortcut and @mentions"
               checked={settings.startFromSlack}
@@ -260,7 +260,7 @@ export function SlackStartSettings({
         </div>
         <div>
           <label className="tk-switch">
-            <BlobToggle
+            <Switch
               size="sm"
               label="Reply in the thread when work starts, finishes or opens a PR"
               checked={settings.postUpdatesToThread}

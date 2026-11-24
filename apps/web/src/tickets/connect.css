@@ -312,22 +312,40 @@
 .tk-empty .tk-cform p {
   margin: 0;
 }
-.tk-move-title {
+.tk-set {
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+.tk-set-row {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.tk-set-row + .tk-set-row {
+  border-top: 1px solid var(--line);
+}
+.tk-set-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.tk-set-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.tk-set-label {
   margin: 0;
   font-size: 13px;
+  font-weight: 600;
   color: var(--text);
-}
-.tk-move-title + .tk-field-help {
-  margin-top: 2px;
 }
 .tk-move {
   display: grid;
-  gap: 4px;
-  max-width: 320px;
-  margin: 6px 0 0 42px;
-}
-.tk-move-title ~ .tk-move {
-  margin-left: 0;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 16px;
 }
 .tk-move-notes {
   display: grid;

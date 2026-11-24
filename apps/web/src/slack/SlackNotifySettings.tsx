@@ -7,7 +7,7 @@ import {
   type SlackConnection,
   type SlackNotifyEvent,
 } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { slackApi } from './slack-api.ts';
 import type { SlackSave } from './use-slack-save.ts';
@@ -113,7 +113,7 @@ export function SlackNotifySettings({
         {slackNotifyEventSchema.options.map((event) => (
           <div key={event}>
             <label className="tk-switch">
-              <BlobToggle
+              <Switch
                 size="sm"
                 label={slackNotifyLabels[event].label}
                 checked={settings.notify[event]}
@@ -129,7 +129,7 @@ export function SlackNotifySettings({
         ))}
         <div>
           <label className="tk-switch">
-            <BlobToggle
+            <Switch
               size="sm"
               label="Stay quiet while I'm using Spark"
               checked={settings.quietWhenFocused}

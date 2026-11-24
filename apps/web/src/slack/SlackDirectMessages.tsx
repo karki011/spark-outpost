@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SLACK_USER_SCOPES, type SlackConnection, type SlackDm } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { CopyManifest } from './SlackConnectForm.tsx';
 import { SlackSignInPanel } from './SlackSignIn.tsx';
 import { slackApi, slackKeys } from './slack-api.ts';
@@ -198,7 +198,7 @@ export function SlackDirectMessages({
         ))}
       <div>
         <label className="tk-switch">
-          <BlobToggle
+          <Switch
             size="sm"
             label={SWITCH_LABEL}
             checked={on}

@@ -8,7 +8,7 @@ import {
 } from '@spark-outpost/contracts';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import { AUTOMATIC, moveChoices, moveNotes, withMove } from './move-status-model.ts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 
 type SyncKey = 'moveOnShip' | 'moveOnMerge';
@@ -65,49 +65,59 @@ export function TicketSyncSettings({ connection }: { connection: TicketConnectio
   const moveStatuses = pending?.moveStatuses ?? connection.moveStatuses;
   return (
     <div className="tk-sync">
-      {ROWS.map((row) => {
-        const chosen = moveStatuses[row.move];
-        const notes = moveNotes(options.data, row.move, chosen);
-        const { toggle } = row;
-        return (
-          <div key={row.move}>
-            {toggle ? (
-              <label className="tk-switch">
-                <BlobToggle
-                  size="sm"
-                  label={row.label}
-                  checked={pending?.[toggle] ?? connection[toggle]}
-                  describedBy={`${id}-${row.move}`}
-                  onChange={(next) => save.mutate({ [toggle]: next })}
+      <div className="tk-set" role="group" aria-label="Ticket status">
+        {ROWS.map((row) => {
+          const chosen = moveStatuses[row.move];
+          const notes = moveNotes(options.data, row.move, chosen);
+          const { toggle } = row;
+          const switchId = `${id}-${row.move}-switch`;
+          return (
+            <div key={row.move} className="tk-set-row">
+              <div className="tk-set-head">
+                <div className="tk-set-text">
+                  {toggle ? (
+                    <label className="tk-set-label" htmlFor={switchId}>
+                      {row.label}
+                    </label>
+                  ) : (
+                    <p className="tk-set-label">{row.label}</p>
+                  )}
+                  <p id={`${id}-${row.move}`} className="tk-field-help">
+                    {row.hint}
+                  </p>
+                </div>
+                {toggle && (
+                  <Switch
+                    id={switchId}
+                    size="sm"
+                    label={row.label}
+                    checked={pending?.[toggle] ?? connection[toggle]}
+                    describedBy={`${id}-${row.move}`}
+                    onChange={(next) => save.mutate({ [toggle]: next })}
+                  />
+                )}
+              </div>
+              <div className="tk-move">
+                <ChoicePicker
+                  label={row.picker}
+                  choices={moveChoices(options.data, row.move, chosen)}
+                  value={chosen ?? AUTOMATIC}
+                  onChange={(choice) =>
+                    save.mutate({ moveStatuses: withMove(moveStatuses, row.move, choice) })
+                  }
                 />
-                <span>{row.label}</span>
-              </label>
-            ) : (
-              <p className="tk-move-title">{row.label}</p>
-            )}
-            <p id={`${id}-${row.move}`} className="tk-field-help">
-              {row.hint}
-            </p>
-            <div className="tk-move">
-              <ChoicePicker
-                label={row.picker}
-                choices={moveChoices(options.data, row.move, chosen)}
-                value={chosen ?? AUTOMATIC}
-                onChange={(choice) =>
-                  save.mutate({ moveStatuses: withMove(moveStatuses, row.move, choice) })
-                }
-              />
-              <ul className="tk-move-notes" aria-label={`${row.picker} by project`}>
-                {notes.map((note) => (
-                  <li key={note.project} className={note.warn ? 'warn' : undefined}>
-                    <b>{note.project}</b> {note.text}
-                  </li>
-                ))}
-              </ul>
+                <ul className="tk-move-notes" aria-label={`${row.picker} by project`}>
+                  {notes.map((note) => (
+                    <li key={note.project} className={note.warn ? 'warn' : undefined}>
+                      <b>{note.project}</b> {note.text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
       {options.isError && (
         <p className="tk-field-err" role="alert">
           Couldn’t read the statuses from {source}: {options.error.message}

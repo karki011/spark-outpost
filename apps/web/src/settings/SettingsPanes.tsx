@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useCalendarStatus } from '../calendar/use-calendar.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
-import { SwitchWordsProvider } from '../brand/switch-words.ts';
+import { SwitchWordsProvider } from '../ui/switch-words.ts';
 import { reveal } from '../ui/transitions.tsx';
 import { clearSettingFocus, requestSettingFocus } from './setting-focus.ts';
 import { pageOf, partOf } from './section-ids.ts';
