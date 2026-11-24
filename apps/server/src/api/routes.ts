@@ -20,6 +20,7 @@ import {
   listConversationsAfter,
   sendUserMessage,
 } from '../persistence/conversations.ts';
+import { getConversationRuns } from '../persistence/conversation-runs.ts';
 import { listHealthConversations } from '../persistence/health-chats.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
 import { reasoningText } from '../persistence/run-events.ts';
@@ -129,6 +130,10 @@ export function apiRoutes(deps: RouteDeps): Router {
       return;
     }
     res.json(detail);
+  });
+
+  router.get('/conversations/:id/runs', async (req, res) => {
+    res.json(await getConversationRuns(db, paramId(req)));
   });
 
   router.post('/conversations/:id/messages', async (req, res) => {

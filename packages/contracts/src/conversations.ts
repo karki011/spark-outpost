@@ -221,6 +221,13 @@ export const conversationDetailSchema = z.object({
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 
+export const conversationRunsSchema = z.object({
+  runs: z.array(runSchema),
+  usageTotals: conversationUsageSchema,
+  promptCache: promptCacheSchema.optional(),
+});
+export type ConversationRuns = z.infer<typeof conversationRunsSchema>;
+
 export const createConversationRequestSchema = z.object({
   id: z.uuid(),
   sessionType: sessionTypeSchema.optional(),

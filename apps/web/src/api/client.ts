@@ -19,10 +19,12 @@ import {
   type UpdateChatSettingsRequest,
   type UpdateConversationRequest,
   conversationDetailSchema,
+  conversationRunsSchema,
   conversationSummarySchema,
   runSchema,
   sendMessageResponseSchema,
   type ConversationDetail,
+  type ConversationRuns,
   type ConversationSummary,
   type Run,
   type SendMessageResponse,
@@ -53,13 +55,7 @@ async function send(url: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-export async function request<T>(
-  schema: z.ZodType<T>,
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
-  const url = `/api${path}`;
-  const response = await send(url, init);
+async function read<T>(schema: z.ZodType<T>, response: Response, url: string): Promise<T> {
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const message =
@@ -72,6 +68,47 @@ export async function request<T>(
     throw new ApiError(response.status, message, url, payload);
   }
   return schema.parse(payload);
+}
+
+export async function request<T>(
+  schema: z.ZodType<T>,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const url = `/api${path}`;
+  return read(schema, await send(url, init), url);
+}
+
+const KEPT_DETAILS = 12;
+
+interface KeptDetail {
+  etag: string;
+  detail: ConversationDetail;
+}
+
+const keptDetails = new Map<string, KeptDetail>();
+
+function keepDetail(id: string, kept: KeptDetail): ConversationDetail {
+  keptDetails.delete(id);
+  keptDetails.set(id, kept);
+  const oldest = keptDetails.keys().next();
+  if (keptDetails.size > KEPT_DETAILS && !oldest.done) keptDetails.delete(oldest.value);
+  return kept.detail;
+}
+
+async function fetchConversationDetail(id: string): Promise<ConversationDetail> {
+  const url = `/api/conversations/${id}`;
+  const kept = keptDetails.get(id);
+  const response = await send(url, kept ? { headers: { 'If-None-Match': kept.etag } } : undefined);
+  const etag = response.headers.get('ETag');
+  if (kept && (response.status === 304 || (response.ok && etag === kept.etag))) {
+    void response.body?.cancel();
+    return keepDetail(id, kept);
+  }
+  const detail = await read(conversationDetailSchema, response, url);
+  if (etag) return keepDetail(id, { etag, detail });
+  keptDetails.delete(id);
+  return detail;
 }
 
 const drafts = new Set<string>();
@@ -143,13 +180,13 @@ export const api = {
     request(z.null(), `/conversations/${id}`, { method: 'DELETE', keepalive: true }),
   getConversation: async (id: string): Promise<ConversationDetail> => {
     if (drafts.has(id)) return draftConversation(id, await api.getChatDefaults());
-    return request(conversationDetailSchema, `/conversations/${id}`).catch(
-      async (error: unknown) => {
-        if (!(error instanceof ApiError) || error.status !== 404) throw error;
-        return draftConversation(id, await api.getChatDefaults());
-      },
-    );
+    return fetchConversationDetail(id).catch(async (error: unknown) => {
+      if (!(error instanceof ApiError) || error.status !== 404) throw error;
+      return draftConversation(id, await api.getChatDefaults());
+    });
   },
+  getConversationRuns: (id: string): Promise<ConversationRuns> =>
+    request(conversationRunsSchema, `/conversations/${id}/runs`),
   getChatDefaults: (): Promise<ChatSettings> =>
     request(chatSettingsSchema, '/chat-settings/defaults'),
   sendMessage: (

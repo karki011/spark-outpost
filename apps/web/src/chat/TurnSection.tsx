@@ -26,7 +26,7 @@ import { AskLines } from './sub-chats/AskLines.tsx';
 import { ChatTurnStart } from './sub-chats/ChatTurnStart.tsx';
 import { StartedLines } from './sub-chats/StartedLine.tsx';
 
-interface TurnSectionProps {
+interface TurnBodyProps {
   run: Run;
   userMessage: Message | null;
   assistantMessage: Message | null;
@@ -37,6 +37,10 @@ interface TurnSectionProps {
   onOpenChat: (conversationId: string) => void;
 }
 
+interface TurnSectionProps extends TurnBodyProps {
+  deferred?: boolean;
+}
+
 function sameMessages(before: readonly Message[], after: readonly Message[]): boolean {
   return (
     before.length === after.length && before.every((message, index) => message === after[index])
@@ -45,6 +49,7 @@ function sameMessages(before: readonly Message[], after: readonly Message[]): bo
 
 function sameSection(before: TurnSectionProps, after: TurnSectionProps): boolean {
   return (
+    before.deferred === after.deferred &&
     before.run === after.run &&
     before.userMessage === after.userMessage &&
     before.assistantMessage === after.assistantMessage &&
@@ -56,7 +61,7 @@ function sameSection(before: TurnSectionProps, after: TurnSectionProps): boolean
   );
 }
 
-export const TurnSection = memo(function TurnSection({
+function TurnBody({
   run,
   userMessage,
   assistantMessage,
@@ -65,7 +70,7 @@ export const TurnSection = memo(function TurnSection({
   detail,
   repo,
   onOpenChat,
-}: TurnSectionProps) {
+}: TurnBodyProps) {
   const orchestration = detail.orchestrations?.[run.id] ?? null;
   const sparkLed = isSparkLed(orchestration) ? orchestration : null;
   const crew = !sparkLed && isCrewTurn(orchestration) ? orchestration : null;
@@ -122,13 +127,7 @@ export const TurnSection = memo(function TurnSection({
     </>
   );
   return (
-    <section
-      id={turnAnchor(run.id)}
-      data-turn={run.id}
-      tabIndex={-1}
-      aria-label="Turn"
-      data-assistant-message-id={assistantMessage?.id}
-    >
+    <>
       {compactions.map((compaction) => (
         <CompactionDivider key={compaction.id} compaction={compaction} onOpenChat={onOpenChat} />
       ))}
@@ -200,6 +199,25 @@ export const TurnSection = memo(function TurnSection({
             onOpenChat={onOpenChat}
           />
         ))}
+    </>
+  );
+}
+
+export const TurnSection = memo(function TurnSection({
+  deferred = false,
+  ...turn
+}: TurnSectionProps) {
+  return (
+    <section
+      id={turnAnchor(turn.run.id)}
+      data-turn={turn.run.id}
+      tabIndex={-1}
+      aria-label="Turn"
+      aria-busy={deferred || undefined}
+      data-deferred={deferred ? '' : undefined}
+      data-assistant-message-id={turn.assistantMessage?.id}
+    >
+      {!deferred && <TurnBody {...turn} />}
     </section>
   );
 }, sameSection);

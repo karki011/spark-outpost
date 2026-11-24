@@ -304,9 +304,14 @@ test.describe('plain chats', () => {
     );
     expect(Math.min(...heights)).toBeGreaterThanOrEqual(4);
 
+    await expect(turns(page)).toHaveCount(303);
+    await expect(turns(page).last().locator('.bubble')).toBeInViewport();
+
     await page.locator('.thread').evaluate((element) => element.scrollTo({ top: 0 }));
     await expect(ticks(page).first()).toHaveAttribute('aria-current', 'location');
     await expect(ticks(page).first()).toBeInViewport();
+    await expect(turns(page).first().locator('.bubble')).toBeInViewport();
+    await expect(page.locator('.thread section[data-deferred]')).toHaveCount(0);
     await page
       .locator('.thread')
       .evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
