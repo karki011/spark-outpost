@@ -165,3 +165,38 @@ it('puts the accepted message and its turn in the chat while the refresh is stil
     }),
   );
 });
+
+it('keeps the accepted turn when a chat fetch that started before the send answers late', async () => {
+  const saved = {
+    message: { id: 'message-1', role: 'user' },
+    run: { id: 'run-1', userMessageId: 'message-1', status: 'queued' },
+  } as SendMessageResponse;
+  vi.spyOn(api, 'sendMessage').mockResolvedValue(saved);
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+  const key = queryKeys.conversation('chat-a');
+  const before = { messages: [], runs: [] } as unknown as ConversationDetail;
+  client.setQueryData(key, before);
+  let answer = (_detail: ConversationDetail) => {};
+  const stale = client
+    .fetchQuery({
+      queryKey: key,
+      queryFn: () =>
+        new Promise<ConversationDetail>((done) => {
+          answer = done;
+        }),
+    })
+    .catch(() => undefined);
+  const hook = chat(() => new Promise(() => undefined), client);
+  act(() => hook.result.current.send(content));
+  await waitFor(() =>
+    expect(client.getQueryData<ConversationDetail>(key)?.runs).toEqual([saved.run]),
+  );
+  await act(async () => {
+    answer(before);
+    await stale;
+  });
+  expect(client.getQueryData<ConversationDetail>(key)).toMatchObject({
+    messages: [saved.message],
+    runs: [saved.run],
+  });
+});

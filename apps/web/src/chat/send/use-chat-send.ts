@@ -61,9 +61,11 @@ export function useChatSend(
         message.attachments.map((attachment) => attachment.id),
         message.annotations,
       ),
-    onSuccess: (saved) => {
+    onSuccess: async (saved) => {
+      const detailKey = queryKeys.conversation(conversationId);
+      await queryClient.cancelQueries({ queryKey: detailKey, exact: true });
       queryClient.setQueryData<ConversationDetail>(
-        queryKeys.conversation(conversationId),
+        detailKey,
         (detail) => detail && withSavedSend(detail, saved),
       );
       void Promise.resolve()
