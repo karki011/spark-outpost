@@ -3,8 +3,8 @@ import { createReplayBuffer } from './replay-buffer.ts';
 
 const ESC = String.fromCharCode(27);
 const VIEW_RESYNC = `${ESC}[0m\r\n`;
-const MODE_SWITCH = new RegExp(`${ESC}\\[\\?(1049|1047|47|25)[hl]`, 'g');
-const LONGEST_SWITCH = 8;
+const MODE_SWITCH = new RegExp(`${ESC}\\[\\?([0-9;]{1,24})([hl])`, 'g');
+const LONGEST_SWITCH = 28;
 
 export interface ViewHold {
   output(data: string): void;
@@ -30,7 +30,11 @@ export function createViewHold(
     kept.push(data);
     heldLength += data.length;
     const text = tail + data;
-    for (const found of text.matchAll(MODE_SWITCH)) modes.set(found[1]!, found[0]);
+    for (const found of text.matchAll(MODE_SWITCH)) {
+      for (const mode of found[1]!.split(';')) {
+        if (mode) modes.set(mode, `${ESC}[?${mode}${found[2]!}`);
+      }
+    }
     tail = text.slice(-(LONGEST_SWITCH - 1));
   };
   return {

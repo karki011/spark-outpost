@@ -45,6 +45,15 @@ describe('createViewHold', () => {
     expect(sent[1]).toBe('\x1b[?1049l\x1b[?25h\x1b[0m\r\nnew 1\r\nnew 2\r\n');
   });
 
+  it('keeps every private mode switched before the kept lines, one by one', () => {
+    const { hold, sent } = held(20);
+    hold.pause();
+    hold.output('\x1b[?2004h\x1b[?1000;1006h');
+    hold.output('\x1b[?1000l' + 'x'.repeat(30) + '\r\nnew\r\n');
+    hold.resume();
+    expect(sent[0]).toBe('\x1b[?2004h\x1b[?1000l\x1b[?1006h\x1b[0m\r\nnew\r\n');
+  });
+
   it('starts each hold empty', () => {
     const { hold, sent } = held(20);
     hold.pause();
