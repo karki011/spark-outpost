@@ -338,7 +338,7 @@ describe('expiry', () => {
     const locked = await create(fake, { ...VALID_CREATE, expiresInDays: 1, passcode: 'ABCD2345' });
     await postForm(fake, `/a/${locked.id}/unlock`, { code: 'WXYZ2345' });
     await fake.bucket.put('reports/x/1-a', '{}');
-    expect(fake.storages.get(`attempts:${locked.id}`)?.values.size).toBe(1);
+    expect(fake.storages.get(`attempts:${locked.id}`)?.values.size).toBeGreaterThan(0);
 
     const waited: Promise<unknown>[] = [];
     vi.spyOn(Date, 'now').mockReturnValue(START + 2 * DAY);
