@@ -48,7 +48,7 @@ export function refreshChatRuns(
   }
   const mine = { again: false };
   waiting.set(conversationId, mine);
-  const readAt = query.state.dataUpdatedAt;
+  const read = query.state.data;
   const finish = (retry: boolean) => {
     waiting.delete(conversationId);
     if (retry || mine.again) refreshChatRuns(client, conversationId, fetchRuns);
@@ -68,7 +68,7 @@ export function refreshChatRuns(
         invalidateLive(client, { queryKey, exact: true });
         return;
       }
-      if (state.dataUpdatedAt !== readAt) return finish(true);
+      if (state.data !== read) return finish(true);
       client.setQueryData<ConversationDetail>(queryKey, (detail) =>
         detail ? withRuns(detail, slice) : detail,
       );

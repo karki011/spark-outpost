@@ -69,8 +69,9 @@ export const Thread = memo(function Thread({
         assistantMessage?.id === messageId ||
         laterMessages.some((message) => message.id === messageId),
     );
-    if (!turn || turnWindow.mounted.has(turn.run.id)) return true;
-    turnWindow.reveal([turn.run.id]);
+    const owners = turn ? [turn.run.id] : turns.map(({ run }) => run.id);
+    if (owners.every((id) => turnWindow.mounted.has(id))) return true;
+    turnWindow.reveal(owners);
     return false;
   });
   useMessageJump(

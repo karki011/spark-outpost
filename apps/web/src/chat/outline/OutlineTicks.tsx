@@ -29,7 +29,7 @@ interface Preview {
 
 function anchorElement(anchor: string): HTMLElement | null {
   const mounted = document.getElementById(anchor);
-  if (mounted) return mounted;
+  if (mounted && !mounted.hasAttribute('data-deferred')) return mounted;
   flushSync(revealAllTurns);
   return document.getElementById(anchor);
 }

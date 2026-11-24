@@ -94,7 +94,7 @@ export function useTurnWindow(
     );
     for (const shell of root.querySelectorAll('section[data-deferred]')) observer.observe(shell);
     return () => observer.disconnect();
-  }, [waiting, scroller, reveal]);
+  }, [waiting, order, scroller, reveal]);
 
   return { mounted, reveal };
 }
