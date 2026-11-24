@@ -83,6 +83,7 @@ export interface ApprovalRequest {
   subagent?: string | null;
   attachedFiles?: readonly string[];
   readable?: readonly string[];
+  sentCommand?: string | null;
 }
 
 export type RunRule =
@@ -150,6 +151,7 @@ export interface DecideOptions {
   shell?: ShellScript | null;
   agentAsks?: boolean;
   powershell?: boolean;
+  readAs?: string | null;
   publish?: PublishContext;
   sparkRules?: SparkRuleContext;
   browserData?: string | null;
@@ -309,7 +311,8 @@ function ruledDecide(
   allowlist: readonly string[],
   options: DecideOptions = {},
 ): Decision {
-  const request = withResolvedVariables(gateRequest(asked));
+  const read = options.readAs ? { ...asked, command: options.readAs } : asked;
+  const request = withResolvedVariables(gateRequest(read));
   const browserData = options.browserData === undefined ? browserDataDir() : options.browserData;
   if (touchesBrowserData(request, browserData)) {
     return { verdict: 'reject', reason: BROWSER_DATA_REASON };
