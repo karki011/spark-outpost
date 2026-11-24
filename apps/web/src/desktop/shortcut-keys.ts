@@ -1,4 +1,3 @@
-import { MAC } from '../ui/shortcuts.ts';
 import { onWindows, type IslandAction } from './desktop-bridge.ts';
 
 const MAC_MODIFIERS: Record<string, string> = {
@@ -12,6 +11,8 @@ const MAC_MODIFIERS: Record<string, string> = {
   Option: '⌥',
   Shift: '⇧',
 };
+
+const macDesktop = (): boolean => !onWindows();
 
 const PC_MODIFIERS: Record<string, string> = {
   Command: 'Win',
@@ -54,12 +55,12 @@ const CODE_KEYS: Record<string, string> = {
   Backquote: '`',
 };
 
-export function shortcutKeys(accelerator: string, mac = MAC): string[] {
+export function shortcutKeys(accelerator: string, mac = macDesktop()): string[] {
   const labels = mac ? MAC_MODIFIERS : PC_MODIFIERS;
   return accelerator.split('+').map((part) => labels[part] ?? part);
 }
 
-export function shortcutLabel(accelerator: string, mac = MAC): string {
+export function shortcutLabel(accelerator: string, mac = macDesktop()): string {
   return shortcutKeys(accelerator, mac).join(mac ? ' ' : '+');
 }
 
@@ -80,7 +81,7 @@ export interface KeyPress {
   shiftKey: boolean;
 }
 
-export function acceleratorFromKey(press: KeyPress, mac = MAC): string | null {
+export function acceleratorFromKey(press: KeyPress, mac = macDesktop()): string | null {
   const key = keyName(press.code);
   if (!key) return null;
   const modifiers = [
@@ -94,7 +95,7 @@ export function acceleratorFromKey(press: KeyPress, mac = MAC): string | null {
   return [...modifiers, key].join('+');
 }
 
-export function matchesShortcut(accelerator: string, press: KeyPress, mac = MAC): boolean {
+export function matchesShortcut(accelerator: string, press: KeyPress, mac = macDesktop()): boolean {
   return acceleratorFromKey(press, mac) === accelerator;
 }
 
