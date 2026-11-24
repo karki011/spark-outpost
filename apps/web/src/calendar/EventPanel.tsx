@@ -18,6 +18,7 @@ import { dateOf, span } from './calendar-format.ts';
 import { EventInfo } from './EventDetails.tsx';
 import { JoinButton } from './JoinButton.tsx';
 import { TakeNotesButton } from '../meetings/index.ts';
+import { EventReply } from './EventReply.tsx';
 import { replyState } from './reply-status.ts';
 import { openJoin } from './today-model.ts';
 import { openTodayMeeting } from './today-request.ts';
@@ -237,6 +238,7 @@ export function EventPanel({
     <section id={id} className="hpanel td-panel" aria-labelledby={`${id}-h`}>
       <h2 id={`${id}-h`}>{event.title}</h2>
       <EventMeta event={event} date={date} calendars={calendars} />
+      <EventReply event={event} />
       {clashes && (
         <p className="td-panel-clash">
           <ClashTag titles={clashes} />

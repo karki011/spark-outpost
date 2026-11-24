@@ -49,11 +49,33 @@ export function floorReasons(
   op: CalendarEditOp,
   choice: CalendarChoice,
   others: number,
+  guests = 0,
 ): CalendarFloorReason[] {
   const reasons: CalendarFloorReason[] = [];
-  if (others > 0) reasons.push('others');
+  if (op === 'reply') reasons.push('reply');
+  else if (others > 0) reasons.push('others');
+  if (guests > 0) reasons.push('invites');
   if (choice.ownership !== 'mine') reasons.push('shared');
   return reasons;
+}
+
+export interface GoogleOnlyFacts {
+  op: CalendarEditOp;
+  choice: CalendarChoice;
+  guests: number;
+  meet: boolean;
+}
+
+export function googleOnlyProblem({ op, choice, guests, meet }: GoogleOnlyFacts): string | null {
+  const google = choice.sourceKind === 'google';
+  if (op === 'reply') {
+    return google
+      ? null
+      : 'Spark answers invitations on Google calendars only. Ask the user to answer this one in their calendar app.';
+  }
+  if (guests === 0 && !meet) return null;
+  if (op !== 'create') return 'guests and meet are for a new event only.';
+  return google ? null : 'Guests and a Meet link need a Google calendar.';
 }
 
 function clipNotes(notes: string): string | null {

@@ -227,6 +227,8 @@ POST /api/calendar/refresh
 PUT /api/calendar/marks
 POST /api/calendar/open
 POST /api/calendar/event
+POST /api/calendar/reply
+POST /api/calendar/events
 GET /api/calendar/google/sign-in
 POST /api/calendar/google/sign-in
 DELETE /api/calendar/google/sign-in
@@ -235,6 +237,10 @@ GET /api/calendar/microsoft/sign-in
 POST /api/calendar/microsoft/sign-in
 DELETE /api/calendar/microsoft/sign-in
 DELETE /api/calendar/microsoft/accounts/:id
+GET /api/zoom/status
+POST /api/zoom/sign-in
+DELETE /api/zoom/sign-in
+DELETE /api/zoom/account
 GET /api/island/requests
 POST /api/island/requests/:id/claim
 GET /api/remote/access

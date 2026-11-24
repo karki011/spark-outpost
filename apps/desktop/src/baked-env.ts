@@ -7,6 +7,7 @@ import {
   readDevMicrosoftClient,
 } from './microsoft-client.ts';
 import { shareEnvFromManifest } from './share-url.ts';
+import { readDevZoomClient, zoomClientEnv, zoomClientFromManifest } from './zoom-client.ts';
 import {
   readDevSlackClientId,
   SLACK_CLIENT_ID_ENV,
@@ -16,6 +17,7 @@ import {
 interface DevSignInFiles {
   googleClientFile: string | null;
   microsoftClientFile?: string | null;
+  zoomClientFile?: string | null;
   slackClientIdFile: string | null;
 }
 
@@ -31,11 +33,14 @@ export async function bakedServerEnv(
   const microsoft =
     microsoftClientFromManifest(manifest) ??
     (await readDevMicrosoftClient(devFiles.microsoftClientFile ?? null));
+  const zoom =
+    zoomClientFromManifest(manifest) ?? (await readDevZoomClient(devFiles.zoomClientFile ?? null));
   return {
     ...gitHubAppEnv(gitHubAppFromManifest(manifest)),
     ...(slack ? { [SLACK_CLIENT_ID_ENV]: slack } : {}),
     ...googleClientEnv(google),
     ...microsoftClientEnv(microsoft),
+    ...zoomClientEnv(zoom),
     ...shareEnvFromManifest(manifest),
   };
 }
