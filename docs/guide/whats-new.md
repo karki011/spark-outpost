@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Windows: privacy screen, company rules          | [Privacy](privacy-screen.md).                              |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |
@@ -21,10 +22,9 @@ summary: What changed in recent releases and what to do next.
 | Copy a review or send it to a chat              | [Reviews](review-pull-requests.md).                        |
 | Workflow runs say which pull request they took  | [Workflows](workflow-in-chat.md).                          |
 | One tap sends on phones                         | [Use your phone](use-your-phone.md).                       |
-| Outposts are gone; agents split work instead    | [Sub-chats](sub-chats.md).                                 |
+| Outposts are gone; agents split work instead    | [Split a job](split-into-sub-chats.md).                    |
 | Sub-chats nest; **Sub-chats** tab; **Edit**     | [Sub-chats](sub-chats.md#find-a-sub-chat).                 |
 | Sub-chat reports, wrap-up                       | [Reports](sub-chat-reports.md).                            |
-| Agents split jobs into sub-chats                | [Split a job](split-into-sub-chats.md).                    |
 | Browser menus, docked tools                     | [Browser](use-the-browser.md).                             |
 | Chats message each other                        | [Messages](chat-messages.md).                              |
 | **Enter** sends mid-dictation; PR panel tidied  | [Talk to Spark](voice.md#turn-it-on).                      |

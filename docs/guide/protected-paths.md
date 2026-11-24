@@ -41,7 +41,7 @@ When a chat says Codex "ran with Codex's own sandbox instead", the browser data 
 
 ## Spark rules
 
-Rules live in Spark's data folder, in `settings.json`. A company may add `/Library/Application Support/SparkOutpost/managed-settings.json`, which yours can't loosen.
+Rules live in Spark's data folder, in `settings.json`. A company's `managed-settings.json`, in `/Library/Application Support/SparkOutpost/` or `%ProgramData%\SparkOutpost\`, can't be loosened.
 
 Rules go in `permissions.allow`, `ask` or `deny`; deny wins, then ask. Unlisted or allowed rules follow the mode, unflagged. A broken or unreadable file means recommended rules.
 
