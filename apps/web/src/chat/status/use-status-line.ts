@@ -4,6 +4,7 @@ import { runSeconds } from '../turns.ts';
 import { stepActivity, type StepActivity } from './step-activity.ts';
 import { providerName } from '../provider-name.ts';
 import { latestWork, type PendingEntry, type StatusStore, type Worker } from './status-store.ts';
+import { STARTING } from '../turn/turn-mood.ts';
 
 export const DONE_SHOWN_MS = 8_000;
 export const SLOW_STEP_MS = 10_000;
@@ -74,7 +75,10 @@ export function useStatusLine({
       },
       activity,
       since: step ? work!.since : null,
-      quietSince: work && !work.doing && (!step || thinking) ? work.outputAt : null,
+      quietSince:
+        work && (!work.doing || work.doing === STARTING) && (!step || thinking)
+          ? work.outputAt
+          : null,
     };
   }
   if (!ended || !isTerminalRunStatus(ended.status)) return null;

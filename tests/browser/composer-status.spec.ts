@@ -171,15 +171,15 @@ test('while the agent works the line says what it is doing, then says Done only 
   await emit(runId, { type: 'RUN_STARTED', runId, threadId: chatId });
   await openChats(page);
   const turnHead = page.locator('.thread .turn-working');
-  await expect(page.locator('.thread .msg.ai .mood')).toHaveText('thinking');
+  await expect(page.locator('.thread .msg.ai .mood')).toHaveText('starting');
   await expect(turnHead).toBeInViewport();
   await expect(shown(page)).toHaveCount(0);
   await expect(page.locator('.thread .dots')).toHaveCount(0);
-  await expect(line(page).getByRole('status')).toHaveText('Fake provider is thinking…');
+  await expect(line(page).getByRole('status')).toHaveText('Fake provider is starting…');
   await page.addStyleTag({ content: '.thread .col { padding-bottom: 200vh; }' });
   await page.locator('.thread').evaluate((element) => (element.scrollTop = element.scrollHeight));
   await expect(turnHead).not.toBeInViewport();
-  await expect(shown(page)).toHaveText('Fake provider is thinking…');
+  await expect(shown(page)).toHaveText('Fake provider is starting…');
 
   await emit(runId, stepStarted(`\`${GREP}\``));
   await expect(shown(page)).toHaveText(

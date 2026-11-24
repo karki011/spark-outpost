@@ -5,6 +5,7 @@ import type { AgentDefinition } from './agents.ts';
 import { codexUserMcpNames, disabledCodexServers } from './codex-mcp.ts';
 import type { SparkFloor } from '../../spark-rules/floor-flags.ts';
 import type { CodexRepoOptions } from './repo-session.ts';
+import { withBackgroundedCommands } from './claude-env.ts';
 import { withBackgroundSubagents } from './subagent-env.ts';
 
 function withHiddenServers(env: Record<string, string>, names: readonly string[]) {
@@ -127,7 +128,7 @@ export async function agentEnvironment(
   const base = await baseEnvironment(options, home, browsing, repo);
   const env = withGitBashOnly(
     options.definition,
-    withBackgroundSubagents(options.definition, base),
+    withBackgroundedCommands(options.definition, withBackgroundSubagents(options.definition, base)),
   );
   return cannotPush ? withoutPushing(env) : env;
 }

@@ -120,7 +120,7 @@ test.describe('one status', () => {
     await expect(working).toContainText('Esc to stop');
     await expect(statusLine(page)).toHaveCount(0);
     await expect(thread(page).locator('.dots')).toHaveCount(0);
-    await expect(page.locator('.cstatus').getByRole('status')).toHaveText(/is thinking/);
+    await expect(page.locator('.cstatus').getByRole('status')).toHaveText(/is (working|thinking)/);
     await expect(thread(page).getByRole('status')).toHaveCount(0);
     await shot(page, 'status-after');
 
