@@ -1,6 +1,6 @@
 import type { RunningRow } from './inbox-model.ts';
 import { shortAgo } from './inbox-model.ts';
-import { SessionBlob } from './SessionBlob.tsx';
+import { SessionMark } from './SessionMark.tsx';
 import { SpinnerIcon } from '../ui/icons.tsx';
 
 interface WorkingTilesProps {
@@ -25,7 +25,7 @@ export function WorkingTiles({ rows, now, onOpenChat }: WorkingTilesProps) {
               title={`Open ${chat.title} in Spark`}
               onClick={() => onOpenChat(chat.id)}
             >
-              <SessionBlob chat={chat} state="working" size={30} />
+              <SessionMark chat={chat} state="working" size={30} />
               <span className="isl-work-text">
                 <b>{chat.title}</b>
                 <span>

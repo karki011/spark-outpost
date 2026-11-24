@@ -1,6 +1,6 @@
 import { useRef, type KeyboardEvent } from 'react';
 import type { ProviderCardsView } from '@spark-outpost/contracts';
-import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { ProviderMark } from '../brand/ProviderMark.tsx';
 import { ALL_PROVIDERS } from './model-list.ts';
 
 interface Chip {
@@ -93,11 +93,7 @@ export function ProviderChips({ providers, value, onChange }: ProviderChipsProps
             onClick={() => onChange(chip.id)}
           >
             {chip.view ? (
-              <ProviderBlob
-                providerId={chip.view.provider.provider}
-                size={22}
-                expression={chip.view.connected ? 'idle' : 'sleepy'}
-              />
+              <ProviderMark providerId={chip.view.provider.provider} size={22} />
             ) : (
               <AllMark />
             )}

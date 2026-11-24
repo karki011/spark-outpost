@@ -7,7 +7,6 @@ import {
   type ConversationDetail,
   type Project,
 } from '@spark-outpost/contracts';
-import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { greeting } from '../spark/voice.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
@@ -105,7 +104,6 @@ export const Thread = memo(function Thread({
       <div className="thread-wrap">
         <div className="thread">
           <div className="empty">
-            <BlobScout size={64} />
             <h2>{greeting(voice, new Date().getHours())}</h2>
             {!intro && <p className="empty-ask">What should we work on?</p>}
             {intro ? (

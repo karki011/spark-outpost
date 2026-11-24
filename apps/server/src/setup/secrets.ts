@@ -11,6 +11,8 @@ export type GoogleCalendarSecretId = `calendar:google:${string}`;
 export type MicrosoftCalendarSecretId = `calendar:microsoft:${string}`;
 export const microsoftCalendarSecret = (subject: string): MicrosoftCalendarSecretId =>
   `calendar:microsoft:${subject}`;
+export type ZoomSecretId = `zoom:${string}`;
+export const zoomSecret = (subject: string): ZoomSecretId => `zoom:${subject}`;
 export type ShareSecretId = `share:${string}`;
 export const shareSecret = (shareId: string): ShareSecretId => `share:${shareId}`;
 export const googleCalendarSecret = (subject: string): GoogleCalendarSecretId =>
@@ -27,6 +29,7 @@ export type SecretId =
   | `signin:${string}`
   | GoogleCalendarSecretId
   | MicrosoftCalendarSecretId
+  | ZoomSecretId
   | ShareSecretId;
 
 export interface SecretStore {

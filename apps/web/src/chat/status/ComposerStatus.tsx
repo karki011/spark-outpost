@@ -86,7 +86,7 @@ function WaitingLine({
   return (
     <>
       <div className="cs-line wait">
-        <Indicator provider={provider} expression="unsure" />
+        <Indicator provider={provider} />
         {single ? (
           <button
             type="button"

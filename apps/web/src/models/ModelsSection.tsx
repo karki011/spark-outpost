@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ProviderCardsView } from '@spark-outpost/contracts';
 import { modelCardsApi, modelCardsKey } from '../api/model-cards.ts';
-import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { ProviderMark } from '../brand/ProviderMark.tsx';
 import { InfoTip } from '../ui/InfoTip.tsx';
 import {
   cardsNote,
@@ -35,11 +35,7 @@ function ProviderModels({ view, sort, onSort, folded }: ProviderModelsProps) {
   return (
     <section className="mc-provider" aria-labelledby={headingId}>
       <div className="mc-head">
-        <ProviderBlob
-          providerId={view.provider.provider}
-          size={26}
-          expression={view.connected ? 'idle' : 'sleepy'}
-        />
+        <ProviderMark providerId={view.provider.provider} size={26} />
         <h4 id={headingId}>{view.provider.label}</h4>
         {!view.connected && <span className="mc-tag">not connected</span>}
         {folded && (

@@ -45,7 +45,6 @@ function changelogPlugin(): Plugin {
 export default defineConfig({
   plugins: [spritePlugin(), changelogPlugin(), docsPlugin()],
   build: {
-    chunkSizeWarningLimit: 700,
     rolldownOptions: {
       input: {
         main: resolve(import.meta.dirname, 'index.html'),

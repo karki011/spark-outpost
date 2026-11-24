@@ -13,6 +13,7 @@ import { dateKey } from '../src/calendar/service.ts';
 import type { CalendarHost } from '../src/calendar/host-client.ts';
 import { createGoogleSource, type GoogleSource } from '../src/calendar/google/source.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
+import type { ZoomService } from '../src/zoom/service.ts';
 import { localClient, testAppOptions } from './app-support.ts';
 import {
   FAKE_GOOGLE_CLIENT_ID,
@@ -73,7 +74,10 @@ export interface Harness {
   client: ReturnType<typeof localClient>;
 }
 
-export function googleHarness(t: TestDb, options: { mac?: boolean } = {}): Harness {
+export function googleHarness(
+  t: TestDb,
+  options: { mac?: boolean; zoom?: ZoomService } = {},
+): Harness {
   const fake = fakeGoogleCalendar('http://127.0.0.1:9');
   fake.addUser(SUBJECT, EMAIL);
   fake.addCalendar(SUBJECT, {
@@ -101,7 +105,12 @@ export function googleHarness(t: TestDb, options: { mac?: boolean } = {}): Harne
   });
   const host = macHost(options.mac ?? false);
   const client = localClient(
-    createApp({ ...testAppOptions(t), calendarHost: host, googleCalendar: google }),
+    createApp({
+      ...testAppOptions(t),
+      calendarHost: host,
+      googleCalendar: google,
+      zoom: options.zoom ?? null,
+    }),
   );
   return { fake, secrets, google, host, client };
 }

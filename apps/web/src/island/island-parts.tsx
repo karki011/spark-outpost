@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
-import type { BlobExpression } from '../brand/blob-expression.ts';
+import { AgentMark } from '../brand/ProviderMark.tsx';
 import { providerName } from '../chat/provider-name.ts';
 import { CrewBlob } from '../crew/CrewBlob.tsx';
 import type { CrewState } from '../crew/crew-model.ts';
@@ -54,18 +53,17 @@ interface WhoProps {
   role?: string | null;
   provider: string | null;
   title?: string | null;
-  expression?: BlobExpression;
   crewState?: CrewState;
 }
 
-export function Who({ name, role, provider, title, expression = 'idle', crewState }: WhoProps) {
+export function Who({ name, role, provider, title, crewState }: WhoProps) {
   return (
     <div className="isl-who">
       <span className="isl-blob" aria-hidden="true">
         {crewState && provider ? (
           <CrewBlob name={name} provider={provider} state={crewState} size={16} />
         ) : (
-          <AgentBlob provider={provider ?? 'claude'} size={16} expression={expression} />
+          <AgentMark provider={provider ?? 'claude'} size={16} />
         )}
       </span>
       <b>{name}</b>

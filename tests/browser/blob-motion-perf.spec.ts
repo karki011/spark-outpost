@@ -123,7 +123,7 @@ test('the model card blobs do no work on each frame', async ({ page }) => {
   await clickSettings(page);
   await page.getByRole('dialog').last().getByRole('tab', { name: 'AI providers' }).click();
   await page.getByRole('radio', { name: 'Models' }).click();
-  await expect(page.locator('.mc-blob .mo-root').first()).toBeVisible();
+  await expect(page.locator('.mc-blob .mark-tile').first()).toBeVisible();
   await page.mouse.move(700, 450);
   await stayLive(page);
   await measure(page, 'models');

@@ -8,7 +8,7 @@ import {
   type TicketSourceId,
   type TicketSummary,
 } from '@spark-outpost/contracts';
-import { UserBlob } from '../brand/UserBlob.tsx';
+import { UserAvatar } from '../brand/UserAvatar.tsx';
 import type { ToastSpec } from '../conversations/use-toast.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
@@ -93,7 +93,7 @@ function WhyBox({ ticket }: { ticket: InboxTicket }) {
 function Person({ name, note }: { name: string; note?: string }) {
   return (
     <>
-      <UserBlob displayName={name} size={18} />
+      <UserAvatar displayName={name} size={18} />
       {name}
       {note}
     </>

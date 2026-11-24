@@ -50,7 +50,7 @@
   border: 1px solid transparent;
   border-left: 3px solid var(--cal-color, var(--line-strong));
   border-radius: var(--r-sm);
-  background: var(--raise);
+  background: color-mix(in srgb, var(--cal-color, var(--line-strong)) 18%, var(--panel));
   font-size: 12.5px;
   line-height: 1.35;
   text-align: left;
@@ -169,7 +169,11 @@
 
 .tl-ev[data-reply='striped'],
 .tl-allday-ev[data-reply='striped'] {
-  background: repeating-linear-gradient(135deg, var(--raise) 0 6px, var(--panel) 6px 10px);
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cal-color, var(--line-strong)) 18%, var(--panel)) 0 6px,
+    var(--panel) 6px 10px
+  );
 }
 
 .tl-ev[data-reply='struck'],
@@ -312,7 +316,7 @@
   border: 1px solid transparent;
   border-left: 3px solid var(--cal-color, var(--line-strong));
   border-radius: var(--r-sm);
-  background: var(--raise);
+  background: color-mix(in srgb, var(--cal-color, var(--line-strong)) 18%, var(--panel));
   font-size: 12.5px;
 }
 

@@ -1,13 +1,13 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type { ApprovalOption } from '@spark-outpost/contracts';
 import { isCheckpoint } from '../chat/checkpoints/checkpoint-model.ts';
-import { ExternalLinkIcon } from '../ui/icons.tsx';
+import { ExternalLinkIcon, WarnIcon } from '../ui/icons.tsx';
 import { askedPrompt, pickDecision } from './asked-question.ts';
 import { cardHeading, QuestionChoices, Target } from './CardView.tsx';
 import { answerable, cardLine } from './inbox-model.ts';
 import type { Card } from './island-model.ts';
 import { Kbd, useArmed } from './island-parts.tsx';
-import { SessionBlob } from './SessionBlob.tsx';
+import { SessionMark } from './SessionMark.tsx';
 import { findOption, useDecide, type Decided } from './use-decide.ts';
 
 export interface FocusCardProps {
@@ -147,11 +147,10 @@ export function FocusCard(props: FocusCardProps) {
       aria-label={`${card.chat.title} needs you`}
     >
       <div className="isl-focus-who">
-        <span className="isl-focus-blob">
-          <SessionBlob chat={card.chat} state="waiting" size={112} />
-          <span className="isl-focus-ask" data-asks={asks} aria-hidden="true">
-            {question ? '?' : '!'}
-          </span>
+        <span className="isl-focus-need" data-asks={asks}>
+          {card.chat.teammate && <SessionMark chat={card.chat} state="waiting" size={28} />}
+          <WarnIcon />
+          {question ? 'Question' : 'Needs you'}
         </span>
         <b className="isl-focus-chat">{card.chat.title}</b>
         <span className="isl-focus-sub">{[agent, props.project].filter(Boolean).join(' · ')}</span>

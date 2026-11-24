@@ -1,0 +1,43 @@
+.ne-dialog {
+  gap: 12px;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.ne-dialog h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.ne-form {
+  display: grid;
+  gap: 12px;
+}
+
+.ne-form .inp {
+  width: 100%;
+}
+
+.ne-when {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 10px;
+}
+
+.field > .ne-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ne-label label {
+  margin: 0;
+}
+
+.ne-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}

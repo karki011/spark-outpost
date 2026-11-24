@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TodayChat, TodaySummary } from '@spark-outpost/contracts';
-import { chatExpression, chatNote, todayStats } from './today-model.ts';
+import { chatGlyphState, chatNote, todayStats } from './today-model.ts';
 
 const CHAT: TodayChat = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -70,10 +70,10 @@ describe('chatNote', () => {
   });
 });
 
-describe('chatExpression', () => {
+describe('chatGlyphState', () => {
   it('matches the blob mood to the chat state', () => {
-    expect(chatExpression('waiting')).toBe('unsure');
-    expect(chatExpression('failed')).toBe('sad');
-    expect(chatExpression('finished')).toBe('happy');
+    expect(chatGlyphState('waiting')).toBe('needs_you');
+    expect(chatGlyphState('failed')).toBe('failed');
+    expect(chatGlyphState('finished')).toBe('done');
   });
 });

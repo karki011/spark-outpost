@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { AssistantSettingsView } from '@spark-outpost/contracts';
 import { assistantApi, assistantKeys } from '../../api/assistant.ts';
 import { AuditDialog } from '../../audit/AuditDialog.tsx';
-import { BlobToggle } from '../../brand/BlobToggle.tsx';
+import { Switch } from '../../ui/Switch.tsx';
 import { SettingRow } from '../SettingRow.tsx';
 import { sessionLine } from './assistant-hints.ts';
 
@@ -71,7 +71,7 @@ export function AssistantSessionRow({ view, onOpenChat }: AssistantSessionRowPro
             Ask Spark starts a new session without this history. Its runs stay in Usage and Audit.
           </p>
           <label className="check-row">
-            <BlobToggle
+            <Switch
               size="sm"
               label="Also clear key facts"
               checked={alsoFacts}

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Project } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 
 const FOCUSABLE = 'button:not(:disabled)';
@@ -83,7 +83,7 @@ export function NotGitDialog({ project, problem, inline, onDone }: NotGitDialogP
       </p>
       {!problem && (
         <label className="notgit-choice">
-          <BlobToggle
+          <Switch
             size="sm"
             label="Make it a git repository"
             checked={makeRepository}

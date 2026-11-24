@@ -1,7 +1,7 @@
 import './turn.css';
 import { useCallback, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { Run } from '@spark-outpost/contracts';
-import { AgentBlob } from '../../brand/AgentBlob.tsx';
+import { AgentMark as AgentTile } from '../../brand/ProviderMark.tsx';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import { formatTokens } from '../composer/model-options.ts';
 import { providerName } from '../provider-name.ts';
@@ -25,7 +25,7 @@ export function agentChanged(run: Run, previous: Run | null): boolean {
 export function AgentMark({ provider, model }: { provider: string; model: string | null }) {
   return (
     <p className="agent-mark">
-      <AgentBlob provider={provider} size={16} />
+      <AgentTile provider={provider} size={16} />
       <span>
         {providerName(provider)}
         {model && <span className="agent-mark-model"> · {model}</span>}

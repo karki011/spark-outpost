@@ -23,24 +23,25 @@ export function useAgentLine(spark: TeammateView): string {
 
 export function SparkCard({ spark, skills, onOpen }: SparkCardProps) {
   const agent = useAgentLine(spark);
-  const facts = skills === undefined ? agent : `${agent} · ${skillCountLabel(skills)}`;
+  const skillWords = skills === undefined ? '' : skillCountLabel(skills);
+  const facts = skillWords ? `${agent} · ${skillWords}` : agent;
   return (
-    <li className="spk-card">
+    <li className="spk-crew">
       <button
         type="button"
-        className="spk-card-open"
+        className="spk-crew-open"
         aria-label={`Open ${spark.name}. ${spark.role || 'Spark'}. ${facts}`}
         onClick={onOpen}
       >
-        <span className="spk-card-top">
-          <TeammateFace face={spark.face} state={spark.state} size={40} />
-          <span className="spk-card-who">
+        <span className="spk-crew-who">
+          <TeammateFace face={spark.face} state={spark.state} size={32} />
+          <span className="spk-crew-name">
             <b>{spark.name}</b>
             <small>{spark.role || 'Spark'}</small>
           </span>
         </span>
-        <span className="spk-card-meta">{agent}</span>
-        {skills !== undefined && <span className="spk-card-meta">{skillCountLabel(skills)}</span>}
+        <span className="spk-crew-meta">{agent}</span>
+        <span className="spk-crew-meta">{skillWords}</span>
       </button>
     </li>
   );

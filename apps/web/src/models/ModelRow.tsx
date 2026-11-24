@@ -46,11 +46,7 @@ export function ModelRow({ view }: { view: ModelCardView }) {
             aria-controls={detailsId}
             onClick={() => setOpen((value) => !value)}
           >
-            <ModelBlob
-              provider={card.provider}
-              tier={card.tier}
-              retiring={view.staleness.retiring}
-            />
+            <ModelBlob provider={card.provider} tier={card.tier} />
             <span className="mc-label">
               <span className="mc-name">{card.label}</span>
               {purpose && <span className="mc-purpose">{purpose}</span>}

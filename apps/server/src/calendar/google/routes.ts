@@ -30,6 +30,7 @@ export function googleCalendarRoutes(deps: GoogleRouteDeps): Router {
       await need().signIn({
         accountId: request.accountId ?? null,
         editCalendar: request.editCalendar ?? null,
+        replies: request.replies === true,
       }),
     );
   });

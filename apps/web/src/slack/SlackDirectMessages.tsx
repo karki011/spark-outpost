@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { SLACK_USER_SCOPES, type SlackConnection, type SlackDm } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { SwitchSettingRow } from '../settings/SwitchSettingRow.tsx';
 import { CopyManifest } from './SlackConnectForm.tsx';
 import { SlackSignInPanel } from './SlackSignIn.tsx';
 import { slackApi, slackKeys } from './slack-api.ts';
@@ -196,24 +196,17 @@ export function SlackDirectMessages({
         ) : (
           <UpdateAppSteps missing={missingScopes} save={save} />
         ))}
-      <div>
-        <label className="tk-switch">
-          <BlobToggle
-            size="sm"
-            label={SWITCH_LABEL}
-            checked={on}
-            disabled={(blockedBy !== null && !on) || save.settings.isPending}
-            describedBy={`${id}-help`}
-            onChange={(next) => save.settings.mutate({ readDirectMessages: next })}
-          />
-          <span>{SWITCH_LABEL}</span>
-        </label>
-        <p id={`${id}-help`} className="tk-field-help">
-          {blockedBy === 'user_token'
+      <SwitchSettingRow
+        label={SWITCH_LABEL}
+        hint={
+          blockedBy === 'user_token'
             ? 'This needs a user token (xoxp-): the app is not in your direct messages, so Spark reads them as you. Add one with Change tokens.'
-            : 'Off unless you turn it on. Spark then reads only the conversations you tick, as you, when you paste a link or an agent looks one up. It never posts in a one-to-one message, and turning this off forgets your choices.'}
-        </p>
-      </div>
+            : 'Off unless you turn it on. Spark then reads only the conversations you tick, as you, when you paste a link or an agent looks one up. It never posts in a one-to-one message, and turning this off forgets your choices.'
+        }
+        checked={on}
+        disabled={(blockedBy !== null && !on) || save.settings.isPending}
+        onChange={(next) => save.settings.mutate({ readDirectMessages: next })}
+      />
       {on && blockedBy === null && <Picker connection={connection} save={save} />}
     </section>
   );
