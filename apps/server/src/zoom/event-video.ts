@@ -24,7 +24,10 @@ export async function withZoomMeeting<T extends string>(
     start: event.start,
     minutes: Math.max(1, Math.round((Date.parse(event.end) - Date.parse(event.start)) / MINUTE_MS)),
   });
-  const discard = () => zoom.deleteMeeting(meeting.id).catch(() => undefined);
+  const discard = () =>
+    zoom.deleteMeeting(meeting.id).catch(() => {
+      console.error(`Could not delete Zoom meeting ${meeting.id} after its event was not created.`);
+    });
   try {
     const outcome = await create(withZoomLink(event, meeting.joinUrl));
     if (outcome !== 'created') await discard();

@@ -60,7 +60,7 @@ async function tokenRequest(deps: ZoomDeps, fields: Record<string, string>) {
     throw new ZoomError('busy', 'Zoom is busy right now. Try again shortly.');
   }
   const data = (await response.json().catch(() => null)) as unknown;
-  return { ok: response.ok, data };
+  return { ok: response.ok, status: response.status, data };
 }
 
 function tokensOf(data: unknown, now: number): ZoomTokens {
@@ -95,11 +95,12 @@ export async function refreshZoomTokens(
   refreshToken: string,
   now: number,
 ): Promise<ZoomRefresh> {
-  const { ok, data } = await tokenRequest(deps, {
+  const { ok, status, data } = await tokenRequest(deps, {
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
   });
-  if (!ok) return { kind: 'rejected' };
+  if (status === 400 || status === 401) return { kind: 'rejected' };
+  if (!ok) throw new ZoomError('refused', `Zoom refused to renew the sign-in (${status}).`);
   return { kind: 'tokens', ...tokensOf(data, now) };
 }
 

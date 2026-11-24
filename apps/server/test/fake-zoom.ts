@@ -10,6 +10,8 @@ export interface FakeZoom {
   code(): string;
   expireAccess(): void;
   rejectRefresh(): void;
+  refreshStatus: number | null;
+  holdTokens: Promise<void> | null;
   failNextCreate(status: number): void;
 }
 
@@ -47,6 +49,7 @@ export function fakeZoom(baseUrl = 'https://zoom.test'): FakeZoom {
       }
       return issue();
     }
+    if (fake.refreshStatus !== null) return json(fake.refreshStatus, {});
     if (rejecting || form.get('refresh_token') !== refresh) {
       return json(400, { error: 'invalid_grant' });
     }
@@ -83,6 +86,8 @@ export function fakeZoom(baseUrl = 'https://zoom.test'): FakeZoom {
     meetings: new Map(),
     refreshTokens: [],
     revoked: [],
+    refreshStatus: null,
+    holdTokens: null,
     code() {
       const code = `zoom-code-${codes.size + issued + 1}`;
       codes.add(code);
@@ -101,6 +106,7 @@ export function fakeZoom(baseUrl = 'https://zoom.test'): FakeZoom {
       const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
       const method = init?.method ?? 'GET';
       const path = url.pathname;
+      if (path === '/oauth/token' && fake.holdTokens) await fake.holdTokens;
       if (path === '/oauth/token') return token(new URLSearchParams(String(init?.body)));
       if (path === '/oauth/revoke') {
         const form = new URLSearchParams(String(init?.body));

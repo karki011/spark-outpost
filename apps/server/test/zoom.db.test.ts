@@ -100,6 +100,26 @@ describe('Zoom sign-in', () => {
   });
 });
 
+describe('Cancelling a Zoom sign-in', () => {
+  it('connects nothing when Cancel arrives while the code is being exchanged', async () => {
+    let release = () => {};
+    fake.holdTokens = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const flow = await zoom.signIn();
+    const asked = new URL(flow.authorizeUrl!);
+    const back = new URL(asked.searchParams.get('redirect_uri')!);
+    back.searchParams.set('code', fake.code());
+    back.searchParams.set('state', asked.searchParams.get('state')!);
+    await fetch(back);
+    zoom.cancelSignIn();
+    release();
+    await zoom.signInSettled();
+    expect(zoom.signInFlow().status).toBe('idle');
+    expect((await zoom.status()).account).toBeNull();
+  });
+});
+
 describe('Staying signed in to Zoom', () => {
   it('reuses the access token, then renews it and saves the new refresh token', async () => {
     await connect();
@@ -171,6 +191,16 @@ describe('Staying signed in to Zoom', () => {
     await expect(zoom.createMeeting(MEETING)).rejects.toThrow(ZoomSignInNeeded);
     expect((await zoom.status()).account).toMatchObject({ needsSignIn: true });
     await expect(zoom.createMeeting(MEETING)).rejects.toThrow(ZOOM_SIGN_IN_AGAIN);
+  });
+
+  it('keeps the sign-in when Zoom answers a renewal with something other than a refusal', async () => {
+    await connect();
+    fake.refreshStatus = 403;
+    clock += 61 * 60_000;
+    await expect(zoom.createMeeting(MEETING)).rejects.toThrow(/403/);
+    expect((await zoom.status()).account).toMatchObject({ needsSignIn: false });
+    fake.refreshStatus = null;
+    await expect(zoom.createMeeting(MEETING)).resolves.toMatchObject({ id: expect.any(String) });
   });
 
   it('disconnects: revokes, forgets the token and the account', async () => {

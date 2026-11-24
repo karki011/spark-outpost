@@ -78,6 +78,7 @@ interface Pending {
   state: string;
   verifier: string;
   redirectUri: string;
+  attempt: number;
   loopback: Loopback;
   timer: NodeJS.Timeout;
 }
@@ -100,6 +101,7 @@ export function createZoomService(deps: ZoomServiceDeps): ZoomService {
   const client = deps.client;
   let flow = IDLE;
   let pending: Pending | null = null;
+  let attempt = 0;
   let work: Promise<void> = Promise.resolve();
   let live: { accessToken: string; expiresAt: number } | null = null;
   let renewing: Promise<string> | null = null;
@@ -210,9 +212,11 @@ export function createZoomService(deps: ZoomServiceDeps): ZoomService {
         { code: callback.code, verifier: waiting.verifier, redirectUri: waiting.redirectUri },
         now(),
       );
+      if (waiting.attempt !== attempt) return;
       await connect(tokens);
       flow = ended('connected', null);
     } catch (error) {
+      if (waiting.attempt !== attempt) return;
       flow = ended(
         'failed',
         error instanceof ZoomError ? error.message : 'The sign-in could not be finished.',
@@ -252,6 +256,7 @@ export function createZoomService(deps: ZoomServiceDeps): ZoomService {
         state: pkce.state,
         verifier: pkce.verifier,
         redirectUri: loopback.redirectUri,
+        attempt: (attempt += 1),
         loopback,
         timer,
       };
@@ -265,6 +270,7 @@ export function createZoomService(deps: ZoomServiceDeps): ZoomService {
       return flow;
     },
     cancelSignIn() {
+      attempt += 1;
       clear();
       flow = IDLE;
       return flow;
