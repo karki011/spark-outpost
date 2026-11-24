@@ -101,7 +101,22 @@ A code change needs a doc change in the same commit when it adds, renames or rem
 | A protected path or publish rule            | `protected-paths.md`                                             |
 | What is sent to a provider, Jev or the team | `privacy-and-secrets.md`, `jev.md`, `map.md`, `mac-privacy.md`   |
 | A keyboard shortcut or a limit              | `keyboard-shortcuts.md`, `statuses-and-limits.md`                |
-| Anything a user can see                     | One row in `whats-new.md`: what changed and what to do           |
+| Anything a user can see                     | One new file in `whats-new/`: what changed and what to do        |
+
+## What's new entries
+
+The What's new page is built from the files in `whats-new/`, so two branches never edit the same lines. Never add rows to `whats-new.md`; it holds only the page's frontmatter.
+
+Add one file per change, named `whats-new/YYYY-MM-DD-short-name.md` (lowercase letters, digits and hyphens):
+
+```
+change: Share copies the link
+do: [Share one](share-an-artifact.md).
+```
+
+- `change` is the **What changed** cell. `do` is the **What to do** cell; leave it out when there is nothing to do.
+- The date in the name is the section heading. `section: Some heading` puts the entry under that heading instead.
+- Entries sort by file name, newest first. The page keeps the newest entries that fit its word cap and leaves the rest out, so old files need no cleanup.
 
 `pnpm check:docs` fails when:
 

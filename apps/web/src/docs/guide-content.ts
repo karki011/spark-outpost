@@ -6,11 +6,14 @@ import {
   type GuidePage,
 } from '@spark-outpost/contracts';
 
-const sources = import.meta.glob<string>('../../../../docs/guide/*.md', {
-  eager: true,
-  query: '?raw',
-  import: 'default',
-});
+const sources = import.meta.glob<string>(
+  ['../../../../docs/guide/*.md', '../../../../docs/guide/whats-new/*.md'],
+  {
+    eager: true,
+    query: '?raw',
+    import: 'default',
+  },
+);
 
 const images = import.meta.glob<string>('../../../../docs/guide/images/*.{png,jpg,webp,svg}', {
   eager: true,
