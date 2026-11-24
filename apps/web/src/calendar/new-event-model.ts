@@ -2,6 +2,7 @@ import {
   CALENDAR_GUESTS_MAX,
   type CalendarChoice,
   type CalendarStatus,
+  type CalendarVideo,
 } from '@spark-outpost/contracts';
 import { dateOf } from './calendar-format.ts';
 
@@ -93,4 +94,12 @@ export function eventCalendars(status: CalendarStatus): EventCalendar[] {
         },
       ];
     });
+}
+
+export function videoChoices(zoomReady: boolean): { id: CalendarVideo; label: string }[] {
+  return [
+    { id: 'none', label: 'None' },
+    { id: 'meet', label: 'Google Meet' },
+    ...(zoomReady ? [{ id: 'zoom' as const, label: 'Zoom' }] : []),
+  ];
 }

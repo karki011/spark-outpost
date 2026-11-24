@@ -179,3 +179,4 @@ export * from './crew-builder.ts';
 export * from './crew-schedule.ts';
 export * from './crew-schedule-slots.ts';
 export * from './crew-triggers.ts';
+export * from './zoom.ts';

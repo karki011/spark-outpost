@@ -20,7 +20,7 @@ Google tells the organiser and the other guests. Each guest's own reply shows be
 
 1. In **Today**, select **New event**.
 2. Enter the **Title**, **Date**, **Starts** and **Ends**, and pick the **Calendar**.
-3. Optional: add **Guests** as email addresses, tick **Add a Google Meet link**, add a **Location** or **Description**.
+3. Optional: add **Guests** as email addresses, pick a **Video call** (**Google Meet**, or **Zoom** once you [connect it](connect-zoom.md)), add a **Location** or **Description**.
 4. Select **Create**. With guests the button says how many it invites, and Google emails each one.
 
 Leave **Guests** empty and nobody is told.

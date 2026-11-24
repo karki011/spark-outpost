@@ -7,6 +7,7 @@ import { parseArgs } from 'node:util';
 import {
   GOOGLE_CLIENT_FILE_ENV,
   MICROSOFT_CLIENT_FILE_ENV,
+  ZOOM_CLIENT_FILE_ENV,
   packagedHeartbeatUrl,
   packagedShareUrl,
   packagedSlackClientId,
@@ -56,6 +57,7 @@ function localClientFile(name: string): string | undefined {
 for (const [env, name] of [
   [GOOGLE_CLIENT_FILE_ENV, 'google-oauth-client.json'],
   [MICROSOFT_CLIENT_FILE_ENV, 'microsoft-oauth-client.json'],
+  [ZOOM_CLIENT_FILE_ENV, 'zoom-oauth-client.json'],
 ] as const) {
   if ((process.env[env] ?? '').trim() !== '') continue;
   const found = localClientFile(name);
@@ -87,6 +89,9 @@ console.log(
 );
 console.log(
   `Microsoft Calendar: ${process.env[MICROSOFT_CLIENT_FILE_ENV] ? 'on' : `off (set ${MICROSOFT_CLIENT_FILE_ENV})`}`,
+);
+console.log(
+  `Zoom: ${process.env[ZOOM_CLIENT_FILE_ENV] ? 'on' : `off (set ${ZOOM_CLIENT_FILE_ENV})`}`,
 );
 console.log(`Slack: ${packagedSlackClientId(process.env) ? 'on' : 'off'}`);
 const heartbeat = packagedHeartbeatUrl(process.env);

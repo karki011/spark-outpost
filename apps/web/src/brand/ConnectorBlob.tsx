@@ -2,7 +2,8 @@ import { Blobatar } from 'blobatar/react';
 import * as expressions from 'blobatar/expression';
 import type { BlobExpression } from './blob-expression.ts';
 
-export type ConnectorId = 'github' | 'atlassian' | 'linear' | 'servicenow' | 'slack' | 'calendar';
+export type ConnectorId =
+  'github' | 'atlassian' | 'linear' | 'servicenow' | 'slack' | 'calendar' | 'zoom';
 
 const CONNECTOR_SEED: Record<ConnectorId, { name: string; hue: number }> = {
   calendar: { name: 'connector:calendar', hue: 28 },
@@ -11,6 +12,7 @@ const CONNECTOR_SEED: Record<ConnectorId, { name: string; hue: number }> = {
   linear: { name: 'connector:linear', hue: 268 },
   servicenow: { name: 'connector:servicenow', hue: 158 },
   slack: { name: 'connector:slack', hue: 352 },
+  zoom: { name: 'connector:zoom', hue: 212 },
 };
 
 interface ConnectorBlobProps {

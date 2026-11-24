@@ -237,6 +237,10 @@ GET /api/calendar/microsoft/sign-in
 POST /api/calendar/microsoft/sign-in
 DELETE /api/calendar/microsoft/sign-in
 DELETE /api/calendar/microsoft/accounts/:id
+GET /api/zoom/status
+POST /api/zoom/sign-in
+DELETE /api/zoom/sign-in
+DELETE /api/zoom/account
 GET /api/island/requests
 POST /api/island/requests/:id/claim
 GET /api/remote/access

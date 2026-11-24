@@ -30,6 +30,9 @@ import { MicrosoftAuthError } from './microsoft/oauth.ts';
 import { microsoftCalendarRoutes } from './microsoft/routes.ts';
 import { MicrosoftSignInNeeded, type MicrosoftSource } from './microsoft/source.ts';
 import { CalendarHostError, type CalendarHost } from './host-client.ts';
+import { ZoomError } from '../zoom/oauth.ts';
+import { ZoomSignInNeeded, type ZoomService } from '../zoom/service.ts';
+import { withZoomMeeting } from '../zoom/event-video.ts';
 import {
   calendarDay,
   calendarNow,
@@ -57,6 +60,7 @@ export interface CalendarRouteDeps {
   workspaceId: string;
   calendarHost?: CalendarHost | null;
   googleCalendar?: GoogleSource | null;
+  zoom?: ZoomService | null;
   microsoftCalendar?: MicrosoftSource | null;
   now?: () => number;
 }
@@ -286,16 +290,21 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
       if (!google || calendar?.sourceKind !== 'google' || !calendar.writable) {
         throw new BadRequestError('Pick a Google calendar you can change.');
       }
+      const event = {
+        summary: request.title,
+        start: new Date(request.start).toISOString(),
+        end: new Date(request.end).toISOString(),
+        guests: request.guests,
+        meetRequestId: request.video === 'meet' ? randomUUID() : null,
+        location: request.location.trim(),
+        description: request.notes.trim(),
+      };
       const outcome = await cloudWrite(() =>
-        google.create(calendar.calendarId, {
-          summary: request.title,
-          start: new Date(request.start).toISOString(),
-          end: new Date(request.end).toISOString(),
-          guests: request.guests,
-          meetRequestId: request.meet ? randomUUID() : null,
-          location: request.location.trim(),
-          description: request.notes.trim(),
-        }),
+        request.video === 'zoom'
+          ? withZoomMeeting(deps.zoom ?? null, event, (withLink) =>
+              google.create(calendar.calendarId, withLink),
+            )
+          : google.create(calendar.calendarId, event),
       );
       if (outcome === 'needs_grant') {
         throw new CalendarHostError('not_authorized', GOOGLE_REPLY_NEEDS_GRANT);
@@ -311,9 +320,10 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     try {
       return await work();
     } catch (error) {
-      if (error instanceof GoogleSignInNeeded) {
+      if (error instanceof GoogleSignInNeeded || error instanceof ZoomSignInNeeded) {
         throw new CalendarHostError('not_authorized', error.message);
       }
+      if (error instanceof ZoomError) throw new CalendarHostError('failed', error.message);
       if (error instanceof GoogleApiError || error instanceof GoogleAuthError) {
         throw new CalendarHostError('failed', error.message);
       }

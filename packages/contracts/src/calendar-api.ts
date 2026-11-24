@@ -226,6 +226,9 @@ export type CalendarReplyRequest = z.infer<typeof calendarReplyRequestSchema>;
 
 export const CALENDAR_GUESTS_MAX = 50;
 
+export const calendarVideoSchema = z.enum(['none', 'meet', 'zoom']);
+export type CalendarVideo = z.infer<typeof calendarVideoSchema>;
+
 export const calendarCreateRequestSchema = z
   .object({
     calendarKey: z.uuid(),
@@ -233,7 +236,7 @@ export const calendarCreateRequestSchema = z
     start: z.iso.datetime({ offset: true }),
     end: z.iso.datetime({ offset: true }),
     guests: z.array(z.email().max(300)).max(CALENDAR_GUESTS_MAX),
-    meet: z.boolean(),
+    video: calendarVideoSchema,
     location: z.string().max(500),
     notes: z.string().max(5_000),
   })

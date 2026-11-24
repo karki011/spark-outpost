@@ -1,10 +1,15 @@
 import './new-event.css';
 import { useId, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CalendarStatus } from '@spark-outpost/contracts';
+import {
+  calendarVideoSchema,
+  type CalendarStatus,
+  type CalendarVideo,
+} from '@spark-outpost/contracts';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { InfoTip } from '../ui/InfoTip.tsx';
 import { ModalFrame } from '../ui/ModalFrame.tsx';
+import { useZoomStatus } from '../zoom/use-zoom.ts';
 import { calendarApi, calendarKeys } from './calendar-api.ts';
 import { AllowGoogleChanges } from './EventReply.tsx';
 import {
@@ -13,6 +18,7 @@ import {
   eventSpan,
   parseGuests,
   type EventCalendar,
+  videoChoices,
 } from './new-event-model.ts';
 
 interface NewEventDialogProps {
@@ -36,7 +42,9 @@ export function NewEventDialog({ status, date, today, now, onClose }: NewEventDi
   const [title, setTitle] = useState('');
   const [times, setTimes] = useState(() => defaultTimes(date, today, now));
   const [guestText, setGuestText] = useState('');
-  const [meet, setMeet] = useState(false);
+  const [video, setVideo] = useState<CalendarVideo>('none');
+  const zoom = useZoomStatus().data;
+  const zoomReady = Boolean(zoom?.account && !zoom.account.needsSignIn);
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [tried, setTried] = useState(false);
@@ -51,7 +59,7 @@ export function NewEventDialog({ status, date, today, now, onClose }: NewEventDi
         start: span!.start,
         end: span!.end,
         guests: guests.emails,
-        meet,
+        video,
         location,
         notes,
       }),
@@ -180,14 +188,15 @@ export function NewEventDialog({ status, date, today, now, onClose }: NewEventDi
             onChange={(event) => setGuestText(event.target.value)}
           />
         </div>
-        <label className="ne-check">
-          <input
-            type="checkbox"
-            checked={meet}
-            onChange={(event) => setMeet(event.target.checked)}
+        <div className="field">
+          <span aria-hidden="true">Video call</span>
+          <ChoicePicker
+            label="Video call"
+            choices={videoChoices(zoomReady)}
+            value={video}
+            onChange={(id) => setVideo(calendarVideoSchema.parse(id))}
           />
-          Add a Google Meet link
-        </label>
+        </div>
         <div className="field">
           <label htmlFor={`${ids}-where`}>Location</label>
           <input
