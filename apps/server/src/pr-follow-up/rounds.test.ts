@@ -155,6 +155,17 @@ describe('round prompt', () => {
     expect(roundPrompt({ ...target, reviewers: [] }, [])).not.toContain('re-request');
   });
 
+  it('tells the round agent it is separate from the chat and obeys a stop from the main agent', () => {
+    const target = { repo: 'acme/widgets', number: 7, branch: 'spark/x', round: 1, base: 'main' };
+    for (const prompt of [
+      roundPrompt(target, [item('F1', 'Fix it.')]),
+      roundPrompt({ ...target, mergeState: 'behind' }, []),
+    ]) {
+      expect(prompt).toContain("a separate session from the chat's main agent");
+      expect(prompt).toContain('when it tells you to stop or wait, make no further edits');
+    }
+  });
+
   it('prefixes every quoted line', () => {
     expect(quoted('one\ntwo')).toBe('> one\n> two');
   });

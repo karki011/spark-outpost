@@ -26,6 +26,9 @@ export const SPLIT_UNCLEAR = '- If the request is unclear, ask one question and 
 export const SPLIT_ASK_WITH_TOOL =
   '- When the user should choose, or a detail you need is missing, call AskUserQuestion (Codex: request_user_input) with the options instead of writing them in your reply, and use the answer it returns.';
 
+export const LONG_COMMAND_LINE =
+  "- Start a command that may run longer than about half a minute (a full test suite, a build, a server, a watcher) in the background when your shell tool can, and keep working or reply while it runs. Don't wait on it in the foreground or poll it with sleep: you can't read a message from the user while a foreground command runs. Where your shell tool moves a command that is still running after 30 seconds to the background by itself, carry on and use its completion notice.";
+
 export const ENGINEERING = [
   'Engineering',
   '- Change files with your file-editing tools, not shell commands such as heredocs, cat > or sed -i, so the user sees each change as a diff.',
@@ -36,6 +39,7 @@ export const ENGINEERING = [
   '- Logic with a branch, loop, parser, money or security in it gets one small test.',
   '- Small, coherent changes that match the surrounding code. No unrelated cleanup.',
   '- Run the checks that cover what you changed.',
+  LONG_COMMAND_LINE,
 ].join('\n');
 
 export const REPORTING = [
@@ -72,4 +76,8 @@ const BREAKS_A_LINE = /[\p{Cc}\p{Zl}\p{Zp}]+/gu;
 
 export function oneLine(value: string): string {
   return value.replace(BREAKS_A_LINE, ' ').trim();
+}
+
+export function roundRunningNote(round: { number: number; round: number; doing: string }): string {
+  return `A separate follow-up agent is working in this folder right now on PR #${round.number} (round ${round.round}; ${oneLine(round.doing)}). It has its own session and does not see this conversation. Answer the user as usual. Before you or the user change the work it is doing, or edit files it may be editing, stop it with spark_pr_follow_up_round (action "stop"), or tell it to wait or what changed with action "message". Don't commit or push its unfinished edits.`;
 }

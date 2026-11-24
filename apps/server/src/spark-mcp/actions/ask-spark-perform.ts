@@ -16,6 +16,7 @@ import { performInbox } from './ask-spark-inbox.ts';
 import { ASK_SPARK_REFUSALS, cardRefusalFor } from './ask-spark-limits.ts';
 import { performMeeting } from './ask-spark-meetings.ts';
 import type { Performed } from './performed.ts';
+import { chatTurn } from '../../persistence/chat-turns.ts';
 
 interface ChatFacts {
   title: string;
@@ -83,7 +84,7 @@ function deliveryLine(delivery: Delivery, title: string): string {
 
 async function activeRun(db: Db, conversationId: string): Promise<string | null> {
   const { rows } = await db.query<{ id: string }>(
-    `SELECT id FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+    `SELECT id FROM runs WHERE conversation_id = $1 AND ${chatTurn()}
        AND status IN ('queued', 'running', 'awaiting_approval')
      ORDER BY created_at DESC LIMIT 1`,
     [conversationId],

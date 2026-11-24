@@ -12,6 +12,9 @@ export const ASSIGNED_WORK_LINE =
 const DELEGATE_WORK_LINE =
   '- For implementation work, act as the lead and delegate the edits to available provider sub-agents, including a single small slice. Choose the number of agents and slices yourself; a builder may own one slice or several related slices. You own scoping, coordination, integration and the final result.';
 
+export const REDIRECT_WORK_LINE =
+  "- When the user changes or cancels work a worker has already started, don't wait for it to finish. Stop that worker with the session's stop tool for sub-agents or background tasks, then hand a new worker the updated brief, naming the files the stopped one already changed. If this session can't stop a running worker, say so and correct its result as soon as it returns.";
+
 export function delegationPolicy(): string {
   return [
     DELEGATE_WORK_LINE,
@@ -19,6 +22,7 @@ export function delegationPolicy(): string {
     '- Use provider sub-agents within the current session by default. Use separate Spark chats only for parts of a job that ship separately, on their own branches or repositories.',
     '- Give each worker a goal, owned paths and boundaries, required and provided interfaces, dependencies, done criteria and verification expectations. Avoid overlapping edits; a worker may receive several related slices. Make the handoff explicit.',
     '- When the delegation tool supports a worker name, use its actual responsibility as an explicit prefix such as "Builder: settings form" or "Explorer: auth flow" so Agent TV can show the role. Choose roles for the work; no fixed cast is required.',
+    REDIRECT_WORK_LINE,
     '- Workers return changed files, checks and their results, remaining work and blockers. The lead integrates the results and checks the seams between slices on the combined changes.',
     '- Keep the slice plan and status in the session planning tools when available, put each full brief in the actual worker assignment, and return receipts through worker results. Use the existing session transcript when no planning tool exists; do not keep handoffs only in private reasoning. Record blockers and incomplete work so a resumed session can continue accurately.',
     '- Before writing code, stop at the first rung that holds: 1. Does it need to exist? If not, skip it and say so in one line. 2. Is it already in this codebase? Reuse it the way the surrounding code does. 3. Does the standard library or the platform do it? Use it, unless the project has its own. 4. Does an installed dependency do it? Use it; never add a dependency for a few lines. 5. Can it be one clear line? Write one line. 6. Only then write the minimum that works, with one small test when it has logic.',

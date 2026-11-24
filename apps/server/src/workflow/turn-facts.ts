@@ -43,7 +43,7 @@ export async function sparkSession(db: Db, input: RunInput, known?: SparkPrefere
 }
 
 export function liveTurn(input: RunInput, session: TurnSession | null): { live?: LiveTurn } {
-  if (!session || input.parentRunId !== null || input.assistant) return {};
+  if (!session || input.parentRunId !== null || input.assistant || input.followUpLane) return {};
   const conversationId = input.identity.threadId;
   return { live: input.agentCycle ? { conversationId, continuation: true } : { conversationId } };
 }

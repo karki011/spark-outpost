@@ -34,12 +34,28 @@ import {
   withLine,
   withWorkMessage,
 } from './publish-step-lines.ts';
+import { FOLLOW_UP_SOURCE } from '../persistence/chat-turns.ts';
 import { publishReason } from './publish-step-reason.ts';
 import { recordPullRequest } from './publish-step-record.ts';
 import { branchWork, notPushed, pushedInFull } from './publish-step-work.ts';
 import type { RunInput } from './run-input.ts';
 
 export const GATE_STOPPED_LINE = 'Not published: the review before publishing was stopped.';
+
+const ROUND_OVERLAP_LINE =
+  'Not published: a PR follow-up round was working in this folder during this turn. Ask to publish once it has finished.';
+
+async function roundOverlapped(db: TurnDeps['db'], runId: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `SELECT 1 FROM runs me JOIN runs round ON round.conversation_id = me.conversation_id
+     WHERE me.id = $1 AND round.id <> me.id AND round.parent_run_id IS NULL
+       AND round.source = '${FOLLOW_UP_SOURCE}'
+       AND (round.finished_at IS NULL OR round.finished_at >= me.created_at)
+     LIMIT 1`,
+    [runId],
+  );
+  return rowCount === 1;
+}
 
 export type GateVerdict = { kind: 'go' } | { kind: 'held'; line: string } | { kind: 'stopped' };
 
@@ -197,6 +213,9 @@ export async function publishStep(
   const root = input.projectRoots[0] ?? null;
   if (!root) return reply;
   if (reason === 'full-auto' && !(await changedFiles(turn))) return reply;
+  if (reason === 'full-auto' && (await roundOverlapped(deps.db, step.lease.runId))) {
+    return withLine(step.append, reply, ROUND_OVERLAP_LINE);
+  }
   if (!(await isGitWorkTree(root))) return keptWithout(turn, NO_PULL_REQUEST.notGit);
   const worktree = await chatWorktreeAt(deps.db, root);
   if (!worktree?.ownsBranch) return keptWithout(turn, NO_OWN_BRANCH_LINE);

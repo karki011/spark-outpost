@@ -21,6 +21,10 @@ describe('usesConversationSession', () => {
     expect(usesConversationSession({ parentRunId: 'p' })).toBe(false);
   });
 
+  it('leaves a follow-up round to its own session', () => {
+    expect(usesConversationSession({ parentRunId: null, followUpLane: true })).toBe(false);
+  });
+
   it('keys the session by provider only', () => {
     expect(conversationKey('claude')).toBe('chat:claude');
     expect(conversationKey('codex')).toBe('chat:codex');

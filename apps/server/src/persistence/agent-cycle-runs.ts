@@ -2,6 +2,7 @@ import { PERMISSION_DO } from '@spark-outpost/contracts';
 import { runMode, type RunTarget } from './conversations.ts';
 import { withTransaction, type Db } from './db.ts';
 import { newId } from './ids.ts';
+import { chatTurn } from './chat-turns.ts';
 
 export const AGENT_CYCLE_SOURCE = 'agent_cycle';
 
@@ -20,7 +21,7 @@ export async function startAgentCycleRun(
     );
     if (!chat.rowCount) return null;
     const active = await client.query(
-      `SELECT 1 FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+      `SELECT 1 FROM runs WHERE conversation_id = $1 AND ${chatTurn()}
          AND status IN ${ACTIVE} LIMIT 1`,
       [conversationId],
     );
@@ -33,7 +34,7 @@ export async function startAgentCycleRun(
        SELECT $1, last.conversation_id, NULL, $3, $4, $5, 'queued', last.task_id,
          last.plan_version, $6, $7, $8, $9, $6, $10
        FROM runs last
-       WHERE last.conversation_id = $2 AND last.parent_run_id IS NULL AND last.provider = $3
+       WHERE last.conversation_id = $2 AND ${chatTurn('last')} AND last.provider = $3
        ORDER BY last.created_at DESC, last.id DESC LIMIT 1`,
       [
         runId,

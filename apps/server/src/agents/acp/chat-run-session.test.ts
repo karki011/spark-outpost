@@ -10,6 +10,7 @@ import {
 } from './agents.ts';
 import { sessionMeta } from './session-start.ts';
 import { CLAUDE_WINDOWS_ENV } from './claude-windows-env.fixture.ts';
+import { FOREGROUND_COMMAND_ENV } from './claude-env.ts';
 
 const project = { roots: [{ path: '/work/app', ignore: [] }] } as unknown as PathPolicy;
 const { claude } = agentDefinitions;
@@ -83,6 +84,7 @@ describe("the agent process of the chat's own changing run that may not publish"
       GH_TOKEN: 'ghp_x',
       GITHUB_TOKEN: 'ghp_y',
       CLAUDE_CODE_FORK_SUBAGENT: '1',
+      ...FOREGROUND_COMMAND_ENV,
       GIT_CONFIG_COUNT: '1',
       GIT_CONFIG_KEY_0: `url.${NO_PUSH_URL}.pushInsteadOf`,
       GIT_CONFIG_VALUE_0: '',
@@ -94,6 +96,7 @@ describe("the agent process of the chat's own changing run that may not publish"
     expect(await agentEnvironment(options, '/runs/1')).toEqual({
       ...options.env,
       CLAUDE_CODE_FORK_SUBAGENT: '1',
+      ...FOREGROUND_COMMAND_ENV,
       ...CLAUDE_WINDOWS_ENV,
     });
   });

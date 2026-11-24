@@ -9,6 +9,10 @@ import {
   type Watch,
 } from '../../persistence/pr-watches.ts';
 import type { Queryable } from '../../persistence/db.ts';
+import { newId } from '../../persistence/ids.ts';
+import { insertMemberMessage } from '../../persistence/member-messages.ts';
+import { MAIN_AGENT_NOTE } from '../../pr-follow-up/prompt.ts';
+import { stopRun } from '../../workflow/stop-run.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 import { pullNumberInput, watchesFor } from '../tools/pr-follow-up-tool.ts';
 import { proposeAction } from './confirm.ts';
@@ -93,16 +97,68 @@ export async function performFollowUpRound(
   };
 }
 
+async function runningRound(context: SparkToolContext, number: number | undefined) {
+  const { conversationId, runId } = context.scope;
+  const watches = await watchesFor(context, number);
+  const watch = watches.find(
+    (entry) =>
+      entry.phase === 'fixing' && entry.roundRunId && entry.conversationId === conversationId,
+  );
+  if (!watch?.roundRunId) {
+    throw new SparkToolError('No follow-up round is running on this chat\u2019s pull request.');
+  }
+  if (watch.roundRunId === runId) {
+    throw new SparkToolError(
+      'This is the follow-up round itself; only the chat\u2019s agent uses this.',
+    );
+  }
+  return { watch, roundRunId: watch.roundRunId };
+}
+
+async function stopRound(context: SparkToolContext, number: number | undefined) {
+  const { watch, roundRunId } = await runningRound(context, number);
+  await stopRun(context.deps.db, roundRunId);
+  return {
+    message: `Stopped follow-up round ${watch.rounds} on PR #${watch.number}. Its edits so far stay in the folder and nothing more is pushed; its items wait for you. Ask for another round with this tool when the work here is done.`,
+    url: watch.url,
+  };
+}
+
+async function messageRound(
+  context: SparkToolContext,
+  args: { number?: number | undefined; message?: string | undefined },
+) {
+  const body = args.message?.trim();
+  if (!body) throw new SparkToolError('Pass the message for the follow-up agent.');
+  const { watch, roundRunId } = await runningRound(context, args.number);
+  await insertMemberMessage(context.deps.db, {
+    id: newId(),
+    conversationId: watch.conversationId,
+    runId: roundRunId,
+    body: `${MAIN_AGENT_NOTE}\n${body}`,
+    urgency: 'now',
+  });
+  return {
+    message: `Sent to the follow-up agent on PR #${watch.number}. It reads it while it works; it does not reply here.`,
+    url: watch.url,
+  };
+}
+
 export const prFollowUpRoundTool = sparkTool({
   name: 'spark_pr_follow_up_round',
-  title: 'Request a PR follow-up round',
+  title: 'Start, stop or message a PR follow-up round',
   acts: true,
   needs: 'pull_requests',
   description:
-    "Ask Spark to run one more follow-up round on a pull request it opened (default: this chat's): a Builder fixes the chosen items in the chat's worktree, then the push and GitHub replies follow the chat's autonomy level. Pass item labels (F1, F2, …) from spark_pr_follow_up to include items Spark held back, such as comments from people without write access, or items past the round limit; with no labels it takes every open item except held ones. " +
+    'A follow-up round on a pull request Spark opened (default: this chat\'s) is run by a separate follow-up agent in the chat\'s worktree. action "start" (the default) asks Spark for one more round: pass item labels (F1, F2, …) from spark_pr_follow_up to include items Spark held back; with no labels it takes every open item except held ones; the push and GitHub replies follow the chat\'s autonomy level. action "stop" stops this chat\'s running round at once, before you or the user change the same work; its edits so far stay and nothing more is pushed. action "message" sends the running round\'s agent a note, for example to wait, to leave a file alone or what changed. ' +
     ACTION_NOTE,
   input: {
     number: pullNumberInput,
+    action: z
+      .enum(['start', 'stop', 'message'])
+      .optional()
+      .describe('start (default), stop the running round, or message its agent.'),
+    message: z.string().trim().min(1).max(4000).optional().describe('For action "message".'),
     items: z
       .array(
         z
@@ -114,5 +170,9 @@ export const prFollowUpRoundTool = sparkTool({
       .optional()
       .describe('Item labels to include, e.g. ["F2", "F5"].'),
   },
-  run: (args, context) => askForRound(context, args),
+  run: (args, context) => {
+    if (args.action === 'stop') return stopRound(context, args.number);
+    if (args.action === 'message') return messageRound(context, args);
+    return askForRound(context, args);
+  },
 });
