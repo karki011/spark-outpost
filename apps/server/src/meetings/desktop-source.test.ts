@@ -128,4 +128,18 @@ describe('the desktop meeting source', () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
     expect(deliver).not.toHaveBeenCalled();
   });
+
+  it('passes the words so far on for the meeting it is recording only', async () => {
+    const test = scene();
+    const meetingId = randomUUID();
+    const words = vi.fn();
+    const starting = test.source.start(meetingId, vi.fn(), vi.fn(), words);
+    test.host({ kind: 'meeting:started', meetingId });
+    await starting;
+    const heard = { speaker: 'others', text: 'we ship', startMs: 1_200 };
+    test.host({ kind: 'meeting:partial', meetingId, words: heard });
+    test.host({ kind: 'meeting:partial', meetingId: randomUUID(), words: heard });
+    test.host({ kind: 'meeting:partial', meetingId, words: { ...heard, speaker: 'someone' } });
+    expect(words.mock.calls).toEqual([[heard]]);
+  });
 });

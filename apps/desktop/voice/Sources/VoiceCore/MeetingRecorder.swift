@@ -9,6 +9,8 @@ final class MeetingRecorder {
         let stream: MeetingStream
         var leftover: [Float] = []
         var offsetMs: Int?
+        var drafting = false
+        var lastDraft = ""
 
         init(source: MeetingSource, detector: SpeechDetector, rules: ListenRules) {
             self.source = source
@@ -133,7 +135,10 @@ final class MeetingRecorder {
             start += size
             let probability = lane.detector.probability(frame)
             if let segment = lane.stream.feed(frame: frame, probability: probability) {
+                lane.lastDraft = ""
                 transcribe(segment, from: source, for: current)
+            } else if let samples = lane.stream.draft() {
+                draft(samples, on: lane, for: current)
             }
         }
         buffer.removeFirst(min(start, buffer.count))
@@ -158,6 +163,37 @@ final class MeetingRecorder {
             self.settleParked(current)
             self.finishIfDone(current)
         }
+    }
+
+    private func draft(_ samples: [Float], on lane: Lane, for current: Recording) {
+        guard !lane.drafting, current.pending == 0, let openStart = lane.stream.openStartMs else { return }
+        if lane.source == .you, othersAreSpeaking(in: current) { return }
+        lane.drafting = true
+        let turn = lane.stream.turn
+        let startMs = openStart + (lane.offsetMs ?? 0)
+        let heardMs = startMs + samples.count * 1_000 / ListenRules.sampleRate
+        current.model.transcribe(samples, language: current.language, hint: "", draft: true) {
+            [weak self] text in
+            lane.drafting = false
+            guard let self, current.generation == self.generation, self.recording === current,
+                  !current.stopping, lane.stream.turn == turn
+            else { return }
+            let words = self.ownWords(
+                HeardLine(text: cleanTranscript(text), startMs: startMs, endMs: heardMs),
+                from: lane.source, in: current)
+            guard !words.isEmpty, words != lane.lastDraft else { return }
+            lane.lastDraft = words
+            self.emit(current.id, .meetingPartial(source: lane.source, text: words, startMs: startMs))
+        }
+    }
+
+    private func othersAreSpeaking(in current: Recording) -> Bool {
+        current.pendingOthers > 0 || current.lanes[.others]?.stream.openStartMs != nil
+    }
+
+    private func ownWords(_ line: HeardLine, from source: MeetingSource, in current: Recording) -> String {
+        guard source == .you else { return line.text }
+        return withoutEcho(line, of: current.played, rules: echo) ?? ""
     }
 
     private func keep(_ line: HeardLine, from source: MeetingSource, for current: Recording) {

@@ -44,11 +44,13 @@ function scene(prepare: () => Promise<string | null> = async () => null) {
 
 function sink() {
   const lines: NewMeetingLine[] = [];
+  const words = vi.fn();
   const ended = vi.fn();
   return {
     lines,
+    words,
     ended,
-    sink: { lines: (next: NewMeetingLine[]) => void lines.push(...next), ended },
+    sink: { lines: (next: NewMeetingLine[]) => void lines.push(...next), words, ended },
   };
 }
 
@@ -202,5 +204,30 @@ describe('the meeting hub', () => {
         detail: 'Turn on Voice in Settings → Voice to record meetings.',
       }),
     );
+  });
+
+  it("passes the words so far to the sink, cut to a line's length", async () => {
+    const test = scene();
+    const out = await started(test);
+    test.say({
+      id: ID,
+      event: 'meeting_partial',
+      source: 'others',
+      text: 'we ship',
+      startMs: 1_200,
+    });
+    test.say({
+      id: ID,
+      event: 'meeting_partial',
+      source: 'you',
+      text: 'x'.repeat(5_000),
+      startMs: 0,
+    });
+    expect(out.words).toHaveBeenNthCalledWith(1, {
+      speaker: 'others',
+      text: 'we ship',
+      startMs: 1_200,
+    });
+    expect(out.words.mock.calls[1]?.[0].text).toHaveLength(4_000);
   });
 });

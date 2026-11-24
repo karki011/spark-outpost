@@ -137,6 +137,13 @@ export const voiceHelperMessageSchema = z.discriminatedUnion('event', [
     startMs: z.number().int().min(0),
     endMs: z.number().int().min(0),
   }),
+  z.object({
+    id,
+    event: z.literal('meeting_partial'),
+    source: z.enum(['you', 'others']),
+    text,
+    startMs: z.number().int().min(0),
+  }),
   z.object({ id, event: z.literal('meeting_ended') }),
   z.object({ id, event: z.literal('loaded') }),
   z.object({ id, event: z.literal('level'), level: z.number().min(0).max(1) }),

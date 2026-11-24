@@ -63,6 +63,15 @@ export const newMeetingLineSchema = z.object({
 });
 export type NewMeetingLine = z.infer<typeof newMeetingLineSchema>;
 
+export const MEETING_LIVE_WORDS_STALE_MS = 3_000;
+
+export const meetingLiveWordsSchema = z.object({
+  speaker: meetingSpeakerSchema,
+  text: z.string().max(MEETING_LINE_MAX),
+  startMs: z.number().int().min(0),
+});
+export type MeetingLiveWords = z.infer<typeof meetingLiveWordsSchema>;
+
 export const meetingNotesSchema = z.object({
   markdown: z.string(),
   writtenAt: z.iso.datetime(),

@@ -14,7 +14,7 @@ Needs the Mac app with [Voice](voice.md) on, and [Calendar](calendar.md) connect
 
 1. In **Today**, select a meeting and choose **Take notes**. Or open **Transcripts** and choose **New meeting**.
 2. The first time, allow **Microphone** and **System Audio Recording** for Spark Outpost.
-3. **Transcript** shows each sentence, labelled **You** (your microphone) or **Others** (what your Mac plays).
+3. **Transcript** shows the words live, labelled **You** (your microphone) or **Others** (what your Mac plays).
 4. Choose **Stop** in the recording bar or island.
 
 **Join** records nothing. To do both, turn on **Take notes when I join a meeting** (Settings → Notifications). Every join then records too, automatic ones included, except Ask Spark's, or says why not.
