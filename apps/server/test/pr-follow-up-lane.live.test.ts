@@ -87,7 +87,7 @@ afterAll(async () => {
   await t.cleanup();
 });
 
-describe.skipIf(!claudeReady)('a follow-up round beside the chat, with real Claude', () => {
+describe.skipIf(!claudeReady)('the agent sessions of one chat, with real Claude', () => {
   it('answers the user on the chat session while the round runs on its own, and survives a stop', async () => {
     const first = await sendUserMessage(
       t.db,
@@ -131,4 +131,39 @@ describe.skipIf(!claudeReady)('a follow-up round beside the chat, with real Clau
     expect(after.status).toBe('succeeded');
     expect(after.reply).toContain('HERON-42');
   }, 600_000);
+
+  it('serves a later turn on the model the chat switched to, not the one its process started on', async () => {
+    const chat = randomUUID();
+    const usedModel = async (runId: string) => {
+      const { rows } = await t.db.query<{ used_model: string | null }>(
+        'SELECT used_model FROM runs WHERE id = $1',
+        [runId],
+      );
+      return rows[0]?.used_model ?? '';
+    };
+    const first = await sendUserMessage(
+      t.db,
+      chat,
+      { id: randomUUID(), content: 'Reply with OK only.' },
+      { provider: 'claude', model: 'haiku' },
+      t.workspaceId,
+    );
+    expect((await settled(first.run.id)).status).toBe('succeeded');
+    const second = await sendUserMessage(
+      t.db,
+      chat,
+      { id: randomUUID(), content: 'Reply with OK only, again.' },
+      { provider: 'claude', model: 'sonnet' },
+    );
+    expect((await settled(second.run.id)).status).toBe('succeeded');
+    const models = [await usedModel(first.run.id), await usedModel(second.run.id)];
+    console.log('models served', models);
+    const sessions = await t.db.query(
+      'SELECT 1 FROM provider_sessions WHERE conversation_id = $1',
+      [chat],
+    );
+    expect(sessions.rowCount).toBe(1);
+    expect(models[0]).toContain('haiku');
+    expect(models[1]).toContain('sonnet');
+  }, 300_000);
 });
