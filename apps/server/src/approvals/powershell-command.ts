@@ -104,18 +104,20 @@ function wrappedScript(command: string, start: number): string | null {
   }
 }
 
-export function powershellScript(command: string): string | null {
+function wrapped(command: string, unquoteOnce: boolean): string | null {
   const trimmed = command.trim();
-  if (!trimmed) return null;
   const firstEnd = rawWordEnd(trimmed, 0);
-  if (firstEnd < 0) return withoutPrefix(trimmed);
+  if (!trimmed || firstEnd < 0) return null;
   if (POWERSHELL_EXES.has(exeName(trimmed.slice(0, firstEnd)))) {
     const script = wrappedScript(trimmed, firstEnd);
     return script === null ? null : withoutPrefix(script);
   }
-  if (/^["']/.test(trimmed) && skipSpaces(trimmed, firstEnd) === trimmed.length) {
-    const script = soleWord(trimmed);
-    return script === null ? null : withoutPrefix(script);
-  }
-  return withoutPrefix(trimmed);
+  const sole = /^["']/.test(trimmed) && skipSpaces(trimmed, firstEnd) === trimmed.length;
+  if (!unquoteOnce || !sole) return null;
+  const inner = soleWord(trimmed);
+  return inner === null ? null : wrapped(inner, false);
+}
+
+export function powershellScript(command: string): string | null {
+  return wrapped(command, true);
 }

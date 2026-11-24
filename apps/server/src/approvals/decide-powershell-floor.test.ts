@@ -35,6 +35,10 @@ const RECOMMENDED = {
 const RULES = [RECOMMENDED, { rules: NO_SPARK_RULES, once: [] }];
 const TEMP = toGatePath(tmpdir(), 'win32');
 
+function wrap(script: string): string {
+  return `pwsh -NoProfile -c '${script.replaceAll("'", `'"'"'`)}'`;
+}
+
 function run(command: string): ApprovalRequest {
   return {
     toolCallId: 't1',
@@ -53,7 +57,7 @@ function run(command: string): ApprovalRequest {
 }
 
 async function viaPowerShell(posture: ModePosture, command: string, options: DecideOptions) {
-  const readAs = await readPowerShell(command);
+  const readAs = await readPowerShell(wrap(command));
   expect(readAs, command).not.toBeNull();
   const shell = await parseShell(readAs);
   return decide(posture, run(command), NO_RUN_RULES, [], { ...options, readAs, shell });
@@ -151,7 +155,7 @@ describe('Codex PowerShell commands on Windows get the safety floor', () => {
 
   it('matches run rules against the command as Codex sent it', async () => {
     const command = 'Remove-Item -Recurse build';
-    const readAs = await readPowerShell(command);
+    const readAs = await readPowerShell(wrap(command));
     const rules = { allow: [], reject: [ruleFor(run(command))!] };
     expect(
       decide('auto', run(command), rules, [], { files, readAs, shell: await parseShell(readAs) }),
@@ -160,7 +164,7 @@ describe('Codex PowerShell commands on Windows get the safety floor', () => {
 });
 
 async function gated(posture: ModePosture, command: string, extra: DecideOptions = {}) {
-  const reading = await readCodexCommand(run(command), true);
+  const reading = await readCodexCommand(run(wrap(command)), true);
   const shell = await parseShell(reading.readAs ?? command);
   return decide(posture, reading.request, NO_RUN_RULES, [], {
     changesProject: true,
@@ -196,6 +200,23 @@ describe('PowerShell spellings the reader refuses keep asking', () => {
   ])('asks in full access: %s', async (command) => {
     expect(await gated('full_access', command)).toEqual(STILL_ASKS);
   });
+
+  it.each(['git p\\ush origin main', 'echo x > AGENTS.m\\d'])(
+    'asks before a bash script Codex sent without PowerShell: %s',
+    async (command) => {
+      const reading = await readCodexCommand(run(command), true);
+      expect(reading).toMatchObject({ readAs: null, unreadable: true });
+      const decision = decide('full_access', reading.request, NO_RUN_RULES, [], {
+        changesProject: true,
+        files,
+        publish: { grant: GRANTS[0]!, task: TASK },
+        sparkRules: RECOMMENDED,
+        shell: await parseShell(command),
+        powershell: true,
+      });
+      expect(decision.verdict).not.toBe('allow');
+    },
+  );
 
   it('refuses browser data reached through a trailing dot', async () => {
     const command = 'Get-Content C:\\Users\\me\\AppData\\Spark.\\Cookies';

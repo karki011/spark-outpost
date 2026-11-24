@@ -6,10 +6,13 @@ import type { ApprovalRequest } from './decide.ts';
 const UTF8 = 'try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}';
 const SHLEX_EXE = `"C:"'\\'"WINDOWS"'\\'"System32"'\\'"WindowsPowerShell"'\\'"v1.0"'\\'"powershell.exe"`;
 
+function wrap(script: string): string {
+  return `pwsh -NoProfile -c '${script.replaceAll("'", `'"'"'`)}'`;
+}
+
 describe('the script Codex asks to run in PowerShell', () => {
   it.each([
-    ['a bare script', 'git status', 'git status'],
-    ['a shell-quoted script', `"git push origin main"`, 'git push origin main'],
+    ['a quoted full command', `"pwsh -c 'git push origin main'"`, 'git push origin main'],
     ['the full command, shell-quoted', `${SHLEX_EXE} -NoProfile -c 'git status'`, 'git status'],
     ['pwsh with -Command', `pwsh -NoLogo -Command "git status"`, 'git status'],
     ['a plain path', 'C:\\Program\\pwsh.exe -c git status', 'git status'],
@@ -28,6 +31,9 @@ describe('the script Codex asks to run in PowerShell', () => {
     ['a backslash in double quotes', 'pwsh -c "Remove-Item C:\\Users\\me"'],
     ['a variable in double quotes', 'pwsh -c "echo $x"'],
     ['quotes among several words', `pwsh -c Set-Content 'a b.txt' x`],
+    ['a bare script', 'git status'],
+    ['a shell-quoted script', `"git push origin main"`],
+    ['a bash script with an escape', 'git p\\ush origin main'],
   ])('fails closed on %s', (_name, command) => {
     expect(powershellScript(command)).toBeNull();
   });
@@ -64,7 +70,7 @@ describe('reading a PowerShell command as bash', () => {
     ['Get-ChildItem | Sort-Object Name | Select-Object -First 3', 'ls | cat | cat'],
     ['git push origin HEAD # done', 'git push origin HEAD'],
   ])('reads %s', async (command, bash) => {
-    expect(await readPowerShell(command)).toBe(bash);
+    expect(await readPowerShell(wrap(command))).toBe(bash);
   });
 
   it.each([
@@ -139,8 +145,15 @@ describe('reading a PowerShell command as bash', () => {
     ['a rooted path on the current drive', 'Set-Content \\dev\\null x'],
     ['certutil', 'certutil.exe -urlcache -f https://example.com a.exe'],
   ])('fails closed on %s', async (_name, command) => {
-    expect(await readPowerShell(command)).toBeNull();
+    expect(await readPowerShell(wrap(command))).toBeNull();
   });
+
+  it.each(['git p\\ush origin main', 'echo x > AGENTS.m\\d', 'git status'])(
+    'never reads a script Codex sent without PowerShell: %s',
+    async (command) => {
+      expect(await readPowerShell(command)).toBeNull();
+    },
+  );
 
   it('reads only Codex commands on Windows, as Codex sent them', async () => {
     const request = { kind: 'execute', command: 'Remove-Item $x' } as ApprovalRequest;
@@ -150,17 +163,17 @@ describe('reading a PowerShell command as bash', () => {
       unreadable: false,
     });
     expect(await readCodexCommand(request, true)).toMatchObject({ readAs: null, unreadable: true });
-    const read = await readCodexCommand({ ...request, command: 'git status' }, true);
+    const read = await readCodexCommand({ ...request, command: wrap('git status') }, true);
     expect(read).toMatchObject({ readAs: 'git status', unreadable: false });
     const mangled = {
       ...request,
       command: 'Remove-Item C:Usersme',
-      sentCommand: '"Remove-Item C:\\Users\\me"',
+      sentCommand: wrap('Remove-Item C:\\Users\\me$x'),
     };
     const raw = await readCodexCommand(mangled, true);
     expect(raw.request.command).toBe(mangled.sentCommand);
     expect(raw.unreadable).toBe(true);
-    const titled = { ...request, command: 'git status', sentCommand: null };
+    const titled = { ...request, command: wrap('git status'), sentCommand: null };
     expect(await readCodexCommand(titled, true)).toMatchObject({ readAs: null, unreadable: true });
   });
 });
