@@ -1,15 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { WarnIcon } from '../ui/icons.tsx';
 import type { CodeRecovery } from './lock-recovery.ts';
+import type { UnlockCopy } from './unlock-copy.ts';
 
 export const RECOVER_TITLE = 'Reset your code?';
-export const RECOVER_LINE =
-  'Confirm with your Mac password or Touch ID. The privacy screen turns off until you set a new code.';
 
 export function RecoverStep({
+  copy,
   recovery,
   onCancel,
 }: {
+  copy: UnlockCopy;
   recovery: CodeRecovery;
   onCancel: () => void;
 }) {
@@ -26,7 +27,7 @@ export function RecoverStep({
         disabled={recovery.busy}
         onClick={recovery.run}
       >
-        Use Mac password…
+        {copy.recoverButton}
       </button>
       <p className="lock-problem" role="alert">
         {recovery.problem && !recovery.busy && (

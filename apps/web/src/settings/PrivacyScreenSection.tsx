@@ -14,20 +14,28 @@ import { SwitchRow } from './SwitchRow.tsx';
 const LOCK_AWAY = 'Lock Spark when I’m away';
 const LOCK_AFTER = 'Lock after';
 const TOUCH_ID = 'Unlock with Touch ID';
+const WINDOWS_HELLO = 'Unlock with Windows Hello';
 const HIDE_NOTIFICATIONS = 'Hide notification text while locked';
 const CODE = 'Code';
 
-function lockOnSleepLabel(): string {
-  return `Lock when the ${hostWords().computer} sleeps or its screen locks`;
+function lockOnSleepLabel(windows = onWindows()): string {
+  return `Lock when the ${hostWords(windows).computer} sleeps or its screen locks`;
 }
 
-function shownWhenOn(): string[] {
-  const touchId = onWindows() ? [] : [TOUCH_ID];
-  return [LOCK_AFTER, lockOnSleepLabel(), ...touchId, HIDE_NOTIFICATIONS];
+function unlockLabel(windows: boolean): string {
+  return windows ? WINDOWS_HELLO : TOUCH_ID;
 }
 
-export function privacyScreenRows(): string[] {
-  return [LOCK_AWAY, ...shownWhenOn(), CODE];
+function shownWhenOn(windows = onWindows()): string[] {
+  return [LOCK_AFTER, lockOnSleepLabel(windows), unlockLabel(windows), HIDE_NOTIFICATIONS];
+}
+
+export function privacyScreenRows(windows = onWindows()): string[] {
+  return [LOCK_AWAY, ...shownWhenOn(windows), CODE];
+}
+
+function noUnlockHint(): string {
+  return onWindows() ? 'Windows Hello isn’t set up on this PC' : 'This Mac has no Touch ID';
 }
 
 function lockMenuHint(): string {
@@ -121,19 +129,15 @@ export function PrivacyScreenSection() {
             checked={status.onSleep}
             onChange={(on) => void updateAppLock({ onSleep: on })}
           />
-          {!onWindows() && (
-            <SwitchRow
-              id={touchId}
-              label={TOUCH_ID}
-              doc={DOC}
-              hint={
-                status.touchIdAvailable ? 'Your code always works too' : 'This Mac has no Touch ID'
-              }
-              checked={status.touchId && status.touchIdAvailable}
-              disabled={!status.touchIdAvailable}
-              onChange={(on) => void updateAppLock({ touchId: on })}
-            />
-          )}
+          <SwitchRow
+            id={touchId}
+            label={unlockLabel(onWindows())}
+            doc={DOC}
+            hint={status.touchIdAvailable ? 'Your code always works too' : noUnlockHint()}
+            checked={status.touchId && status.touchIdAvailable}
+            disabled={!status.touchIdAvailable}
+            onChange={(on) => void updateAppLock({ touchId: on })}
+          />
           <SwitchRow
             id={hideId}
             label={HIDE_NOTIFICATIONS}

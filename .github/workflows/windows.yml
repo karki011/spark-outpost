@@ -11,6 +11,10 @@ on:
       - 'scripts/windows-installer-smoke.ts'
       - 'apps/desktop/scripts/**'
       - 'apps/server/src/terminal/session-host/**'
+      - 'apps/desktop/native/win-helper/**'
+      - 'apps/desktop/src/win-helper/**'
+      - 'apps/desktop/src/windows-hello*.ts'
+      - 'apps/desktop/src/app-lock*.ts'
 
 permissions:
   contents: read
@@ -75,6 +79,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build and test the Windows helper
+        shell: bash
+        run: pnpm desktop:win-helper --test
       - name: Build the unsigned installer
         shell: bash
         run: |

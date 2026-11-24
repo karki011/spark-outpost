@@ -3,7 +3,7 @@ title: Lock Spark with the privacy screen
 section: Mac app and providers
 type: how-to
 order: 417
-summary: Cover Spark's windows when you step away, unlock with Touch ID or a code, and reset a code you forgot.
+summary: Cover Spark's windows when you step away, unlock with Touch ID, Windows Hello or a code, and reset a code you forgot.
 ---
 
 You'll cover Spark Outpost's windows when you step away. About 2 minutes.
@@ -22,7 +22,7 @@ You'll cover Spark Outpost's windows when you step away. About 2 minutes.
 | **Hide notification text while locked**          | Notifications name no chat.                      |
 | **Code**                                         | **Change code…** asks for the current one first. |
 
-On Windows the sleep row reads **Lock when the computer sleeps or its screen locks**, and there's no Touch ID row.
+On Windows the rows say **PC** and **Unlock with Windows Hello**.
 
 ## Lock and unlock
 
@@ -30,9 +30,7 @@ On Windows the sleep row reads **Lock when the computer sleeps or its screen loc
 
 The lock button sits above the left bar's clock, in a narrow window's **More**, in the Settings window and on Spark Island. Windows: right-click the taskbar button.
 
-On Windows, press **Ctrl+Shift+L**.
-
-Unlock with Touch ID or your code. Five wrong codes wait a minute. On Windows only the code unlocks.
+Unlock with Touch ID, Windows Hello on Windows, or your code. Five wrong codes wait a minute.
 
 ## What it covers
 
@@ -46,6 +44,6 @@ Spark's windows are covered and Spark Island hides. Work keeps running and notif
 
 No **Forgot code?** link? Quit Spark and delete `app-lock.json` in `~/Library/Application Support/Spark Outpost`. That removes the privacy screen.
 
-Windows has no **Forgot code?** yet. Quit Spark and delete `app-lock.json` in `%APPDATA%\Spark Outpost`.
+On Windows, **Forgot code?** needs Windows Hello set up: select **Use Windows Hello…** and confirm. Otherwise delete `app-lock.json` in `%APPDATA%\Spark Outpost` while Spark is closed.
 
 **Next:** [Manage providers, models and Jev](providers-and-models.md)

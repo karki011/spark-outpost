@@ -33,6 +33,7 @@ function setup(
     prompts: 0,
     owner: 'ok' as OwnerAuthOutcome | null,
     ownerPrompts: 0,
+    askedFrom: [] as (string | null)[],
     timers: [] as { run: () => void; ms: number; cancelled: boolean }[],
   };
   const lock = createAppLock(record, {
@@ -42,14 +43,17 @@ function setup(
     },
     hash: async (next) => stored(next),
     matches: async (given, saved) => stored(given).hash === saved.hash,
+    unlockName: 'Touch ID',
     touchIdAvailable: () => scene.sensor,
-    promptTouchId: async () => {
+    promptTouchId: async (windowHandle) => {
       scene.prompts += 1;
+      scene.askedFrom.push(windowHandle);
       if (scene.finger === 'cancel') throw new Error('cancelled');
     },
     ownerAuthAvailable: () => scene.owner !== null,
-    authenticateOwner: async () => {
+    authenticateOwner: async (windowHandle) => {
       scene.ownerPrompts += 1;
+      scene.askedFrom.push(windowHandle);
       return scene.owner ?? 'unavailable';
     },
     now: () => scene.now,
@@ -207,6 +211,14 @@ describe('unlocking with Touch ID', () => {
     expect(noSensor.lock.status().touchIdAvailable).toBe(false);
   });
 
+  it('asks over the window that asked, or none', async () => {
+    const { lock, scene } = setup();
+    await lock.unlockWithTouchId('4242');
+    lock.lockNow();
+    await lock.unlockWithTouchId();
+    expect(scene.askedFrom).toEqual(['4242', null]);
+  });
+
   it('works while code entry is paused', async () => {
     const { lock } = setup();
     for (let miss = 0; miss < 5; miss += 1) await lock.unlockWithCode('222222');
@@ -317,6 +329,12 @@ describe('forgot code', () => {
     expect(await lock.recover()).toEqual({ ok: false, reason: 'unavailable' });
     expect(scene.ownerPrompts).toBe(0);
     expect(lock.status().locked).toBe(true);
+  });
+
+  it('asks the owner over the window that asked', async () => {
+    const { lock, scene } = setup();
+    await lock.recover('77');
+    expect(scene.askedFrom).toEqual(['77']);
   });
 
   it('works during the wrong-code wait and ends it', async () => {

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { cp } from 'node:fs/promises';
 import path from 'node:path';
 import { Arch, type AfterPackContext, type Configuration } from 'electron-builder';
@@ -218,7 +218,11 @@ async function copyRuntime(
   await copy(path.join(stageDir, arch, 'runtime/node_modules'), 'app/node_modules');
   await copy(path.join(stageDir, arch, 'server'), 'server');
   await copy(path.join(stageDir, 'web'), 'web');
-  if (platform === 'win') return;
+  if (platform === 'win') {
+    const helper = path.join(stageDir, arch, 'win-helper');
+    if (existsSync(helper)) await copy(helper, 'win-helper');
+    return;
+  }
   await copy(path.join(stageDir, arch, 'tmux'), 'tmux');
   await checkTmuxBinary(path.join(resources, 'tmux/bin/tmux'), arch);
   await copy(path.join(stageDir, arch, 'mac-control'), 'mac-control');

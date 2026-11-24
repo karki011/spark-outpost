@@ -2,6 +2,7 @@ import path from 'node:path';
 import { GOOGLE_CLIENT_FILE_NAME } from './google-client.ts';
 import { MICROSOFT_CLIENT_FILE_NAME } from './microsoft-client.ts';
 import { SLACK_CLIENT_ID_FILE_NAME } from './slack-sign-in.ts';
+import { WIN_HELPER_EXE } from './win-helper/protocol.ts';
 
 export interface AppLayout {
   serverDir: string;
@@ -13,6 +14,7 @@ export interface AppLayout {
   voiceBin: string;
   voiceModels: string;
   noActivateAddon: string;
+  winHelperBin: string;
   googleClientFile: string | null;
   microsoftClientFile: string | null;
   slackClientIdFile: string | null;
@@ -38,6 +40,7 @@ export function appLayout(source: LayoutSource): AppLayout {
       voiceBin: path.join(resourcesPath, 'voice/bin/spark-voice'),
       voiceModels: path.join(resourcesPath, 'voice/models'),
       noActivateAddon: path.join(resourcesPath, 'no-activate/no-activate.node'),
+      winHelperBin: path.join(resourcesPath, 'win-helper', WIN_HELPER_EXE),
       googleClientFile: null,
       microsoftClientFile: null,
       slackClientIdFile: null,
@@ -54,6 +57,7 @@ export function appLayout(source: LayoutSource): AppLayout {
     voiceBin: path.join(repoRoot, '.local/voice', arch, 'spark-voice'),
     voiceModels: path.join(repoRoot, '.local/voice', arch, 'models'),
     noActivateAddon: path.join(repoRoot, '.local/no-activate', arch, 'no-activate.node'),
+    winHelperBin: path.join(repoRoot, '.local/win-helper', arch, WIN_HELPER_EXE),
     googleClientFile: path.join(repoRoot, '.local', GOOGLE_CLIENT_FILE_NAME),
     microsoftClientFile: path.join(repoRoot, '.local', MICROSOFT_CLIENT_FILE_NAME),
     slackClientIdFile: path.join(repoRoot, '.local', SLACK_CLIENT_ID_FILE_NAME),
