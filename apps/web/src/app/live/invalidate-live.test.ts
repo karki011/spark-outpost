@@ -72,4 +72,29 @@ describe('invalidateLive', () => {
     expect(gate.started).toBe(1);
     expect(client.getQueryData(KEY)).toBe(1);
   });
+
+  it('leaves a prefetch of a cached chat nobody is showing to finish by itself', async () => {
+    const client = new QueryClient();
+    client.setQueryData(KEY, 0);
+    let started = 0;
+    let release: () => void = () => undefined;
+    const prefetch = client.prefetchQuery({
+      queryKey: KEY,
+      queryFn: () => {
+        started += 1;
+        return new Promise<number>((resolve) => {
+          release = () => resolve(1);
+        });
+      },
+    });
+    invalidateLive(client, { queryKey: KEY, exact: true });
+    await settle();
+    expect(started).toBe(1);
+    release();
+    await prefetch;
+    await settle();
+    expect(started).toBe(1);
+    invalidateLive(client, { queryKey: KEY, exact: true });
+    expect(client.getQueryState(KEY)?.isInvalidated).toBe(true);
+  });
 });

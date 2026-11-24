@@ -136,7 +136,22 @@ export function nativeRemote(deps: NativeRemoteDeps) {
         409,
       );
   };
-  const items = async (
+  const reading = new Map<string, Promise<unknown>>();
+  const items = (
+    conversationId: string,
+    provider: TrackedTerminalProvider,
+    path: string,
+  ): Promise<ParsedTail | null> => {
+    const earlier = reading.get(conversationId) ?? Promise.resolve();
+    const next = earlier.then(() => readItems(conversationId, provider, path));
+    const settled = next.catch(() => null);
+    reading.set(conversationId, settled);
+    void settled.then(() => {
+      if (reading.get(conversationId) === settled) reading.delete(conversationId);
+    });
+    return next;
+  };
+  const readItems = async (
     conversationId: string,
     provider: TrackedTerminalProvider,
     path: string,

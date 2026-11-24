@@ -22,6 +22,7 @@ export function invalidateLive(client: QueryClient, invalidation: LiveInvalidati
   const inFlight =
     client.isFetching({
       ...invalidation,
+      type: 'active',
       predicate: (query) => query.state.data !== undefined,
     }) > 0;
   const settled = client.invalidateQueries(invalidation, { cancelRefetch: false });
