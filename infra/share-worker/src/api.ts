@@ -1,4 +1,5 @@
-import { mediaType, readLimitedText, clientAddress } from './body.ts';
+import { mediaType, readLimitedText } from './body.ts';
+import { clientKey } from './client.ts';
 import { allowHit } from './counters.ts';
 import {
   hashPasscode,
@@ -10,6 +11,7 @@ import {
   shareIdFor,
 } from './crypto.ts';
 import type { ShareEnv } from './env.ts';
+import { recordEvent } from './events.ts';
 import { emptyResponse, jsonError, jsonResponse } from './responses.ts';
 import {
   discardShare,
@@ -28,6 +30,8 @@ export const MAX_HTML_BYTES = 2_097_152;
 export const MAX_CREATE_BODY_BYTES = MAX_HTML_BYTES * 2 + 16_384;
 export const CREATE_LIMIT_PER_HOUR = 20;
 export const RETIRE_LIMIT_PER_HOUR = 60;
+export const ALL_CREATES_PER_HOUR = 600;
+export const ALL_CREATE_BYTES_PER_DAY = 1_073_741_824;
 export const FINAL_HEADER = 'x-share-final';
 
 const HOUR_MS = 3_600_000;
@@ -127,15 +131,34 @@ async function storeShare(
   return 'conflict';
 }
 
+async function withinAllCreates(env: ShareEnv, bytes: number, now: number): Promise<boolean> {
+  const count = { name: 'create:all', limit: ALL_CREATES_PER_HOUR, windowMs: HOUR_MS };
+  if (!(await allowHit(env.COUNTERS, count, now))) return false;
+  const size = {
+    name: 'create:bytes',
+    limit: ALL_CREATE_BYTES_PER_DAY,
+    windowMs: DAY_MS,
+    amount: bytes,
+  };
+  return allowHit(env.COUNTERS, size, now);
+}
+
 export async function createShare(request: Request, env: ShareEnv, now: number) {
-  const allowed = await allowHit(
-    env.COUNTERS,
-    `create:${clientAddress(request)}`,
-    now,
-    CREATE_LIMIT_PER_HOUR,
-    HOUR_MS,
-  );
-  if (!allowed) return jsonError(429, 'rate_limited');
+  const own = {
+    name: `create:${clientKey(request)}`,
+    limit: CREATE_LIMIT_PER_HOUR,
+    windowMs: HOUR_MS,
+  };
+  if (!(await allowHit(env.COUNTERS, own, now))) {
+    recordEvent(env, 'create_rate_limited');
+    return jsonError(429, 'rate_limited');
+  }
+  const answer = await storeCreate(request, env, now);
+  if (answer.status === 400 || answer.status === 413) recordEvent(env, 'create_rejected');
+  return answer;
+}
+
+async function storeCreate(request: Request, env: ShareEnv, now: number) {
   if (mediaType(request) !== 'application/json') return jsonError(400, 'invalid_request');
   const body = await readLimitedText(request, MAX_CREATE_BODY_BYTES);
   if ('error' in body) {
@@ -147,6 +170,10 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
   if (parsed === 'too_large') return jsonError(413, 'too_large');
   if (parsed === 'invalid_request') return jsonError(400, 'invalid_request');
   if (!(await ownsId(parsed.deleteToken, parsed.id))) return jsonError(400, 'invalid_request');
+  if (!(await withinAllCreates(env, parsed.html.byteLength, now))) {
+    recordEvent(env, 'create_global_limited');
+    return jsonError(429, 'rate_limited');
+  }
   const stored = await storeShare(
     env,
     {
@@ -163,19 +190,22 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
   );
   if (stored === 'conflict') return jsonError(409, 'conflict');
   const { id, expiresAt } = stored;
+  recordEvent(env, 'share_created', {
+    kind: stored.passcode ? 'passcode' : 'open',
+    amount: parsed.html.byteLength,
+  });
   const url = `${new URL(request.url).origin}/a/${id}`;
   return jsonResponse(201, { id, url, expiresAt });
 }
 
 async function retireUnstored(request: Request, env: ShareEnv, id: string, now: number) {
   if (await isRetired(env, id)) return true;
-  const allowed = await allowHit(
-    env.COUNTERS,
-    `retire:${clientAddress(request)}`,
-    now,
-    RETIRE_LIMIT_PER_HOUR,
-    HOUR_MS,
-  );
+  const own = {
+    name: `retire:${clientKey(request)}`,
+    limit: RETIRE_LIMIT_PER_HOUR,
+    windowMs: HOUR_MS,
+  };
+  const allowed = await allowHit(env.COUNTERS, own, now);
   if (allowed) await retireId(env, id);
   return allowed;
 }
@@ -192,5 +222,6 @@ export async function deleteShare(request: Request, env: ShareEnv, id: string, n
   if (!sameText(await sha256(token), record.deleteTokenHash)) return jsonError(404, 'not_found');
   await retireId(env, id);
   await removeShare(env, record);
+  recordEvent(env, 'share_deleted');
   return emptyResponse(204);
 }
