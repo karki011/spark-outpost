@@ -12,7 +12,7 @@ Give someone a page an agent made, such as a chart or a report. About 1 minute.
 2. Pick the version in the version menu, then select **Share…**.
 3. Turn on **Require a passcode** if the page is private. Spark makes the code.
 4. Pick when **Link ends after**: 1 day or 7 days (the default).
-5. Select **Create link**, then **Copy link**, and **Copy code** if there is one. Send the code separately from the link.
+5. Select **Create link**. Spark copies the link; select **Copy code** if there is one, and send the code separately from the link.
 6. Select **Done**. The button now reads **Shared**.
 
 The passcode shows only in that window. Spark doesn't keep it. To get a new one, stop sharing and share again. Five wrong codes lock the link for that visitor for 15 minutes.
