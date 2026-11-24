@@ -4,6 +4,15 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.19
+
+- **Spark Outpost for Windows (alpha).** An unsigned installer for Windows 10 and 11 (x64) is on the website for testing: Terminal sessions that survive a restart, Windows Hello for the privacy screen, the island, jump list and tray, Ctrl shortcuts, and Codex commands in PowerShell checked by the approval gate. Windows SmartScreen warns before it installs; choose **More info**, then **Run anyway**.
+- **Calendar: Week view, replies and new meetings.** **Week** sits between Month and Day. Answer a Google invitation with **Yes**, **No** or **Maybe**, and create a Google meeting with **New event**, with guests and a Meet link if you want them.
+- **Sign in to MCP servers.** A server reached by URL that uses OAuth shows **Sign in** in Settings → Connectors. Spark keeps the sign-in in the keychain and renews it on its own.
+- **A calmer look.** Blobs now mean a Spark: chats, providers and connectors use status marks and tiles, and Sparks → Crew is a list.
+- **Faster.** Long chats open and update faster, and turns start sooner.
+- Voice starts faster on the first press, a meeting no longer hears its own speakers, and Spark no longer crashes without a microphone. Making a share link copies it.
+
 ## 0.1.0-beta.18
 
 - **The chat's agent reads every workflow report.** When a workflow run in a chat ends, however it started (Run, `@`, a schedule, a trigger), the chat's own agent reads each step's reply in the same turn and answers under the run's line: what it fixed, or that nothing needs doing. **Steps** on the line shows the first line of each step's reply; open a step to read all of it. A run you didn't start with `@` never pushes or opens a pull request: its fixes stay in the chat for you.

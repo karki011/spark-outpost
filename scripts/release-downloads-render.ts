@@ -38,6 +38,8 @@ export function latestDmgUrl(arch: Arch): string {
   return `${FEED_URL}/Spark-Outpost-latest-${arch}.dmg`;
 }
 
+export const LATEST_WINDOWS_INSTALLER_URL = `${FEED_URL}/Spark-Outpost-latest-windows-alpha-x64.exe`;
+
 export function releaseDate(page: string | undefined): string | undefined {
   return page ? DATE_LINE.exec(page)?.[1] : undefined;
 }
@@ -88,14 +90,23 @@ function downloadButton(arch: Arch, label: string, color: string): string {
   return `<a href="${latestDmgUrl(arch)}"><img alt="Download for Mac, ${label}" src="${badge}"></a>`;
 }
 
+const WINDOWS_BADGE =
+  'https://img.shields.io/badge/Download_for_Windows-Alpha,_unsigned-555555?style=for-the-badge&logo=windows&logoColor=white';
+
+function windowsButton(): string {
+  return `<a href="${LATEST_WINDOWS_INSTALLER_URL}"><img alt="Download for Windows, alpha, unsigned" src="${WINDOWS_BADGE}"></a>`;
+}
+
 export function renderReadmeSection(latest: Release): string {
   const { version } = latest;
   return [
     README_START,
     '',
-    `${downloadButton('arm64', 'Apple silicon', '2bb39a')} ${downloadButton('x64', 'Intel', '555555')}`,
+    `${downloadButton('arm64', 'Apple silicon', '2bb39a')} ${downloadButton('x64', 'Intel', '555555')} ${windowsButton()}`,
     '',
     `Free beta · [${version}](releases/${version}.md) · macOS 13+ (Mac control needs 14) · [All versions](releases/README.md)`,
+    '',
+    'Windows 10 and 11 (x64) is an unsigned alpha for testing: Windows SmartScreen warns before it installs; choose **More info** → **Run anyway**.',
     '',
     README_END,
   ].join('\n');

@@ -78,6 +78,8 @@ describe('release downloads', () => {
     expect(updated).not.toContain('old');
     expect(updated).toContain(`<a href="${feed}/Spark-Outpost-latest-arm64.dmg">`);
     expect(updated).toContain(`<a href="${feed}/Spark-Outpost-latest-x64.dmg">`);
+    expect(updated).toContain(`<a href="${feed}/Spark-Outpost-latest-windows-alpha-x64.exe">`);
+    expect(updated).toContain('**More info** → **Run anyway**');
     expect(updated).toContain('[0.1.0-beta.3](releases/0.1.0-beta.3.md)');
     expect(updated).toContain('[All versions](releases/README.md)');
     expect(replaceReadmeSection(updated, renderReadmeSection(latest))).toBe(updated);
