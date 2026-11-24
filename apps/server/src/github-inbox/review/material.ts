@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { GithubInboxTicket } from '@spark-outpost/contracts';
 import { knownTicketsNamed } from '../../persistence/github-inbox.ts';
 import { listProjects } from '../../projects/projects.ts';
-import { connectionFor, type GitHubDeps } from '../../ship/github/access.ts';
+import { DEFAULT_GITHUB_HOST, connectionFor, type GitHubDeps } from '../../ship/github/access.ts';
 import { repoPath, type GitHubConnection } from '../../ship/github/connection.ts';
 import { GITHUB_PAGE_SIZE } from '../../ship/github/pull-reads.ts';
 import { repoSlug, type RemoteRepo } from '../../ship/remote.ts';
@@ -59,11 +59,13 @@ function unlinkedPull(parsed: { slug: string; number: number }, host: string): L
 export async function reachablePull(
   deps: GitHubDeps,
   pull: string,
-  host: string,
+  namedHost: string | null,
 ): Promise<{ connection: GitHubConnection; linked: LinkedPull } | null> {
   const parsed = parsePullId(pull);
   if (!parsed) return null;
-  const linked = (await linkedPull(deps, pull)) ?? unlinkedPull(parsed, host);
+  const known = await linkedPull(deps, pull);
+  const onNamedHost = known !== null && (namedHost === null || known.repo.host === namedHost);
+  const linked = onNamedHost ? known : unlinkedPull(parsed, namedHost ?? DEFAULT_GITHUB_HOST);
   const connection = await connectionFor(deps, linked.repo).catch(() => null);
   return connection ? { connection, linked } : null;
 }

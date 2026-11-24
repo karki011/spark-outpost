@@ -7,7 +7,6 @@ import {
 } from '../github-inbox/review/material.ts';
 import { hasProject, type Handoff } from '../orchestration/spark-child.ts';
 import { recordObservation } from '../persistence/observations.ts';
-import { DEFAULT_GITHUB_HOST } from '../ship/github/access.ts';
 import type { PullPlace, PullRef } from './pr-checkout.ts';
 import { pullHostNamedIn, pullNamedIn, type TurnWorkflowRun } from './run-records.ts';
 
@@ -19,9 +18,8 @@ const KEPT_CHANGING = 'it kept changing while Spark read it';
 
 const noConnection = (pull: PullRef) => `no GitHub connection reaches ${pull.owner}/${pull.repo}`;
 
-function hostOf(turn: TurnWorkflowRun, pull: PullRef): string {
-  const named = pullNamedIn(turn.message) === pull.id ? pullHostNamedIn(turn.message) : null;
-  return named ?? DEFAULT_GITHUB_HOST;
+function namedHost(turn: TurnWorkflowRun, pull: PullRef): string | null {
+  return pullNamedIn(turn.message) === pull.id ? pullHostNamedIn(turn.message) : null;
 }
 
 function reasonOf(error: unknown): string {
@@ -33,7 +31,7 @@ async function readFromGitHub(h: Handoff, turn: TurnWorkflowRun, pull: PullRef):
   const access = h.deps.shipAccess;
   if (!access) return { kind: 'unreadable', reason: noConnection(pull) };
   const deps = { ...access, db: h.deps.db, workspaceId: h.input.workspaceId };
-  const found = await reachablePull(deps, pull.id, hostOf(turn, pull)).catch(() => null);
+  const found = await reachablePull(deps, pull.id, namedHost(turn, pull)).catch(() => null);
   if (!found) return { kind: 'unreadable', reason: noConnection(pull) };
   try {
     const facts = await gatherMaterialFrom(deps, found, pull.id, null);

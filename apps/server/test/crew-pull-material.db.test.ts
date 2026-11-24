@@ -123,6 +123,9 @@ describe('a workflow run named for a pull request in a repository the chat has n
     const record = await finished(runId);
 
     expect(record).toMatchObject({ status: 'succeeded', pull: OTHER_ID });
+    expect(stub.github.requests.map((request) => request.path)).toContain(
+      '/repos/someone/else/pulls/3',
+    );
     for (const entry of record!.steps) {
       const prompt = await promptOf(entry.runId!);
       expect(prompt).toContain('Spark read it from GitHub');
@@ -167,6 +170,22 @@ describe('a workflow run named for a pull request in a repository the chat has n
 
     expect(statesOf(record)).toEqual({ look: 'skipped', judge: 'skipped' });
     expect((await getRun(t.db, runId))?.error).toContain('GitHub did not return it');
+  }, 90_000);
+
+  it('does not read a linked repository of the same name for a link on another host', async () => {
+    stub.github.pulls.push({ ...otherPull(), owner: 'acme', repo: 'widgets', number: 7 });
+    await workerSignedIn();
+    await lookFlow();
+    const repo = await repoWithPull(base, 'hosted');
+    await openChat(t, { root: repo.root });
+
+    const link = 'https://git.example/acme/widgets/pull/7';
+    const record = await finished(await sendMessage(t, await openChat(t), `@check review ${link}`));
+
+    expect(statesOf(record)).toEqual({ look: 'skipped', judge: 'skipped' });
+    expect(stub.github.requests.map((request) => request.path)).not.toContain(
+      '/repos/acme/widgets/pulls/7',
+    );
   }, 90_000);
 
   it('gives the steps the pull request in a chat whose project is another repository', async () => {
