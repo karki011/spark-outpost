@@ -1,8 +1,16 @@
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
-import { NO_RUN_RULES, decide, type ApprovalRequest, type DecideOptions } from './decide.ts';
+import {
+  NO_RUN_RULES,
+  RUN_REJECTED_REASON,
+  decide,
+  ruleFor,
+  type ApprovalRequest,
+  type DecideOptions,
+} from './decide.ts';
 import type { FileLister } from './file-lister.ts';
+import { toGatePath } from './gate-path.ts';
 import { readPowerShell } from './powershell-read.ts';
 import type { PublishGrant, TaskBranch } from './publish-policy.ts';
 import { parseShell } from './shell-parse.ts';
@@ -24,7 +32,7 @@ const RECOMMENDED = {
   once: [],
 };
 const RULES = [RECOMMENDED, { rules: NO_SPARK_RULES, once: [] }];
-const TEMP = tmpdir();
+const TEMP = toGatePath(tmpdir(), 'win32');
 
 function run(command: string): ApprovalRequest {
   return {
@@ -138,5 +146,14 @@ describe('Codex PowerShell commands on Windows get the safety floor', () => {
     expect(merge.verdict).toBe('reject');
     const other = await viaPowerShell('full_access', 'git push origin main', options);
     expect(other.verdict).toBe('reject');
+  });
+
+  it('matches run rules against the command as Codex sent it', async () => {
+    const command = 'Remove-Item -Recurse build';
+    const readAs = await readPowerShell(command);
+    const rules = { allow: [], reject: [ruleFor(run(command))!] };
+    expect(
+      decide('auto', run(command), rules, [], { files, readAs, shell: await parseShell(readAs) }),
+    ).toEqual({ verdict: 'reject', reason: RUN_REJECTED_REASON });
   });
 });

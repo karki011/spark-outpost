@@ -33,8 +33,12 @@ function globWord(text: string): string {
   return text.replace(/[^A-Za-z0-9_*?[\]/.:~=+@%^-]/g, (char) => `\\${char}`);
 }
 
+const DRIVE_PATH = /^[A-Za-z]:\/[^:]*$/;
+
 function gatePath(text: string, temp: boolean): string {
   const forward = text.replaceAll('\\', '/');
+  const colon = forward.indexOf(':');
+  if (colon >= 0 && (temp || colon !== 1 || !DRIVE_PATH.test(forward))) fail();
   if (temp) return gatePaths.join(toGatePath(tmpdir(), 'win32'), forward);
   return toGatePath(forward, 'win32');
 }

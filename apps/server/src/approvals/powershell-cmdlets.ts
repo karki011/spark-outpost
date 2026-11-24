@@ -208,32 +208,8 @@ const NATIVE_TOOLS = new Set([
   'findstr',
 ]);
 
-const SHELLS = new Set([
-  'cmd',
-  'powershell',
-  'pwsh',
-  'wsl',
-  'bash',
-  'sh',
-  'start',
-  'runas',
-  'wscript',
-  'cscript',
-  'mshta',
-  'rundll32',
-  'regsvr32',
-  'reg',
-  'schtasks',
-  'sc',
-  'icacls',
-  'takeown',
-]);
-
 export function nativeName(name: string): string | null {
-  if (!/^[A-Za-z0-9_.+-]+$/.test(name)) return null;
   const lower = name.toLowerCase();
-  const explicit = lower.endsWith('.exe');
-  const bare = explicit ? lower.slice(0, -4) : lower;
-  if (!bare || SHELLS.has(bare) || bare.includes('.')) return null;
-  return explicit || NATIVE_TOOLS.has(bare) ? bare : null;
+  const bare = lower.endsWith('.exe') ? lower.slice(0, -4) : lower;
+  return NATIVE_TOOLS.has(bare) ? bare : null;
 }
