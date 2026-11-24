@@ -6,6 +6,8 @@ import {
   type CompanionStatus,
   type IslandAction,
 } from '../desktop/desktop-bridge.ts';
+import { hostWords } from '../desktop/host-words.ts';
+import { defaultIslandShortcuts } from '../desktop/shortcut-keys.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import { ISLAND_HEIGHT_LABEL, IslandHeightSetting } from './IslandHeightSetting.tsx';
 import { ISLAND_SIZE_LABEL, IslandSizeSetting } from './IslandSizeSetting.tsx';
@@ -17,8 +19,17 @@ import { SwitchRow } from './SwitchRow.tsx';
 const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
 const HIDE_IN_SHARE = 'Hide in screen sharing';
-const NOTIFY = 'Dock badge and notifications';
-const MENU_BAR = 'Show in menu bar';
+function notifyLabel(): string {
+  return `${capitalize(hostWords().taskbar)} badge and notifications`;
+}
+
+function menuBarLabel(): string {
+  return `Show in ${hostWords().tray}`;
+}
+
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
 
 function notifyHint(status: CompanionStatus): string {
   if (onWindows()) return windowsNotifyHint(status);
@@ -40,8 +51,6 @@ const SHORTCUTS: { action: IslandAction; label: string; hint: string }[] = [
   { action: 'sessions', label: 'Inbox shortcut', hint: 'Opens the island inbox.' },
 ];
 
-const DEFAULTS: Record<IslandAction, string> = { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' };
-
 const SHOWN_WITH_ISLAND = [
   ISLAND_SIZE_LABEL,
   ISLAND_HEIGHT_LABEL,
@@ -54,7 +63,7 @@ const SHOWN_WITH_ISLAND = [
 function menuBarHint(on: boolean): string {
   if (onWindows()) {
     return on
-      ? 'A Spark icon in the notification area opens Spark, shows or hides Spark Island, and quits.'
+      ? 'A Spark icon in the system tray opens Spark, shows or hides Spark Island, and quits.'
       : 'Off. Right-click Spark on the taskbar to show or hide Spark Island.';
   }
   return on
@@ -66,8 +75,8 @@ export function islandRows(): string[] {
   if (!companionAvailable()) return [];
   return [
     SHOW_ISLAND_LABEL,
-    NOTIFY,
-    MENU_BAR,
+    notifyLabel(),
+    menuBarLabel(),
     ISLAND_SIZE_LABEL,
     ISLAND_HEIGHT_LABEL,
     AUTO_EXPAND,
@@ -113,7 +122,7 @@ function ShortcutSetting({
       <ShortcutPicker
         label={label}
         accelerator={accelerator}
-        isDefault={accelerator === DEFAULTS[action]}
+        isDefault={accelerator === defaultIslandShortcuts()[action]}
         describedBy={hintId}
         picker={picker}
       />
@@ -150,7 +159,7 @@ export function DesktopCompanionSetting() {
       {desktop.companion.setNotify && (
         <SwitchRow
           id={notifyId}
-          label={NOTIFY}
+          label={notifyLabel()}
           doc={{ page: 'desktop-companion', heading: 'when-spark-island-is-off' }}
           hint={notifyHint(status)}
           checked={status.notify === true}
@@ -160,7 +169,7 @@ export function DesktopCompanionSetting() {
       {desktop.companion.setMenuBar && (
         <SwitchRow
           id={menuBarId}
-          label={MENU_BAR}
+          label={menuBarLabel()}
           doc={{ page: 'desktop-companion', heading: 'turn-it-on-and-size-it' }}
           hint={menuBarHint(status.menuBar === true)}
           checked={status.menuBar === true}

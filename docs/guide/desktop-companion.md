@@ -14,8 +14,8 @@ Adjust Spark Island and answer agents. About 2 minutes.
 2. Switch **Show Spark Island** on or off.
 3. Pick a **Spark Island size**. Slide **Spark Island height**; **Reset** restores it.
 4. **Island chimes** sound for new requests.
-5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
-6. **Show in menu bar** adds Spark's icon. Otherwise, right-click the Dock icon (Windows: taskbar button) to toggle Island.
+5. **Hide in screen sharing** keeps it out of most shares.
+6. **Show in menu bar** (Windows: **Show in system tray**) adds Spark's icon. Otherwise, right-click Spark's Dock or taskbar icon to toggle Island.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
@@ -35,7 +35,7 @@ Spark Island and Spark share one inbox: opening a request or its chat anywhere m
 
 **Open requests by themselves** opens a card once until answered.
 
-1. Press **⌥Space** to focus it.
+1. Press **⌥Space** (Windows: **Ctrl+Alt+Space**) to focus it.
 2. Press **Y** to allow once or **N** to deny (also on Home).
 
 Edit cards show the first changed lines, never secret files.
@@ -50,7 +50,7 @@ Edit cards show the first changed lines, never secret files.
 
 ## When Spark Island is off
 
-With **Dock badge and notifications** on, the Dock counts unread requests and notifications name them until read.
+With **Dock badge and notifications** (Windows: **Taskbar badge and notifications**) on, the Dock counts unread requests and notifications name them until read.
 
 ## Inside the app
 

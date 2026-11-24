@@ -23,6 +23,7 @@ import { ParentFolderIcon, PlusIcon } from '../../ui/icons.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
+import { hostWords } from '../../desktop/host-words.ts';
 
 type FolderPurpose = 'project' | 'reference' | 'instructions' | 'repos';
 type Mode = 'browse' | 'clone' | 'clone-parent';
@@ -40,7 +41,7 @@ const CLONE_COPY: Record<
 > = {
   clone: {
     title: 'Clone a repository',
-    lede: 'Spark runs git clone on this Mac, straight from the git host, then adds the new folder as a project.',
+    lede: `Spark runs git clone on this ${hostWords().computer}, straight from the git host, then adds the new folder as a project.`,
     remoteLede:
       'Spark runs git clone on your Mac, straight from the git host, then adds the new folder as a project.',
     use: '',

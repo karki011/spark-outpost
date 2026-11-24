@@ -1,6 +1,7 @@
 import { requestSettings } from '../settings/settings-request.ts';
 import { keysText } from '../ui/Keys.tsx';
 import { appLock, useAppLock } from './use-app-lock.ts';
+import { shortcutParts } from '../ui/shortcuts.ts';
 
 export const LOCK_LABEL = 'Lock Spark Outpost';
 
@@ -19,7 +20,7 @@ export function useLockAction(): LockAction | null {
   const ready = status.enabled && status.hasCode;
   return {
     ready,
-    title: ready ? `${LOCK_LABEL} · ${keysText(['⇧', '⌘', 'L'])}` : SET_UP,
+    title: ready ? `${LOCK_LABEL} · ${keysText(shortcutParts(['shift', 'mod', 'L']))}` : SET_UP,
     run: () => {
       if (ready) void lock.lockNow();
       else requestSettings('lock');

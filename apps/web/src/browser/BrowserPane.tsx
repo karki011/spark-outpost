@@ -41,6 +41,7 @@ import { PageWidthMenu } from './PageWidthMenu.tsx';
 import { PreviewBadge, PreviewStart } from './PreviewControls.tsx';
 import { tabLabel } from './tab-label.ts';
 import { hiddenPlacement, useViewPlacement, type BrowserHome } from './use-view-placement.ts';
+import { shortcutText } from '../ui/shortcuts.ts';
 
 const COPIED_MS = 1600;
 const REFOCUS_MS = 1500;
@@ -268,7 +269,7 @@ export function BrowserPane({
           <PickRegionIcon />
         </ToolButton>
         <ToolButton
-          label="Open developer tools (⌥⌘I)"
+          label={`Open developer tools (${shortcutText(['alt', 'mod', 'I'])})`}
           disabled={blank}
           onClick={() => tab && sendBrowserCommand(chatId, { command: 'devtools', tabId: tab.id })}
         >

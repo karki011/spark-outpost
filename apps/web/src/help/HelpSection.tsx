@@ -10,6 +10,7 @@ import { FeedbackForm } from './FeedbackForm.tsx';
 import { HEARTBEAT_LABEL, HeartbeatSetting } from './HeartbeatSetting.tsx';
 import '../desktop/updates.css';
 import './help.css';
+import { hostWords } from '../desktop/host-words.ts';
 
 const DIAGNOSTICS = 'Diagnostics';
 const VERSION = 'Version';
@@ -86,7 +87,7 @@ function AppRows({ info }: { info: DesktopHelpInfo }) {
           aria-describedby={logsHint}
           onClick={() => void help?.showLogs()}
         >
-          Show in Finder
+          Show in {hostWords().fileManager}
         </button>
       </SettingRow>
     </>
@@ -118,7 +119,7 @@ export function HelpSection() {
         Tell the Spark Outpost team what went wrong or what you'd like.{' '}
         {remote
           ? 'Feedback leaves your Mac only when you send it.'
-          : 'Diagnostics and feedback leave your Mac only when you send them.'}
+          : `Diagnostics and feedback leave your ${hostWords().computer} only when you send them.`}
       </p>
       {desktop &&
         (info ? (

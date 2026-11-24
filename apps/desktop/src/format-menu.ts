@@ -17,7 +17,7 @@ function sendCommand(command: string): MenuClick {
   };
 }
 
-export function formatMenu(enabled = true): MenuItemConstructorOptions {
+export function formatMenu(enabled = true, label = 'Format'): MenuItemConstructorOptions {
   const items: MenuItemConstructorOptions[] = [
     {
       label: 'Bold',
@@ -42,7 +42,7 @@ export function formatMenu(enabled = true): MenuItemConstructorOptions {
     { label: 'Add Link…', click: sendCommand('format:link') },
   ];
   return {
-    label: 'Format',
+    label,
     submenu: items.map((item) => (item.type === 'separator' ? item : { ...item, enabled })),
   };
 }

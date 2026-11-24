@@ -5,7 +5,7 @@ import {
   type IslandAction,
   type IslandGeometry,
 } from '../desktop/desktop-bridge.ts';
-import { matchesShortcut } from '../desktop/shortcut-keys.ts';
+import { defaultIslandShortcuts, matchesShortcut } from '../desktop/shortcut-keys.ts';
 import {
   MENU_QUIET_MS,
   onScout,
@@ -30,10 +30,7 @@ const BROWSER_GEOMETRY: IslandGeometry = {
   docked: true,
   menuBar: 32,
 };
-const BROWSER_SHORTCUTS: Record<IslandAction, string> = {
-  quick: 'Alt+Space',
-  sessions: 'Alt+Shift+Space',
-};
+const BROWSER_SHORTCUTS = defaultIslandShortcuts(false);
 
 function inside(rects: readonly DOMRect[], x: number, y: number, margin = HIT_MARGIN): boolean {
   return rects.some(

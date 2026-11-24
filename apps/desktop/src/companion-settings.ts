@@ -29,10 +29,16 @@ export interface CompanionSettings {
   menuBar: boolean;
 }
 
-export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, string>> = {
-  quick: 'Alt+Space',
-  sessions: 'Alt+Shift+Space',
-};
+export function defaultShortcuts(
+  platform: NodeJS.Platform,
+): Readonly<Record<ShortcutAction, string>> {
+  return {
+    quick: platform === 'win32' ? 'Control+Alt+Space' : 'Alt+Space',
+    sessions: 'Alt+Shift+Space',
+  };
+}
+
+export const DEFAULT_SHORTCUTS = defaultShortcuts(process.platform);
 
 export const DEFAULT_SETTINGS: CompanionSettings = {
   enabled: true,

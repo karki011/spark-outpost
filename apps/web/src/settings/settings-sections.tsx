@@ -39,7 +39,7 @@ import { islandRows } from './DesktopCompanionSetting.tsx';
 import { MAC_CONTROL_LABEL, MacControlSection } from './MacControlSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import { NotificationsSection } from './NotificationsSection.tsx';
-import { PRIVACY_SCREEN_ROWS, PrivacyScreenSection } from './PrivacyScreenSection.tsx';
+import { privacyScreenRows, PrivacyScreenSection } from './PrivacyScreenSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { GithubSection, githubRows } from './GithubSection.tsx';
 import { HealthSection } from './health/HealthSection.tsx';
@@ -145,7 +145,7 @@ export const SETTINGS_SECTIONS = [
       {
         id: 'lock',
         title: 'Privacy screen',
-        rows: ({ remote }) => (remote ? [] : PRIVACY_SCREEN_ROWS),
+        rows: ({ remote }) => (remote ? [] : privacyScreenRows()),
         render: () => <PrivacyScreenSection />,
       },
     ],

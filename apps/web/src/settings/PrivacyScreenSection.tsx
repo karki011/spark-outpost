@@ -1,5 +1,7 @@
 import { useId, useState } from 'react';
-import type { AppLockIdleMinutes } from '../desktop/desktop-bridge.ts';
+import { onWindows, type AppLockIdleMinutes } from '../desktop/desktop-bridge.ts';
+import { hostWords } from '../desktop/host-words.ts';
+import { shortcutText } from '../ui/shortcuts.ts';
 import { CODE_RESET_NOTE, useCodeResetNote } from '../app-lock/lock-recovery.ts';
 import { updateAppLock, useAppLock } from '../app-lock/use-app-lock.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
@@ -11,14 +13,28 @@ import { SwitchRow } from './SwitchRow.tsx';
 
 const LOCK_AWAY = 'Lock Spark when I’m away';
 const LOCK_AFTER = 'Lock after';
-const LOCK_ON_SLEEP = 'Lock when the Mac sleeps or its screen locks';
 const TOUCH_ID = 'Unlock with Touch ID';
 const HIDE_NOTIFICATIONS = 'Hide notification text while locked';
 const CODE = 'Code';
 
-const SHOWN_WHEN_ON = [LOCK_AFTER, LOCK_ON_SLEEP, TOUCH_ID, HIDE_NOTIFICATIONS];
+function lockOnSleepLabel(): string {
+  return `Lock when the ${hostWords().computer} sleeps or its screen locks`;
+}
 
-export const PRIVACY_SCREEN_ROWS = [LOCK_AWAY, ...SHOWN_WHEN_ON, CODE];
+function shownWhenOn(): string[] {
+  const touchId = onWindows() ? [] : [TOUCH_ID];
+  return [LOCK_AFTER, lockOnSleepLabel(), ...touchId, HIDE_NOTIFICATIONS];
+}
+
+export function privacyScreenRows(): string[] {
+  return [LOCK_AWAY, ...shownWhenOn(), CODE];
+}
+
+function lockMenuHint(): string {
+  const keys = shortcutText(['shift', 'mod', 'L']);
+  const menu = onWindows() ? 'File' : 'Spark Outpost';
+  return `Locks after the time below, or from ${menu} → Lock Spark Outpost (${keys}).`;
+}
 
 const DOC: DocTarget = { page: 'privacy-screen' };
 
@@ -43,6 +59,7 @@ export function PrivacyScreenSection() {
   const afterHintId = useId();
   const codeHintId = useId();
   if (!status || phone.remote) return null;
+  const { computer } = hostWords();
 
   const turn = (on: boolean) => {
     if (on && !status.hasCode) setSheet('set');
@@ -53,7 +70,7 @@ export function PrivacyScreenSection() {
     <>
       <p className="lede">
         Covers Spark’s windows until you unlock. Work in progress keeps running. It doesn’t lock
-        your Mac.
+        your {computer}.
       </p>
       {resetNote.shown && !status.hasCode && (
         <p className="set-off-note" role="note">
@@ -66,11 +83,11 @@ export function PrivacyScreenSection() {
         doc={DOC}
         hint={
           status.enabled
-            ? 'Locks after the time below, or from Spark Outpost → Lock Spark Outpost (⇧⌘L).'
+            ? lockMenuHint()
             : 'Off. Turning it on asks you to set a 6-digit code first.'
         }
         checked={status.enabled}
-        standsFor={status.enabled ? undefined : SHOWN_WHEN_ON}
+        standsFor={status.enabled ? undefined : shownWhenOn()}
         onChange={turn}
       />
       {status.enabled && (
@@ -78,7 +95,7 @@ export function PrivacyScreenSection() {
           <SettingRow
             label={LOCK_AFTER}
             doc={DOC}
-            hint="No mouse or keys on this Mac"
+            hint={`No mouse or keys on this ${computer}`}
             hintId={afterHintId}
           >
             <Segmented
@@ -94,7 +111,7 @@ export function PrivacyScreenSection() {
           </SettingRow>
           <SwitchRow
             id={sleepId}
-            label={LOCK_ON_SLEEP}
+            label={lockOnSleepLabel()}
             doc={DOC}
             hint={
               status.onSleep
@@ -104,17 +121,19 @@ export function PrivacyScreenSection() {
             checked={status.onSleep}
             onChange={(on) => void updateAppLock({ onSleep: on })}
           />
-          <SwitchRow
-            id={touchId}
-            label={TOUCH_ID}
-            doc={DOC}
-            hint={
-              status.touchIdAvailable ? 'Your code always works too' : 'This Mac has no Touch ID'
-            }
-            checked={status.touchId && status.touchIdAvailable}
-            disabled={!status.touchIdAvailable}
-            onChange={(on) => void updateAppLock({ touchId: on })}
-          />
+          {!onWindows() && (
+            <SwitchRow
+              id={touchId}
+              label={TOUCH_ID}
+              doc={DOC}
+              hint={
+                status.touchIdAvailable ? 'Your code always works too' : 'This Mac has no Touch ID'
+              }
+              checked={status.touchId && status.touchIdAvailable}
+              disabled={!status.touchIdAvailable}
+              onChange={(on) => void updateAppLock({ touchId: on })}
+            />
+          )}
           <SwitchRow
             id={hideId}
             label={HIDE_NOTIFICATIONS}
@@ -129,7 +148,7 @@ export function PrivacyScreenSection() {
         <SettingRow
           label={CODE}
           doc={DOC}
-          hint="Six digits, kept as a salted hash on this Mac."
+          hint={`Six digits, kept as a salted hash on this ${computer}.`}
           hintId={codeHintId}
         >
           <button

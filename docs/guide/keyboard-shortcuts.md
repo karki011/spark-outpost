@@ -6,7 +6,7 @@ order: 620
 summary: Shortcuts for chats, the Browser pane, the Changes drawer, the Map, Tickets and Spark Island.
 ---
 
-On Windows and Linux, use **Ctrl** for **⌘**.
+On Windows and Linux, use **Ctrl** for **⌘** and **⌃**, **Alt** for **⌥** and **Shift** for **⇧**. The Windows app keeps **Settings…** and **Lock Spark Outpost** under **File**.
 
 ## Chats
 

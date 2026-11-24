@@ -12,6 +12,7 @@ import { PenIcon, PlusIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { COLOR_NAMES, ICON_NAMES, SpaceIcon } from './SpaceIcon.tsx';
 import { sendViewCommand } from './view-store.ts';
+import { MAC } from '../ui/shortcuts.ts';
 
 type Editing = { kind: 'new' } | { kind: 'edit'; space: BrowserSpace } | null;
 
@@ -26,7 +27,7 @@ function SpaceButton({
   current: boolean;
   onChoose(): void;
 }) {
-  const tip = useTooltip(`${space.name} (⌃${index + 1})`, { side: 'bottom' });
+  const tip = useTooltip(MAC ? `${space.name} (⌃${index + 1})` : space.name, { side: 'bottom' });
   return (
     <>
       <button
