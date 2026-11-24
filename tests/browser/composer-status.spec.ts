@@ -148,7 +148,7 @@ test.describe('waiting for you', () => {
     await scrollAway(page);
     await expect(waiting(page)).toBeVisible();
     const animation = await line(page)
-      .locator('.mo-breathe')
+      .locator('.cs-blob .mark-tile')
       .evaluate((element) => getComputedStyle(element).animationName);
     expect(animation).toBe('none');
     await waiting(page).click();

@@ -32,7 +32,7 @@ test('Z.ai connects with an API key, says who bills it, and runs a chat', async 
   await expect(tile).toContainText('Z.ai (GLM)');
   await expect(tile).toContainText('by Z.ai');
   await expect(tile).toContainText('Connect with an API key');
-  await expect(tile.locator('.plogo svg')).toHaveAttribute('aria-hidden', 'true');
+  await expect(tile.locator('.plogo .mark-tile')).toHaveAttribute('aria-hidden', 'true');
 
   await tile.click();
   await expect(zai).toContainText(NOTE);
