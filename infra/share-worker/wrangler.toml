@@ -10,6 +10,10 @@ crons = ["17 3 * * *"]
 binding = "SHARES"
 bucket_name = "spark-outpost-shares"
 
+[[analytics_engine_datasets]]
+binding = "EVENTS"
+dataset = "spark_outpost_share_events"
+
 [[durable_objects.bindings]]
 name = "COUNTERS"
 class_name = "ShareCounters"
