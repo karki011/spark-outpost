@@ -28,14 +28,26 @@ describe('letter case in protected paths', () => {
     expect(protectedPath('src/agents.ts')).toBeNull();
   });
 
-  it.each(['darwin', 'linux'] as const)(
-    'keeps exact case on %s, as Claude ask rules do',
-    (value) => {
-      on(value);
-      expect(protectedPath('agents.md')).toBeNull();
-      expect(protectedPath('AGENTS.md')).toBe('instructions');
-    },
-  );
+  it('protects instruction files and git control in any case on macOS, whose disks ignore case', () => {
+    on('darwin');
+    expect(protectedPath('agents.MD')).toBe('instructions');
+    expect(protectedPath('docs/Claude.md')).toBe('instructions');
+    expect(protectedPath('.Claude/settings.json')).toBe('instructions');
+    expect(protectedPath('.GIT/hooks/pre-commit')).toBe('git_control');
+    expect(protectedPath('.git/HOOKS/x')).toBe('git_control');
+    expect(protectedPath('.git/Config')).toBe('git_control');
+    expect(protectedPath('.Spark/worktrees/chat-1/a.ts')).toBeNull();
+    expect(protectedPath('src/agents.ts')).toBeNull();
+    expect(protectedPath('README.md')).toBeNull();
+  });
+
+  it('keeps exact case on Linux', () => {
+    on('linux');
+    expect(protectedPath('agents.md')).toBeNull();
+    expect(protectedPath('.GIT/hooks/pre-commit')).toBeNull();
+    expect(protectedPath('AGENTS.md')).toBe('instructions');
+    expect(protectedPath('.git/hooks/pre-commit')).toBe('git_control');
+  });
 
   it('finds a target inside a project whose path differs only in case on Windows', () => {
     on('win32');
@@ -51,10 +63,13 @@ describe('letter case in protected paths', () => {
     }
   });
 
-  it('refuses writes inside .git in any case on Windows', () => {
+  it('refuses writes inside .git in any case on Windows and macOS', () => {
     on('win32');
     expect(refusalFor('.GIT/objects/x', 'write', [])).toBe('inside .git');
     expect(refusalFor('.Git/HEAD', 'write', [])).toBe('inside .git');
+    on('darwin');
+    expect(refusalFor('.Git/HEAD', 'write', [])).toBe('inside .git');
+    expect(refusalFor('src/.git-keep', 'write', [])).toBeNull();
     on('linux');
     expect(refusalFor('.GIT/objects/x', 'write', [])).toBeNull();
   });
