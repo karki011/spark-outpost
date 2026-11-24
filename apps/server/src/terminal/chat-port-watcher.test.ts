@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PortProbe } from './chat-port-probe.ts';
-import { chatPortWatcher, type ChatPortWatcher } from './chat-port-watcher.ts';
+import {
+  CHAT_PORTS_QUIET_AFTER_TICKS,
+  CHAT_PORTS_QUIET_EVERY_MS,
+  chatPortWatcher,
+  type ChatPortWatcher,
+} from './chat-port-watcher.ts';
 import type { ChatPortMap, PortRoot } from './chat-ports.ts';
 
 const CHAT = '00000000-0000-4000-8000-00000000000a';
@@ -174,5 +179,38 @@ describe('chat ports', () => {
     await tick();
     expect(log).toHaveBeenCalledTimes(1);
     expect(changes).toEqual([]);
+  });
+
+  it('probes less often once nothing has changed for a while, and a new process brings it back', async () => {
+    probe.tree.set(100, [200]);
+    shell('s1', 100);
+    await vi.advanceTimersByTimeAsync(EVERY * CHAT_PORTS_QUIET_AFTER_TICKS);
+    probe.asked.length = 0;
+    await vi.advanceTimersByTimeAsync(CHAT_PORTS_QUIET_EVERY_MS * 2);
+    expect(probe.asked).toHaveLength(2);
+
+    probe.tree.set(100, [200, 300]);
+    probe.open.set(300, [3000]);
+    await vi.advanceTimersByTimeAsync(CHAT_PORTS_QUIET_EVERY_MS);
+    expect(changes).toEqual([{ [CHAT]: [3000] }]);
+    probe.asked.length = 0;
+    await vi.advanceTimersByTimeAsync(EVERY * 3);
+    expect(probe.asked).toHaveLength(3);
+  });
+
+  it('probes at once on the fast pace when a tab opens or it is woken while quiet', async () => {
+    shell('s1', 100);
+    await vi.advanceTimersByTimeAsync(EVERY * CHAT_PORTS_QUIET_AFTER_TICKS);
+    probe.asked.length = 0;
+    probe.open.set(101, [9000]);
+    shell('s2', 101, OTHER);
+    await tick();
+    expect(changes).toEqual([{ [OTHER]: [9000] }]);
+
+    await vi.advanceTimersByTimeAsync(EVERY * CHAT_PORTS_QUIET_AFTER_TICKS);
+    probe.asked.length = 0;
+    watcher.wake();
+    await tick();
+    expect(probe.asked).toHaveLength(1);
   });
 });

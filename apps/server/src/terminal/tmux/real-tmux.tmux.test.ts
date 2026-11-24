@@ -200,6 +200,37 @@ describe.skipIf(!bin)('Terminal sessions under a real tmux', () => {
     await run.exit;
   });
 
+  it('drops output while paused without blocking the command, then redraws', async () => {
+    const run = start('echo ready; IFS= read -r l; seq 1 3000; echo finished; sleep 30');
+    await until(() => run.output().includes('ready'), 'the command to start');
+    run.pty.pause?.();
+    run.pty.pause?.();
+    run.pty.write('go\r');
+    await until(
+      () => (tryTmux(host, ['capture-pane', '-p', '-t', '=spark-a1:']) ?? '').includes('finished'),
+      'the command to finish while paused',
+    );
+    expect(run.output()).not.toContain('finished');
+    run.pty.resume?.();
+    run.pty.resume?.();
+    await until(() => run.output().includes('finished'), 'the redraw');
+    const redraw = run.output().split('\x1bc');
+    expect(redraw).toHaveLength(2);
+    expect(redraw[1]).toContain('2999');
+    run.pty.kill?.();
+    await run.exit;
+  });
+
+  it('delivers the last screen of a command that exits while paused', async () => {
+    const run = start('echo ready; IFS= read -r l; echo last words; exit 3');
+    await until(() => run.output().includes('ready'), 'the command to start');
+    run.pty.pause?.();
+    run.pty.write('go\r');
+    const exit = await run.exit;
+    expect(exit.exitCode).toBe(3);
+    expect(run.output().split('\x1bc')[1]).toContain('last words');
+  });
+
   it('removes sessions that are not Spark terminals', async () => {
     tryTmux(host, ['new-session', '-d', '-s', 'stray', '--', '/bin/sleep', '300']);
     await killUnknownSessions(host);

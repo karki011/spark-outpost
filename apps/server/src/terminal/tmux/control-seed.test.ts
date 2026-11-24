@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { modeSequences, parseModes, seedText } from './control-seed.ts';
+import type { ControlClient } from './control-client.ts';
+import { modeSequences, parseModes, requestSeed, seedText } from './control-seed.ts';
 
 describe('terminal seed after adoption', () => {
   it('reads the pane modes tmux reports', () => {
@@ -45,5 +46,80 @@ describe('terminal seed after adoption', () => {
   it('keeps a hyperlink that capture-pane printed', () => {
     const link = '\x1b]8;;https://example.com\x1b\\docs\x1b]8;;\x1b\\';
     expect(seedText([['0 0 0 0 0 [25]'], [], [], [link]])).toContain(link);
+  });
+
+  it('drops the oldest history first to stay within a byte budget and keeps the screen', () => {
+    const history = Array.from({ length: 50 }, (_, index) => `old ${index} ${'x'.repeat(100)}`);
+    const replies = [['50 0 0 0 0 [25]'], history, [], ['now 1', 'now 2']];
+    const whole = seedText(replies);
+    const cut = seedText(replies, 2000);
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(2000);
+    expect(cut).toContain('old 49 ');
+    expect(cut).not.toContain('old 0 ');
+    expect(cut.endsWith(whole.slice(whole.indexOf('now 1') - 4))).toBe(true);
+    expect(seedText(replies, 60)).toContain('now 2');
+    expect(seedText(replies, 60)).not.toContain('old');
+  });
+
+  it('keeps only the newest rows of a screen that alone is over the budget', () => {
+    const screen = Array.from({ length: 40 }, (_, index) => `row ${index} ${'y'.repeat(100)}`);
+    const cut = seedText([['0 0 0 0 0 [25]'], [], [], screen], 1500);
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(1500);
+    expect(cut).toContain('row 39 ');
+    expect(cut).not.toContain('row 0 ');
+  });
+
+  it('counts the alternate-screen opening in the budget', () => {
+    const screen = Array.from({ length: 40 }, (_, index) => `row ${index} ${'y'.repeat(100)}`);
+    const cut = seedText([['0 1 0 0 0 [25]'], [], [], screen], 1500);
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(1500);
+    expect(cut).toContain('row 39 ');
+  });
+
+  it('leaves the kept rows of a cut screen on their own lines', () => {
+    const screen = Array.from({ length: 40 }, (_, index) => `row ${index} ${'y'.repeat(100)}`);
+    const cut = seedText([['0 1 0 0 0 [25]'], [], [], screen], 1500);
+    const body = cut.slice('\x1b[?1049h\x1b[H'.length);
+    const lines = body.split('\r\n');
+    expect(lines).toHaveLength(40);
+    expect(lines[39]).toContain('row 39 ');
+    expect(lines[0]).toBe('');
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(1500);
+  });
+
+  it('sends no row at all when one row alone is over the budget', () => {
+    const huge = 'z'.repeat(2 * 1024 * 1024);
+    const cut = seedText([['0 0 0 0 0 [25]'], [], [], ['above', huge]], 384 * 1024);
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThan(100);
+    expect(cut).not.toContain('above');
+  });
+});
+
+describe('requesting a seed', () => {
+  function clientAnswering(answers: (string[] | null)[]): ControlClient {
+    const left = [...answers];
+    return {
+      command: (_text, onReply) => onReply?.(left.shift() ?? null),
+      onOutput: () => undefined,
+      onNotice: () => undefined,
+      onClosed: () => undefined,
+      close: () => undefined,
+    };
+  }
+
+  it('gives the screen when every capture answered, an empty screen included', () => {
+    const seeds: (string | null)[] = [];
+    requestSeed(clientAnswering([['0 0 0 0 0 [25]'], [], [], []]), '%1', (seed) =>
+      seeds.push(seed),
+    );
+    expect(seeds).toEqual([seedText([['0 0 0 0 0 [25]'], [], [], []])]);
+  });
+
+  it('gives no seed when the connection closed before the captures answered', () => {
+    const seeds: (string | null)[] = [];
+    requestSeed(clientAnswering([['0 0 0 0 0 [25]'], ['old'], null, null]), '%1', (seed) =>
+      seeds.push(seed),
+    );
+    expect(seeds).toEqual([null]);
   });
 });

@@ -5,6 +5,7 @@ import {
 } from '@spark-outpost/contracts';
 import { storableText } from '../audit/redact.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
+import { createReplayBuffer } from './replay-buffer.ts';
 
 export const AGENT_TERMINAL_REPLAY_CHARS = 256_000;
 
@@ -19,7 +20,7 @@ export interface AgentTerminalRecord {
 export function createAgentTerminalRecord(secretValues: readonly string[]): AgentTerminalRecord {
   const sanitizer = createOutputSanitizer();
   const redaction = createRedactionFilter(secretValues);
-  let replay = '';
+  const replay = createReplayBuffer(AGENT_TERMINAL_REPLAY_CHARS);
   let tail = '';
   let total = 0;
 
@@ -32,12 +33,12 @@ export function createAgentTerminalRecord(secretValues: readonly string[]): Agen
 
   return {
     push(data) {
-      replay = (replay + data).slice(-AGENT_TERMINAL_REPLAY_CHARS);
+      replay.push(data);
       keep(redaction.push(sanitizer.push(data)));
     },
     finish: () => keep(redaction.finish()),
     get replay() {
-      return replay;
+      return replay.text();
     },
     get tail() {
       return tail;

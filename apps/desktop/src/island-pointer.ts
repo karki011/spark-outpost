@@ -3,6 +3,9 @@ import type { Point, Rect } from './island-geometry.ts';
 
 export const NEAR_POLL_MS = 16;
 export const FAR_POLL_MS = 120;
+export const NEAR_STILL_POLL_MS = 50;
+export const FAR_STILL_POLL_MS = 200;
+export const STILL_AFTER_TICKS = 30;
 const NEAR_REACH = 160;
 
 export function windowPoint(cursor: Point, bounds: Rect): Point | null {
@@ -36,7 +39,13 @@ function nearBox(cursor: Point, box: Rect): boolean {
   );
 }
 
-export function pollDelay(cursor: Point, bounds: Rect, regions: IslandRegions): number {
+export function pollDelay(
+  cursor: Point,
+  bounds: Rect,
+  regions: IslandRegions,
+  stillTicks = 0,
+): number {
   const near = shown(regions, bounds).some((box) => nearBox(cursor, box));
-  return near ? NEAR_POLL_MS : FAR_POLL_MS;
+  if (stillTicks < STILL_AFTER_TICKS) return near ? NEAR_POLL_MS : FAR_POLL_MS;
+  return near ? NEAR_STILL_POLL_MS : FAR_STILL_POLL_MS;
 }

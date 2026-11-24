@@ -90,6 +90,10 @@ export async function ensureLocalWorkspace(db: Queryable): Promise<string> {
 const CHAT_LIST_ORDER = `ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC, c.id DESC
   LIMIT ${CHAT_LIST_PAGE}`;
 
+function chatListPage(after: string): string {
+  return `SELECT c.id FROM conversations c WHERE ${LISTED_CHAT} ${after} ${CHAT_LIST_ORDER}`;
+}
+
 export async function listConversations(
   db: Queryable,
   workspaceId: string,
@@ -98,7 +102,7 @@ export async function listConversations(
   const text = search.trim();
   if (text !== '') return searchConversations(db, workspaceId, text);
   const { rows } = await db.query<ConversationSummaryRow>(
-    `${summaryQuery} WHERE ${LISTED_CHAT} ${CHAT_LIST_ORDER}`,
+    `${summaryQuery} WHERE c.id IN (${chatListPage('')}) ${CHAT_LIST_ORDER}`,
     [workspaceId],
   );
   return withChatBranches(db, await withNativeTerminals(db, rows.map(toConversationSummary)));
@@ -110,11 +114,11 @@ export async function listConversationsAfter(
   afterId: string,
 ): Promise<ConversationSummary[]> {
   const { rows } = await db.query<ConversationSummaryRow>(
-    `${summaryQuery} WHERE ${LISTED_CHAT}
+    `${summaryQuery} WHERE c.id IN (${chatListPage(`
        AND (COALESCE(c.pinned_at, '-infinity'), c.updated_at, c.id) < (
          SELECT COALESCE(a.pinned_at, '-infinity'), a.updated_at, a.id
          FROM conversations a WHERE a.id = $2
-       )
+       )`)})
      ${CHAT_LIST_ORDER}`,
     [workspaceId, afterId],
   );

@@ -1,3 +1,6 @@
+import { appendFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Db } from '../../persistence/db.ts';
 import type { LiveSession } from '../native-runtime-types.ts';
@@ -171,6 +174,54 @@ describe('the view a paired device reads', () => {
     expect((await working.remote.view('c1')).workingSince).toBeNull();
     const idle = setup('claude', { state: 'ready' });
     expect((await idle.remote.view('c1')).workingSince).toBeNull();
+  });
+});
+
+describe('two devices reading the same growing transcript', () => {
+  it('adds each new reply once', async () => {
+    const folder = await mkdtemp(path.join(tmpdir(), 'spark-remote-'));
+    const file = path.join(folder, 'session.jsonl');
+    const reply = (id: string, text: string) =>
+      `${JSON.stringify({
+        type: 'assistant',
+        uuid: id,
+        timestamp: '2026-10-14T10:00:00Z',
+        message: { id, content: [{ type: 'text', text }] },
+      })}\n`;
+    const claude = setup('claude');
+    (claude.row as { usage_file: string | null }).usage_file = file;
+    await writeFile(file, reply('m1', 'first'));
+    await claude.remote.view('c1');
+    await appendFile(file, reply('m2', 'second'));
+    const views = await Promise.all([claude.remote.view('c1'), claude.remote.view('c1')]);
+    for (const view of views) {
+      expect(JSON.stringify(view.items).match(/second/g)).toHaveLength(1);
+    }
+    await rm(folder, { recursive: true, force: true });
+  });
+});
+
+describe('a transcript rewritten shorter', () => {
+  it('is read again from the start, even past an unfinished last record', async () => {
+    const folder = await mkdtemp(path.join(tmpdir(), 'spark-remote-'));
+    const file = path.join(folder, 'session.jsonl');
+    const reply = (id: string, text: string) =>
+      `${JSON.stringify({
+        type: 'assistant',
+        uuid: id,
+        timestamp: '2026-10-14T10:00:00Z',
+        message: { id, content: [{ type: 'text', text }] },
+      })}\n`;
+    const claude = setup('claude');
+    (claude.row as { usage_file: string | null }).usage_file = file;
+    const first = reply('m1', 'first');
+    await writeFile(file, first + reply('m2', 'unfinished '.repeat(60)).slice(0, -20));
+    expect(JSON.stringify((await claude.remote.view('c1')).items)).toContain('first');
+    await writeFile(file, reply('m3', 'replacement '.repeat(Math.ceil(first.length / 12) + 4)));
+    const items = JSON.stringify((await claude.remote.view('c1')).items);
+    expect(items).toContain('replacement');
+    expect(items).not.toContain('first');
+    await rm(folder, { recursive: true, force: true });
   });
 });
 

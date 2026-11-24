@@ -67,6 +67,9 @@ export const terminalServerMessageSchema = z.discriminatedUnion('type', [
 ]);
 export type TerminalServerMessage = z.infer<typeof terminalServerMessageSchema>;
 
+export const TERMINAL_ACK_BYTES = 128 * 1024;
+const TERMINAL_ACK_MAX_BYTES = 64 * 1024 * 1024;
+
 export const terminalClientMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('resize'),
@@ -75,5 +78,6 @@ export const terminalClientMessageSchema = z.discriminatedUnion('type', [
   }),
   z.object({ type: z.literal('close') }),
   z.object({ type: z.literal('colors'), colors: terminalColorsSchema }),
+  z.object({ type: z.literal('ack'), bytes: z.number().int().min(0).max(TERMINAL_ACK_MAX_BYTES) }),
 ]);
 export type TerminalClientMessage = z.infer<typeof terminalClientMessageSchema>;

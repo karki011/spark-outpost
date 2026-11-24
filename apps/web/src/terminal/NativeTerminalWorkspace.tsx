@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   isTrackedTerminalProvider,
@@ -35,6 +35,22 @@ import './native-terminal.css';
 const PATH_COPIED = 'Folder path copied';
 const PATH_NOT_COPIED = 'Could not copy the folder path';
 const SELECT_HINT = MAC ? 'Hold Option to select' : 'Hold Shift to select';
+const LIVE_POLL_MS = 2000;
+
+function useOnScreen(ref: RefObject<Element | null>): boolean {
+  const [shown, setShown] = useState(true);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof IntersectionObserver !== 'function') return;
+    const observer = new IntersectionObserver((entries) => {
+      const last = entries.at(-1);
+      if (last) setShown(last.isIntersecting);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+  return shown;
+}
 
 export function NativeTerminalWorkspace({
   chat,
@@ -49,6 +65,8 @@ export function NativeTerminalWorkspace({
 }) {
   const client = useQueryClient();
   const { remote } = useRemoteClient();
+  const workspace = useRef<HTMLElement>(null);
+  const onScreen = useOnScreen(workspace);
   const session = useQuery({
     queryKey: nativeTerminalKey(chat.id),
     queryFn: async () => {
@@ -56,9 +74,16 @@ export function NativeTerminalWorkspace({
       if (live.usage) client.setQueryData(terminalUsageKey(chat.id), live.usage);
       return sessionOf(live);
     },
-    refetchInterval: 2000,
+    refetchInterval: (query) =>
+      onScreen && !(query.state.data && terminalEnded(query.state.data)) ? LIVE_POLL_MS : false,
     enabled: !remote,
   });
+  const { refetch: recheckSession } = session;
+  const wasOnScreen = useRef(onScreen);
+  useEffect(() => {
+    if (onScreen && !wasOnScreen.current && !remote) void recheckSession();
+    wasOnScreen.current = onScreen;
+  }, [onScreen, remote, recheckSession]);
   const [link, setLink] = useState<TerminalLink>('connecting');
   const [attempt, setAttempt] = useState(0);
   const [confirm, setConfirm] = useState(false);
@@ -146,6 +171,7 @@ export function NativeTerminalWorkspace({
   const reason = native?.reason && native.observation !== 'unsupported' ? native.reason : null;
   return (
     <section
+      ref={workspace}
       className={focus.focused ? 'native-workspace focused' : 'native-workspace'}
       aria-label="Terminal session"
     >

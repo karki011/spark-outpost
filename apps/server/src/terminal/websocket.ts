@@ -7,6 +7,7 @@ import {
   terminalClientMessageSchema,
 } from '@spark-outpost/contracts';
 import { launchTokenCheck } from '../api/launch-token.ts';
+import { createOutputFlow, type OutputFlow } from './output-flow.ts';
 import { TerminalAuthError, type AttachedTerminal, type TerminalSessions } from './sessions.ts';
 
 const STREAM_PATH = /^\/api\/terminal\/sessions\/([0-9a-f-]{36})\/stream$/;
@@ -33,16 +34,18 @@ function requestedSize(url: URL) {
 
 const MAX_FRAME_BYTES = 64 * 1024;
 
-function outputBatcher(ws: WebSocket) {
+function outputBatcher(ws: WebSocket, onSent: (bytes: number) => void) {
   let pending: string[] = [];
   let size = 0;
   let scheduled = false;
   const flush = () => {
     scheduled = false;
     if (pending.length === 0 || ws.readyState !== ws.OPEN) return;
-    ws.send(Buffer.from(pending.join(''), 'utf8'), { binary: true });
+    const frame = Buffer.from(pending.join(''), 'utf8');
     pending = [];
     size = 0;
+    ws.send(frame, { binary: true });
+    onSent(frame.length);
   };
   const write = (data: string) => {
     pending.push(data);
@@ -56,7 +59,7 @@ function outputBatcher(ws: WebSocket) {
   return { write, flush };
 }
 
-function forwardClientMessages(ws: WebSocket, terminal: AttachedTerminal) {
+function forwardClientMessages(ws: WebSocket, terminal: AttachedTerminal, flow: OutputFlow) {
   ws.on('message', (raw, isBinary) => {
     if (isBinary) {
       const data = Buffer.isBuffer(raw)
@@ -75,9 +78,13 @@ function forwardClientMessages(ws: WebSocket, terminal: AttachedTerminal) {
     if (!message.success) return;
     if (message.data.type === 'resize') terminal.resize(message.data.cols, message.data.rows);
     if (message.data.type === 'colors') terminal.colors(message.data.colors);
+    if (message.data.type === 'ack') flow.acked(message.data.bytes);
     if (message.data.type === 'close') terminal.close();
   });
-  ws.on('close', () => terminal.disconnect());
+  ws.on('close', () => {
+    flow.stop();
+    terminal.disconnect();
+  });
 }
 
 export function attachTerminalSockets(
@@ -103,9 +110,14 @@ export function attachTerminalSockets(
     const id = match[1]!;
     const token = url.searchParams.get('token') ?? '';
     wss.handleUpgrade(req, socket, head, (ws) => {
-      const batcher = outputBatcher(ws);
+      let terminal: AttachedTerminal | null = null;
+      const flow = createOutputFlow(
+        { pause: () => terminal?.pause(), resume: () => terminal?.resume() },
+        () => ws.bufferedAmount,
+      );
+      const batcher = outputBatcher(ws, flow.sent);
       try {
-        const terminal = sessions.attach(
+        terminal = sessions.attach(
           id,
           token,
           {
@@ -118,8 +130,9 @@ export function attachTerminalSockets(
           },
           requestedSize(url),
         );
-        forwardClientMessages(ws, terminal);
+        forwardClientMessages(ws, terminal, flow);
       } catch (error) {
+        flow.stop();
         const reason =
           error instanceof TerminalAuthError ? error.message : 'The terminal could not start.';
         ws.close(4401, reason);

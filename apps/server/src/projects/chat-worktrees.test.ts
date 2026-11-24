@@ -6,7 +6,15 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ChatWorktree } from '../persistence/chat-worktrees.ts';
 import { releaseOnDisk } from './chat-worktree-cleanup.ts';
-import { addChatWorktree, bringChanges, branchTipOf, listBranches } from './chat-worktrees.ts';
+import {
+  addChatWorktree,
+  bringChanges,
+  branchMerged,
+  tipMergedAt,
+  branchTipOf,
+  listBranches,
+  repoRefsOf,
+} from './chat-worktrees.ts';
 import { worktreePath } from './worktrees.ts';
 
 let root: string;
@@ -150,5 +158,38 @@ describe('releasing a chat worktree', () => {
     const copy = { ...(await chatCopy('spark/other')), ownsBranch: false, branch: 'spark/other' };
     await releaseOnDisk(copy, 'deleted');
     expect((await listBranches(root)).local).toContain('spark/other');
+  });
+});
+
+describe('reading the refs a merged check depends on', () => {
+  it('lists branch tips and the checkout head in one read, and changes when a branch merges', async () => {
+    const base = git(root, 'rev-parse', 'HEAD');
+    git(root, 'branch', 'spark/one');
+    git(root, 'checkout', '-q', 'spark/one');
+    await writeFile(path.join(root, 'notes.txt'), 'changed\n');
+    git(root, 'commit', '-qam', 'work');
+    const tip = git(root, 'rev-parse', 'HEAD');
+    git(root, 'checkout', '-q', 'main');
+
+    const before = await repoRefsOf(root);
+    expect(before?.tips.get('spark/one')).toBe(tip);
+    expect(before?.head).toBe(base);
+    expect(before?.remoteDefault).toBeNull();
+    expect(await branchMerged(root, 'spark/one', base)).toBe(false);
+
+    git(root, 'merge', '-q', '--ff-only', 'spark/one');
+    const after = await repoRefsOf(root);
+    expect(after?.head).toBe(tip);
+    expect(await branchMerged(root, 'spark/one', base)).toBe(true);
+    expect(await tipMergedAt(root, after!, tip, base)).toBe(true);
+    expect(await tipMergedAt(root, after!, base, base)).toBe(false);
+    expect(await tipMergedAt(root, after!, null, base)).toBe(false);
+    expect(await tipMergedAt(root, before!, tip, base)).toBe(false);
+    const broken = { ...after!, head: '0'.repeat(40) };
+    expect(await tipMergedAt(root, broken, tip, base)).toBeNull();
+  });
+
+  it('is unknown for a folder that is not a repository', async () => {
+    expect(await repoRefsOf(path.join(root, 'missing'))).toBeNull();
   });
 });

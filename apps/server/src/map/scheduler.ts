@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { lstat } from 'node:fs/promises';
+import { lstat, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { IntakeDeps } from '../advisor/jev-types.ts';
 import { headCommit, workingChanges } from '../codescan/git.ts';
@@ -65,6 +65,41 @@ export async function repoSignature(root: string): Promise<string> {
   return hash.digest('hex');
 }
 
+export const MAP_QUIET_RECHECK_MS = 5 * 60_000;
+
+export async function gitStateStamp(root: string): Promise<string | null> {
+  const parts = await Promise.all(
+    ['HEAD', 'index', 'logs/HEAD'].map((name) =>
+      stat(join(root, '.git', name)).then(
+        (stats) => `${stats.size}:${stats.mtimeMs}`,
+        () => null,
+      ),
+    ),
+  );
+  if (parts[0] === null) return null;
+  return parts.map((part) => part ?? 'none').join(' ');
+}
+
+export function gatedSignature(
+  full: (root: string) => Promise<string>,
+  stampOf: (root: string) => Promise<string | null> = gitStateStamp,
+  now: () => number = Date.now,
+  recheckMs = MAP_QUIET_RECHECK_MS,
+): (root: string) => Promise<string> {
+  const known = new Map<string, { stamp: string; signature: string; at: number }>();
+  return async (root) => {
+    const stamp = await stampOf(root).catch(() => null);
+    const last = known.get(root);
+    if (stamp !== null && last && last.stamp === stamp && now() - last.at < recheckMs) {
+      return last.signature;
+    }
+    const signature = await full(root);
+    if (stamp === null) known.delete(root);
+    else known.set(root, { stamp, signature, at: now() });
+    return signature;
+  };
+}
+
 async function jevAccessFor(
   db: Queryable,
   deps: IntakeDeps | null,
@@ -94,7 +129,7 @@ function message(error: unknown): string {
 export function createMapBuilder(options: MapSchedulerOptions): MapBuilder {
   const { db } = options;
   const clock = options.clock ?? systemClock;
-  const signatureOf = options.signature ?? repoSignature;
+  const signatureOf = options.signature ?? gatedSignature(repoSignature);
   const controller = new AbortController();
 
   async function staleRepo(): Promise<RepoRow | null> {

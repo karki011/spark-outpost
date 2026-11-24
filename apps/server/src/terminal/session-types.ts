@@ -76,6 +76,8 @@ export interface AttachedTerminal {
   input(data: string): void;
   resize(cols: number, rows: number): void;
   colors(colors: TerminalColors): void;
+  pause(): void;
+  resume(): void;
   close(): void;
   disconnect(): void;
 }

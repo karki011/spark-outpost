@@ -16,6 +16,7 @@ import { attachmentRoutes } from './attachment-routes.ts';
 import { chatFileRoutes } from './chat-file-routes.ts';
 import { artifactRoutes } from '../artifacts/routes.ts';
 import { jsonBody } from './json-body.ts';
+import { compressRemoteJson } from './json-compression.ts';
 import { auditRoutes } from './audit-routes.ts';
 import { chatShareRoutes, type ChatShareRouteDeps } from './chat-share-routes.ts';
 import { chatTicketRoutes, ticketMentionWarmer } from './chat-ticket-routes.ts';
@@ -139,6 +140,7 @@ export function createAppParts(options: AppOptions) {
       requireLaunchToken(options.apiToken),
     ]),
   );
+  app.use(compressRemoteJson());
   const web = options.webRoot
     ? webApp(options.webRoot, appContentSecurityPolicy(artifactOrigin(options.port)))
     : null;

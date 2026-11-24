@@ -41,8 +41,20 @@ function endWithUpstream(proxyRes: IncomingMessage, _req: IncomingMessage, res: 
   });
 }
 
+const VENDOR_GROUPS = [
+  { name: 'vendor-react', test: /node_modules[\\/](?:react|react-dom|scheduler)[\\/]/ },
+  { name: 'vendor-zod', test: /node_modules[\\/]zod[\\/]/ },
+  {
+    name: 'vendor-markdown',
+    test: /node_modules[\\/](?:react-markdown|remark-[^\\/]+|rehype-[^\\/]+|micromark[^\\/]*|mdast-[^\\/]+|hast-[^\\/]+|unified|unist-[^\\/]+|vfile[^\\/]*|parse5|property-information)[\\/]/,
+  },
+];
+
 export default defineConfig({
   plugins: [react(), bundledFontsPlugin(), precompressPlugin()],
+  build: {
+    rolldownOptions: { output: { codeSplitting: { groups: VENDOR_GROUPS } } },
+  },
   server: {
     host: '127.0.0.1',
     port: webPort,

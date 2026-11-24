@@ -1,5 +1,6 @@
 import { StringDecoder } from 'node:string_decoder';
 import type { TerminalColors } from '@spark-outpost/contracts';
+import { FLOW_REDRAW_MAX_BYTES } from '../output-flow.ts';
 import type { PtyProcess } from '../pty.ts';
 import { createAnsweredQueryFilter } from './answered-queries.ts';
 import { openControlClient, type ControlClient, type OpenControlClient } from './control-client.ts';
@@ -24,7 +25,9 @@ type Exit = { exitCode: number; signal?: number | undefined };
 const INPUT_CHUNK_BYTES = 256;
 const LOST_EXIT_CODE = 1;
 const SPLIT_WRITE_MS = 1;
+const LAST_SCREEN_WAIT_MS = 1000;
 const SIGHUP = 1;
+const REDRAW = '\x1bc';
 
 export function hexWords(data: Buffer): string {
   const words: string[] = [];
@@ -51,14 +54,16 @@ export function controlPty(
   const created = start.observer?.begin('new_session');
   const pane = adopted ?? createSession(host, start);
   created?.();
-  const decoder = new StringDecoder('utf8');
-  const withoutAnswered = createAnsweredQueryFilter();
+  let decoder = new StringDecoder('utf8');
+  let withoutAnswered = createAnsweredQueryFilter();
   const dataListeners: ((data: string) => void)[] = [];
   const exitListeners: ((exit: Exit) => void)[] = [];
   let client: ControlClient;
   let seeded = !start.adopt;
   let answered = false;
   let ended = false;
+  let paused = false;
+  let unseeded: { prefix: string; maxBytes?: number | undefined } | null = null;
 
   let batch = '';
   const flush = () => {
@@ -74,12 +79,21 @@ export function controlPty(
   const exit = (result: Exit) => {
     if (ended) return;
     ended = true;
-    flush();
-    const killing = killSession(host, start.sessionId, null);
-    client.close();
-    void killing.then(() => {
-      for (const listener of exitListeners) listener(result);
-    });
+    let finished = false;
+    const finish = (lastScreen: string | null = null) => {
+      if (finished) return;
+      finished = true;
+      if (lastScreen !== null) emit(REDRAW + lastScreen);
+      flush();
+      const killing = killSession(host, start.sessionId, null);
+      client.close();
+      void killing.then(() => {
+        for (const listener of exitListeners) listener(result);
+      });
+    };
+    if (!paused) return finish();
+    setTimeout(finish, LAST_SCREEN_WAIT_MS);
+    requestSeed(client, pane.paneId, finish, FLOW_REDRAW_MAX_BYTES - REDRAW.length);
   };
   const checkDeath = () =>
     client.command(paneQuery(pane.paneId), (lines) => {
@@ -107,7 +121,41 @@ export function controlPty(
     });
     client.onClosed(lost);
     checkDeath();
+    if (unseeded && !paused) seed(unseeded.prefix, unseeded.maxBytes);
   }
+
+  function seed(prefix: string, maxBytes?: number) {
+    unseeded = null;
+    requestSeed(
+      client,
+      pane.paneId,
+      (text) => {
+        if (paused || ended) return;
+        if (text === null) {
+          unseeded = { prefix, maxBytes };
+          return;
+        }
+        emit(prefix + text);
+        seeded = true;
+      },
+      maxBytes,
+    );
+  }
+  const pause = () => {
+    if (paused || ended) return;
+    paused = true;
+    seeded = false;
+    unseeded = null;
+    decoder = new StringDecoder('utf8');
+    withoutAnswered = createAnsweredQueryFilter();
+    client.command(`refresh-client -A '${pane.paneId}:pause'`);
+  };
+  const resume = () => {
+    if (!paused || ended) return;
+    paused = false;
+    client.command(`refresh-client -A '${pane.paneId}:continue'`);
+    seed(REDRAW, FLOW_REDRAW_MAX_BYTES - REDRAW.length);
+  };
 
   const reportColors = (colors: TerminalColors) => {
     for (const command of colorReportCommands(pane.paneId, colors)) client.command(command);
@@ -116,10 +164,7 @@ export function controlPty(
   const attached = start.observer?.begin('attach');
   connect();
   if (start.adopt) {
-    requestSeed(client!, pane.paneId, (text) => {
-      emit(text);
-      seeded = true;
-    });
+    seed('');
   } else {
     client!.command(`refresh-client -C ${Math.trunc(start.cols)}x${Math.trunc(start.rows)}`);
     if (start.colors) reportColors(start.colors);
@@ -155,6 +200,8 @@ export function controlPty(
         for (const listener of exitListeners) listener({ exitCode: 0, signal: SIGHUP });
       });
     },
+    pause,
+    resume,
     detach: () => {
       if (ended) return;
       ended = true;

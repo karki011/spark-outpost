@@ -30,6 +30,8 @@ export const defaultAgentTerminalTimings: AgentTerminalTimings = {
   watchEveryMs: 3_000,
 };
 
+const OUTPUT_COALESCE_MS = 8;
+
 interface Live {
   id: string;
   conversationId: string;
@@ -37,6 +39,8 @@ interface Live {
   process: PreviewProcess;
   record: AgentTerminalRecord;
   viewers: Set<ViewedOutput>;
+  pending: string[];
+  flushTimer: NodeJS.Timeout | null;
   saveTimer: NodeJS.Timeout | null;
 }
 
@@ -95,7 +99,9 @@ export class AgentTerminals {
   ): TerminalView | null {
     const live = this.live.get(id);
     if (!live) return null;
-    if (live.record.replay) viewer.output(live.record.replay);
+    this.flush(live);
+    const replay = live.record.replay;
+    if (replay) viewer.output(replay);
     live.viewers.add(viewer);
     live.process.resize(size.cols, size.rows);
     return {
@@ -104,6 +110,7 @@ export class AgentTerminals {
         if (this.live.get(id) === live) live.process.resize(cols, rows);
       },
       detach: () => {
+        this.flush(live);
         live.viewers.delete(viewer);
       },
     };
@@ -162,6 +169,8 @@ export class AgentTerminals {
       process,
       record: createAgentTerminalRecord(secretValues),
       viewers: new Set(),
+      pending: [],
+      flushTimer: null,
       saveTimer: null,
     };
     this.live.set(row.id, live);
@@ -179,15 +188,26 @@ export class AgentTerminals {
 
   private took(live: Live, data: string): void {
     if (this.live.get(live.id) !== live) return;
-    live.record.push(data);
-    for (const viewer of live.viewers) viewer.output(data);
+    live.pending.push(data);
+    live.flushTimer ??= setTimeout(() => this.flush(live), OUTPUT_COALESCE_MS);
     live.saveTimer ??= setTimeout(() => {
       live.saveTimer = null;
       void this.saveOutput(live).catch(() => undefined);
     }, this.timings.saveMs);
   }
 
+  private flush(live: Live): void {
+    if (live.flushTimer) clearTimeout(live.flushTimer);
+    live.flushTimer = null;
+    if (live.pending.length === 0) return;
+    const data = live.pending.join('');
+    live.pending = [];
+    live.record.push(data);
+    for (const viewer of live.viewers) viewer.output(data);
+  }
+
   private saveOutput(live: Live): Promise<void> {
+    this.flush(live);
     return saveAgentTerminalOutput(this.db, live.id, live.record.tail, live.record.total);
   }
 
@@ -240,6 +260,7 @@ export class AgentTerminals {
   }
 
   private drop(live: Live): void {
+    this.flush(live);
     if (live.saveTimer) clearTimeout(live.saveTimer);
     live.saveTimer = null;
     if (this.live.get(live.id) === live) this.live.delete(live.id);

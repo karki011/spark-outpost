@@ -6,12 +6,31 @@ import {
 } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { releaseChatWorktree, type Released, type ReleaseReason } from './chat-worktree-cleanup.ts';
-import { branchMerged } from './chat-worktrees.ts';
+import { branchMerged, repoRefsOf, tipMergedAt, type RepoRefs } from './chat-worktrees.ts';
 
 const SWEEP_EVERY_MS = 60_000;
 const REPOS_AT_ONCE = 4;
 const MERGED_KEPT_RECHECK_MS = 24 * 60 * 60_000;
 const mergedKeptAt = new Map<string, number>();
+const unmergedAt = new Map<string, string>();
+
+export type RefsOf = (repoRoot: string) => Promise<RepoRefs | null>;
+
+export function refsKey(refs: RepoRefs | null, branch: string): string | null {
+  if (!refs) return null;
+  return [refs.tips.get(branch) ?? '', refs.head ?? '', refs.remoteDefault ?? ''].join(' ');
+}
+
+export function oncePerRepo(read: (repoRoot: string) => Promise<RepoRefs | null>): RefsOf {
+  const reads = new Map<string, Promise<RepoRefs | null>>();
+  return (repoRoot) => {
+    const known = reads.get(repoRoot);
+    if (known) return known;
+    const next = read(repoRoot).catch(() => null);
+    reads.set(repoRoot, next);
+    return next;
+  };
+}
 
 export type Exclusive = <T>(work: () => Promise<T>) => Promise<T>;
 
@@ -66,7 +85,12 @@ function mergedRecheckDue(id: string, now: number): boolean {
   return keptAt === undefined || now - keptAt >= MERGED_KEPT_RECHECK_MS;
 }
 
-async function sweepOne(db: Queryable, record: ChatWorktree, exclusive: Exclusive): Promise<void> {
+async function sweepOne(
+  db: Queryable,
+  record: ChatWorktree,
+  exclusive: Exclusive,
+  refsOf: RefsOf,
+): Promise<void> {
   if (!record.conversationId) {
     await releaseIdle(db, record, 'deleted', exclusive);
     return;
@@ -77,7 +101,19 @@ async function sweepOne(db: Queryable, record: ChatWorktree, exclusive: Exclusiv
   }
   const now = Date.now();
   if (!mergedRecheckDue(record.id, now)) return;
-  if (!(await branchMerged(record.repoRoot, record.branch, record.baseCommit))) return;
+  const refs = await refsOf(record.repoRoot);
+  const key = refsKey(refs, record.branch);
+  if (key !== null && unmergedAt.get(record.id) === key) return;
+  const tip = refs?.tips.get(record.branch) ?? null;
+  const merged = refs
+    ? await tipMergedAt(record.repoRoot, refs, tip, record.baseCommit)
+    : await branchMerged(record.repoRoot, record.branch, record.baseCommit);
+  if (!merged) {
+    if (key === null || merged === null) unmergedAt.delete(record.id);
+    else unmergedAt.set(record.id, key);
+    return;
+  }
+  unmergedAt.delete(record.id);
   const released = await releaseIdle(db, record, 'merged', exclusive);
   if (released && !released.removed && !released.inUse) mergedKeptAt.set(record.id, now);
   else mergedKeptAt.delete(record.id);
@@ -89,9 +125,12 @@ export async function sweepChatWorktrees(
   signal: AbortSignal,
 ): Promise<void> {
   const records = await sweepableChatWorktrees(db);
+  const refsOf = oncePerRepo(repoRefsOf);
+  const live = new Set(records.map((record) => record.id));
+  for (const id of unmergedAt.keys()) if (!live.has(id)) unmergedAt.delete(id);
   await eachByRepo(records, REPOS_AT_ONCE, async (record) => {
     if (signal.aborted) return;
-    await sweepOne(db, record, exclusive).catch((error: unknown) =>
+    await sweepOne(db, record, exclusive, refsOf).catch((error: unknown) =>
       console.error(`Could not sweep the worktree on ${record.branch}`, error),
     );
   });

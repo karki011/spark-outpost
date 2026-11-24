@@ -26,6 +26,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Faster; protocol logs kept 14 days              | Older [protocol logs](guardrails.md) go at first start.    |
 | Meetings drop speaker echo; faster Voice start  | —                                                          |
 | Share copies the link; checks secrets again     | [Share one](share-an-artifact.md).                         |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
@@ -56,8 +57,6 @@ summary: What changed in recent releases and what to do next.
 | Meeting card buttons on one row                 | —                                                          |
 | **Health** in Settings                          | [Check Health](trouble-setup-and-reset.md#check-health).   |
 | Sent messages show where read                   | —                                                          |
-| Round card; top-right toasts                    | —                                                          |
-| Chat rows show steps; plans name chats          | [Chat list](statuses-and-limits.md#chat-list).             |
 
 ## Mid-November 2026
 

@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { QueryClient } from '@tanstack/react-query';
-import { EventType, type RunEvent } from '@spark-outpost/contracts';
+import { describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryObserver } from '@tanstack/react-query';
+import { EventType, ORCHESTRATION_ACTIVITY, type RunEvent } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { refreshAfter } from './use-run-stream.ts';
 
@@ -33,5 +33,39 @@ describe('refreshAfter', () => {
     refreshAfter(client, CHAT, text);
     expect(stale(client, detailKey)).toBe(false);
     expect(stale(client, pushesKey)).toBe(false);
+  });
+
+  it('refreshes once, shortly after, for a burst of chat activity', () => {
+    vi.useFakeTimers();
+    try {
+      const client = seeded();
+      const activity = {
+        type: EventType.ACTIVITY_SNAPSHOT,
+        activityType: ORCHESTRATION_ACTIVITY,
+      } as RunEvent;
+      let fetches = 0;
+      const observer = new QueryObserver(client, {
+        queryKey: detailKey,
+        staleTime: Infinity,
+        queryFn: () => {
+          fetches += 1;
+          return {};
+        },
+      });
+      const unsubscribe = observer.subscribe(() => undefined);
+      refreshAfter(client, CHAT, activity);
+      refreshAfter(client, CHAT, activity);
+      refreshAfter(client, CHAT, activity);
+      expect(stale(client, detailKey)).toBe(false);
+      expect(fetches).toBe(0);
+      vi.advanceTimersByTime(200);
+      expect(fetches).toBe(1);
+      vi.advanceTimersByTime(1000);
+      expect(fetches).toBe(1);
+      expect(stale(client, pushesKey)).toBe(false);
+      unsubscribe();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -148,8 +148,10 @@ describe('watching an agent terminal from the dock', () => {
     const dock = tab();
     const attached = terminals.attach(view.id, view.token, dock, { cols: 100, rows: 30 });
     expect(dock.seen.output).toBe('first\r\n');
-    fake.spawned[0]!.print('second\r\n');
-    expect(dock.seen.output).toBe('first\r\nsecond\r\n');
+    fake.spawned[0]!.print('sec');
+    fake.spawned[0]!.print('ond\r\n');
+    expect(dock.seen.output).toBe('first\r\n');
+    await expect.poll(() => dock.seen.output).toBe('first\r\nsecond\r\n');
 
     attached.input('echo typed\r');
     expect(fake.spawned[0]!.written).toEqual([]);

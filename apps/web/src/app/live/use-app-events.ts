@@ -3,7 +3,9 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { parseAppEvent, type AppEvent } from '@spark-outpost/contracts';
 import { runStreamClient } from '../../chat/use-run-stream.ts';
 import { LIVE_ROOTS, isLiveQueryKey, isStepEvent, mergeInvalidations } from './app-event-keys.ts';
+import { invalidateLive } from './invalidate-live.ts';
 import { patchRunStep } from './step-patch.ts';
+import { useStableCallback } from '../../ui/use-stable-callback.ts';
 
 const LIVE_STALE_MS = 5 * 60_000;
 const FALLBACK_POLL_MS = 60_000;
@@ -26,9 +28,16 @@ function refreshLiveQueries(client: QueryClient, fetchedBefore = Infinity): void
   });
 }
 
-export function useAppEvents(): { paused: boolean } {
+export type StepDetailCovered = (conversationId: string) => boolean;
+
+const NOT_COVERED: StepDetailCovered = () => false;
+
+export function useAppEvents(stepDetailCovered: StepDetailCovered = NOT_COVERED): {
+  paused: boolean;
+} {
   const queryClient = useQueryClient();
   const [paused, setPaused] = useState(false);
+  const covered = useStableCallback(stepDetailCovered);
 
   useEffect(() => {
     let source: EventSource | null = null;
@@ -52,8 +61,10 @@ export function useAppEvents(): { paused: boolean } {
       steps = [];
       const stream = runStreamClient(queryClient);
       for (const event of events) patchRunStep(queryClient, event);
-      for (const invalidation of mergeInvalidations(events, (runId) => stream.watching(runId))) {
-        void queryClient.invalidateQueries(invalidation);
+      const streamed = (runId: string, conversationId: string) =>
+        stream.watching(runId) || covered(conversationId);
+      for (const invalidation of mergeInvalidations(events, streamed)) {
+        invalidateLive(queryClient, invalidation);
       }
     };
 
@@ -109,7 +120,7 @@ export function useAppEvents(): { paused: boolean } {
       clearTimeout(hintTimer);
       clearInterval(fallbackTimer);
     };
-  }, [queryClient]);
+  }, [queryClient, covered]);
 
   return { paused };
 }

@@ -4,6 +4,7 @@ import {
   type Approval,
   type ConversationDetail,
 } from '@spark-outpost/contracts';
+import { runIndex } from '../run-index.ts';
 
 export const WAITED_LABEL = 'waited for you';
 
@@ -32,6 +33,6 @@ export function retryMessage(asked: string | null): string {
 }
 
 export function isLatestTurn(detail: Pick<ConversationDetail, 'runs'>, runId: string): boolean {
-  const turns = detail.runs.filter((run) => !run.parentRunId);
-  return turns.at(-1)?.id === runId || !turns.some((run) => run.id === runId);
+  const { latestTopLevelId, topLevel } = runIndex(detail.runs);
+  return latestTopLevelId === runId || !topLevel.has(runId);
 }

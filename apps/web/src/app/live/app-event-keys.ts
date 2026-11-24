@@ -29,7 +29,7 @@ import { sparkPauseKey } from '../pause/spark-pause-api.ts';
 import { workflowRunKeys } from '../../crew-flows/runs-api.ts';
 import { subChatKeys } from '../../tasks/use-sub-chats.ts';
 
-type RunStreamed = (runId: string) => boolean;
+type RunStreamed = (runId: string, conversationId: string) => boolean;
 
 interface Invalidation {
   queryKey: QueryKey;
@@ -123,7 +123,8 @@ function stepInvalidations(event: AppEvent, streamed: RunStreamed): Invalidation
     ];
   }
   const id = event.conversationId;
-  const detail = event.runId && streamed(event.runId) ? [] : conversationScoped(event, false);
+  const covered = Boolean(event.runId && id && streamed(event.runId, id));
+  const detail = covered ? [] : conversationScoped(event, false);
   return [
     ...detail,
     ...(id ? [{ queryKey: auditKeys.summary(id), exact: true }] : []),

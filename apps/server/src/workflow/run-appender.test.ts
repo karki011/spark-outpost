@@ -60,7 +60,7 @@ describe('buffering streamed text', () => {
     await vi.advanceTimersByTimeAsync(TEXT_FLUSH_MS - 1);
     expect(store.deltas()).toEqual([['a']]);
     await vi.advanceTimersByTimeAsync(1);
-    expect(store.deltas()).toEqual([['a'], ['b', 'c', 'd']]);
+    expect(store.deltas()).toEqual([['a'], ['bcd']]);
   });
 
   it('writes waiting text before any other event, in the same write', async () => {
@@ -71,8 +71,8 @@ describe('buffering streamed text', () => {
     await append(text('b'));
     await append(text('c'));
     const seq = await append(runEvents.stepStarted('Edit file'));
-    expect(seq).toBe(4);
-    expect(store.deltas()).toEqual([['a'], ['b', 'c', 'STEP_STARTED']]);
+    expect(seq).toBe(3);
+    expect(store.deltas()).toEqual([['a'], ['bc', 'STEP_STARTED']]);
     await vi.advanceTimersByTimeAsync(TEXT_FLUSH_MS * 2);
     expect(store.writes).toHaveLength(2);
   });
@@ -84,7 +84,7 @@ describe('buffering streamed text', () => {
     await append(text('b'));
     const options = { assistantMessage: { id: 'message-1', content: 'ab' } };
     await append(runEvents.textEnd('message-1'), options);
-    expect(store.deltas()).toEqual([['a', 'b', 'TEXT_MESSAGE_END']]);
+    expect(store.deltas()).toEqual([['ab', 'TEXT_MESSAGE_END']]);
     expect(store.writes[0]?.options).toBe(options);
   });
 
@@ -96,7 +96,33 @@ describe('buffering streamed text', () => {
     await append(text('bbb'));
     expect(store.deltas()).toEqual([['a']]);
     await append(text('ccc'));
-    expect(store.deltas()).toEqual([['a'], ['bbb', 'ccc']]);
+    expect(store.deltas()).toEqual([['a'], ['bbbccc']]);
+  });
+
+  it('joins only neighbouring chunks of the same message and kind', async () => {
+    const store = recorder();
+    const append = bufferingText(store.write);
+    await append(text('a'));
+    await vi.advanceTimersByTimeAsync(0);
+    await append(text('b'));
+    await append(text('c'));
+    await append(runEvents.textContent('message-2', 'd'));
+    await append(runEvents.reasoningContent('message-2', 'e'));
+    await append(runEvents.reasoningContent('message-2', 'f'));
+    await append({ ...text('g'), subagentRunId: 'child-1' } as RunEvent);
+    await append(text('h'));
+    await vi.advanceTimersByTimeAsync(TEXT_FLUSH_MS);
+    const written = store.writes[1]!.events;
+    expect(store.deltas()[1]).toEqual(['bc', 'd', 'ef', 'g', 'h']);
+    expect(written.map((event) => ('messageId' in event ? event.messageId : null))).toEqual([
+      'message-1',
+      'message-2',
+      'message-2',
+      'message-1',
+      'message-1',
+    ]);
+    expect(written[3]).toMatchObject({ subagentRunId: 'child-1' });
+    expect(written[4]).not.toHaveProperty('subagentRunId');
   });
 
   it('keeps writes in the order they were asked for', async () => {
@@ -197,7 +223,7 @@ describe('reasoning text', () => {
     await append(thought('c'));
     expect(store.writes).toHaveLength(2);
     await append(runEvents.reasoningMessageEnd('thought-1'));
-    expect(store.deltas().at(-1)).toEqual(['a', 'b', 'c', 'REASONING_MESSAGE_END']);
+    expect(store.deltas().at(-1)).toEqual(['abc', 'REASONING_MESSAGE_END']);
   });
 
   it('closes open reasoning and tool calls before the terminal event', async () => {

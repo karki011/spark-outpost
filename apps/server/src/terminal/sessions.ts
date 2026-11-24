@@ -6,6 +6,7 @@ import { detectHint } from './hints.ts';
 import { createAnsweredQueryFilter } from './tmux/answered-queries.ts';
 import { processTable, runningCommand, stopPty } from './process-group.ts';
 import type { PtyProcess, SpawnPty } from './pty.ts';
+import { createReplayBuffer, type ReplayBuffer } from './replay-buffer.ts';
 import type {
   AgentRequest,
   AttachedTerminal,
@@ -17,6 +18,7 @@ import type {
   TerminalView,
 } from './session-types.ts';
 import { defaultLimits, TerminalAuthError, TerminalLimitError } from './session-types.ts';
+import { createViewHold } from './view-hold.ts';
 
 export * from './session-types.ts';
 
@@ -48,8 +50,7 @@ interface Session {
   kind: SetupKind | ShellKind | ViewKind;
   attached: boolean;
   tokenExpiresAt: number;
-  replay: string;
-  replayFilter?: (text: string) => string;
+  replay: ReplayBuffer;
   view: TerminalView | null;
   pty: PtyProcess | null;
   client: TerminalClient | null;
@@ -142,6 +143,7 @@ export class TerminalSessions {
     const oldClient = session.client;
     session.client = null;
     session.attached = false;
+    session.pty?.resume?.();
     oldClient?.close();
     session.token = randomBytes(32);
     session.tokenExpiresAt = Date.now() + this.limits.tokenTtlMs;
@@ -179,7 +181,8 @@ export class TerminalSessions {
     if (kind.type === 'view') return this.attachView(session, kind, size);
     if (session.pty) {
       session.pty.resize(size.cols, size.rows);
-      if (session.replay) client.output(session.replay);
+      const replay = session.replay.text();
+      if (replay) client.output(replay);
     } else this.startPty(session, size);
 
     return {
@@ -194,11 +197,18 @@ export class TerminalSessions {
       colors: (colors) => {
         if (session.client === client) session.pty?.colors?.(colors);
       },
+      pause: () => {
+        if (session.client === client) session.pty?.pause?.();
+      },
+      resume: () => {
+        if (session.client === client) session.pty?.resume?.();
+      },
       close: () => {
         if (session.client === client) this.end(session, 'closed', null);
       },
       disconnect: () => {
         if (session.client !== client) return;
+        session.pty?.resume?.();
         if (!isAgent(kind)) this.end(session, 'disconnected', null);
         else {
           session.client = null;
@@ -279,9 +289,10 @@ export class TerminalSessions {
     kind: ViewKind,
     size: { cols: number; rows: number },
   ): AttachedTerminal {
+    const hold = createViewHold((data) => session.client?.output(data));
     const view = kind.open(
       {
-        output: (data) => session.client?.output(data),
+        output: hold.output,
         ended: () => this.end(session, 'exited', null),
       },
       size,
@@ -295,6 +306,8 @@ export class TerminalSessions {
       input: (data) => view.input(data),
       resize: (cols, rows) => view.resize(cols, rows),
       colors: () => undefined,
+      pause: hold.pause,
+      resume: hold.resume,
       close: () => this.end(session, 'closed', null),
       disconnect: () => this.end(session, 'disconnected', null),
     };
@@ -358,7 +371,7 @@ export class TerminalSessions {
       kind,
       attached: false,
       tokenExpiresAt: Date.now() + this.limits.tokenTtlMs,
-      replay: '',
+      replay: createReplayBuffer(REPLAY_BYTES, createAnsweredQueryFilter()),
       view: null,
       pty: null,
       client: null,
@@ -414,10 +427,7 @@ export class TerminalSessions {
   }
 
   private handleOutput(session: Session, data: string) {
-    if (isAgent(session.kind)) {
-      session.replayFilter ??= createAnsweredQueryFilter();
-      session.replay = (session.replay + session.replayFilter(data)).slice(-REPLAY_BYTES);
-    }
+    if (isAgent(session.kind)) session.replay.push(data);
     session.client?.output(data);
     if (session.kind.type === 'shell') this.watcher?.output?.(session.id, data);
     if (session.kind.type !== 'setup') return;

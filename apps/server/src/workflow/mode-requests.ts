@@ -1,4 +1,5 @@
 import type { Db, Queryable } from '../persistence/db.ts';
+import { onRunSignal } from '../persistence/run-signals.ts';
 import type { ModeRequests } from '../providers/provider.ts';
 
 export interface ModeRequestWatch extends ModeRequests {
@@ -34,6 +35,7 @@ export function watchModeRequests(db: Db, runId: string, pollMs: number): ModeRe
   const listeners = new Set<(mode: string) => void>();
   let last: string | null = null;
   let started = false;
+  let unheard: string | null = null;
   const poll = async () => {
     const mode = await requestedMode(db, runId);
     if (!started) {
@@ -43,17 +45,27 @@ export function watchModeRequests(db: Db, runId: string, pollMs: number): ModeRe
     }
     if (mode === null || mode === last) return;
     last = mode;
+    if (listeners.size === 0) unheard = mode;
     for (const listener of listeners) listener(mode);
   };
-  void poll().catch(() => undefined);
-  const timer = setInterval(() => void poll().catch(() => undefined), pollMs);
+  let polling: Promise<void> = Promise.resolve();
+  const check = () => {
+    polling = polling.then(poll).catch(() => undefined);
+  };
+  check();
+  const unsubscribe = onRunSignal(runId, check);
+  const timer = setInterval(check, pollMs);
   return {
     subscribe(listener) {
       listeners.add(listener);
+      const missed = unheard;
+      unheard = null;
+      if (missed !== null) listener(missed);
       return () => listeners.delete(listener);
     },
     dispose() {
       clearInterval(timer);
+      unsubscribe();
       listeners.clear();
     },
   };

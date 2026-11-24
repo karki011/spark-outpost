@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useQueries, useQuery, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
 import type {
   Approval,
   ConversationDetail,
@@ -10,7 +10,7 @@ import { api, queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { providerName } from '../chat/provider-name.ts';
 import { runStep } from '../chat/wait-label.ts';
-import { conversationCrew } from '../crew/conversation-crew.ts';
+import { conversationCrew, crewOrchestration } from '../crew/conversation-crew.ts';
 import type { CrewAgent } from '../crew/crew-model.ts';
 import { isRunning } from '../conversations/row-state.ts';
 
@@ -62,6 +62,13 @@ export function pendingOf(detail: ConversationDetail): Approval[] {
     orchestration.pendingCheckpoint ? [orchestration.pendingCheckpoint] : [],
   );
   return [...detail.approvals, ...checkpoints];
+}
+
+export function stepsLeaveDetail(client: QueryClient): (conversationId: string) => boolean {
+  return (conversationId) =>
+    crewOrchestration(
+      client.getQueryData<ConversationDetail>(queryKeys.conversation(conversationId)),
+    ) === null;
 }
 
 function dataOf(results: UseQueryResult<ConversationDetail>[]) {

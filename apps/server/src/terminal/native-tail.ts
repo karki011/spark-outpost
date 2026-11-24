@@ -9,6 +9,8 @@ export interface TranscriptWatcher {
   ready: Promise<void>;
   flush(): Promise<void>;
   offset(): number | null;
+  pause(): void;
+  resume(): void;
   close(): void;
 }
 
@@ -58,8 +60,11 @@ export const watchTranscript: WatchTranscript = (path, from, onLines) => {
     }
   };
   let chain = Promise.resolve();
-  const queue = () => {
-    chain = chain.then(() => (closed ? undefined : read())).catch(() => undefined);
+  let watching = false;
+  const queue = (polled = false) => {
+    chain = chain
+      .then(() => (closed || (polled && !watching) ? undefined : read()))
+      .catch(() => undefined);
     return chain;
   };
   try {
@@ -67,16 +72,27 @@ export const watchTranscript: WatchTranscript = (path, from, onLines) => {
   } catch {
     return null;
   }
-  const onChange = () => void queue();
-  watchFile(path, { interval: POLL_MS, persistent: false }, onChange);
-  const ready = queue();
+  const onChange = () => void queue(true);
+  const pause = () => {
+    if (watching) unwatchFile(path, onChange);
+    watching = false;
+  };
+  const resume = () => {
+    if (watching || closed) return;
+    watching = true;
+    watchFile(path, { interval: POLL_MS, persistent: false }, onChange);
+    void queue();
+  };
+  resume();
   return {
-    ready,
-    flush: queue,
+    ready: chain,
+    flush: () => queue(),
     offset: () => (offset === null ? null : offset - rest.length),
+    pause,
+    resume,
     close() {
       closed = true;
-      unwatchFile(path, onChange);
+      pause();
     },
   };
 };

@@ -21,6 +21,9 @@ import type { ParkedTurns } from './parked-turns.ts';
 import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queue-drain.ts';
 import { watchLiveSessions } from './live-sessions.ts';
 
+export const WORKER_IDLE_POLL_MS = 5_000;
+export const WORKER_RECOVERY_EVERY_MS = 15_000;
+
 export interface WorkerOptions extends ChatTurnDeps {
   pollMs?: number;
   recoveryEveryMs?: number;

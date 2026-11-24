@@ -195,3 +195,48 @@ describe('shotCaption', () => {
     expect(shotCaption('http://localhost:5173/settings')).toBe('localhost:5173/settings');
   });
 });
+
+describe('outsideFence against a line-by-line reading', () => {
+  const FENCE_LINE = /^ {0,3}(`{3,}|~{3,})/;
+
+  function lineByLine(text: string, index: number): number {
+    let open: string | null = null;
+    let lineStart = 0;
+    for (const line of text.split('\n')) {
+      if (open === null && lineStart >= index) return index;
+      const lineEnd = lineStart + line.length;
+      const marker = FENCE_LINE.exec(line)?.[1]?.[0] ?? null;
+      if (marker !== null && open === null) {
+        open = marker;
+      } else if (marker !== null && marker === open) {
+        open = null;
+        if (lineEnd >= index) return lineEnd;
+      }
+      lineStart = lineEnd + 1;
+    }
+    return open === null ? index : text.length;
+  }
+
+  const texts = [
+    '',
+    'plain words only',
+    'a\n```ts\ncode\n```\nb\n~~~\nmore\n~~~\nend',
+    '```\n~~~\nstill code\n```\nafter',
+    'open\n```\nnever closed',
+    '```\n```\n```\nthird opens\n',
+    'x\n    ```\nindented is text\n   ```\nfenced\n   ```',
+    '\n\n```\n\n```\n\n',
+  ];
+
+  it('gives the same place for every index of every text', () => {
+    for (const text of texts) {
+      for (let index = 0; index <= text.length + 2; index += 1) {
+        expect([text, index, outsideFence(text, index)]).toEqual([
+          text,
+          index,
+          lineByLine(text, index),
+        ]);
+      }
+    }
+  });
+});

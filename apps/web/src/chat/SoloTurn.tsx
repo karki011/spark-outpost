@@ -258,7 +258,8 @@ export function SoloTurn({
   };
   const collapse = useCollapseFinishedTurns();
   const [foldOpen, setFoldOpen] = useState(false);
-  const foldable = finished && collapse && canFold(turnRowParts(rowInput));
+  const plainParts = finished && collapse ? turnRowParts(rowInput) : null;
+  const foldable = plainParts !== null && canFold(plainParts);
   const decided =
     foldable && !foldOpen ? cards.decided : cardsLeft(cards.decided, answers, commandCalls);
   const timeline = turnCards({
@@ -270,7 +271,10 @@ export function SoloTurn({
     approvalAt: stream.approvalAt,
     publishFrom: stream.replyEnd?.at ?? (replyClosedAt ? Date.parse(replyClosedAt) : null),
   });
-  const parts = turnRowParts({ ...rowInput, cards: timeline.marks });
+  const parts =
+    plainParts && timeline.marks.length === 0
+      ? plainParts
+      : turnRowParts({ ...rowInput, cards: timeline.marks });
   const cardView = (card: TurnCard) => (
     <TurnCardView
       key={card.id}

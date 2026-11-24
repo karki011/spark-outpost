@@ -224,6 +224,32 @@ export async function branchTipOf(root: string, branch: string): Promise<string 
   return tip.trim() || null;
 }
 
+export interface RepoRefs {
+  head: string | null;
+  remoteDefault: string | null;
+  tips: Map<string, string>;
+}
+
+export async function repoRefsOf(root: string): Promise<RepoRefs | null> {
+  const listed = await git(root, [
+    'for-each-ref',
+    '--format=%(objectname) %(refname)',
+    'refs/heads',
+    'refs/remotes/origin/HEAD',
+  ]).catch(() => null);
+  if (listed === null) return null;
+  const tips = new Map<string, string>();
+  let remoteDefault: string | null = null;
+  for (const line of lines(listed)) {
+    const space = line.indexOf(' ');
+    const commit = line.slice(0, space);
+    const ref = line.slice(space + 1);
+    if (ref === 'refs/remotes/origin/HEAD') remoteDefault = commit;
+    else if (ref.startsWith('refs/heads/')) tips.set(ref.slice('refs/heads/'.length), commit);
+  }
+  return { head: await headCommit(root).catch(() => null), remoteDefault, tips };
+}
+
 async function ancestorOf(root: string, tip: string, ref: string): Promise<boolean> {
   return succeeds(root, ['merge-base', '--is-ancestor', tip, ref]);
 }
@@ -252,10 +278,39 @@ export async function branchSafeToDelete(
   return (await pushed(root, tip)) || (await mergedInto(root, tip));
 }
 
-export async function branchMerged(root: string, branch: string, baseCommit: string) {
-  const tip = await branchTipOf(root, branch);
+async function ancestry(root: string, tip: string, ref: string): Promise<boolean | null> {
+  try {
+    await git(root, ['merge-base', '--is-ancestor', tip, ref]);
+    return true;
+  } catch (error) {
+    return (error as { code?: unknown }).code === 1 ? false : null;
+  }
+}
+
+export async function tipMergedAt(
+  root: string,
+  refs: RepoRefs,
+  tip: string | null,
+  baseCommit: string,
+): Promise<boolean | null> {
+  if (!tip || tip === baseCommit) return false;
+  let unknown = false;
+  for (const ref of [refs.head, refs.remoteDefault]) {
+    if (!ref) continue;
+    const merged = await ancestry(root, tip, ref);
+    if (merged) return true;
+    if (merged === null) unknown = true;
+  }
+  return unknown ? null : false;
+}
+
+async function tipMerged(root: string, tip: string | null, baseCommit: string) {
   if (!tip || tip === baseCommit) return false;
   return mergedInto(root, tip);
+}
+
+export async function branchMerged(root: string, branch: string, baseCommit: string) {
+  return tipMerged(root, await branchTipOf(root, branch), baseCommit);
 }
 
 export async function saveWorktreeWork(copy: string, branch: string, message: string) {

@@ -38,11 +38,31 @@ function isStreamedText(
   return streamed && options === undefined;
 }
 
+function streamKey(event: StreamedText): string {
+  return JSON.stringify({ ...event, delta: '' });
+}
+
+export function mergeTextDeltas(events: readonly StreamedText[]): StreamedText[] {
+  const merged: StreamedText[] = [];
+  let lastKey: string | null = null;
+  for (const event of events) {
+    const key = streamKey(event);
+    const last = merged.at(-1);
+    if (last && key === lastKey) {
+      merged[merged.length - 1] = { ...last, delta: last.delta + event.delta };
+      continue;
+    }
+    merged.push(event);
+    lastKey = key;
+  }
+  return merged;
+}
+
 export function bufferingText(write: Write, options: TextBufferOptions = {}): Append {
   const flushMs = options.flushMs ?? TEXT_FLUSH_MS;
   const flushChars = options.flushChars ?? TEXT_FLUSH_CHARS;
   const now = options.now ?? Date.now;
-  let waiting: RunEvent[] = [];
+  let waiting: StreamedText[] = [];
   let waitingChars = 0;
   let timer: NodeJS.Timeout | null = null;
   let flushedAt = -Infinity;
@@ -51,7 +71,7 @@ export function bufferingText(write: Write, options: TextBufferOptions = {}): Ap
   const spans = trackOpenSpans();
 
   const take = (): RunEvent[] => {
-    const taken = waiting;
+    const taken = mergeTextDeltas(waiting);
     waiting = [];
     waitingChars = 0;
     if (timer) clearTimeout(timer);

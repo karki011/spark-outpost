@@ -143,15 +143,22 @@ function codexRecord(record: Record<string, unknown>, items: Item[]): void {
   }
 }
 
-export function transcriptItems(
+export function addTranscriptItems(
   provider: TrackedTerminalProvider,
   lines: readonly string[],
+  items: Item[],
 ): Item[] {
-  const items: Item[] = [];
   const read = provider === 'claude' ? claudeRecord : codexRecord;
   for (const line of lines) {
     const record = parseLine(line);
     if (isRecord(record)) read(record, items);
   }
   return items;
+}
+
+export function transcriptItems(
+  provider: TrackedTerminalProvider,
+  lines: readonly string[],
+): Item[] {
+  return addTranscriptItems(provider, lines, []);
 }

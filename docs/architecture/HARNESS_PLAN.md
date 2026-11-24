@@ -402,7 +402,7 @@ Everything an agent does is recorded, CloudWatch-like: the chat is the log group
 - **Also kept:** approvals with their receipts, task artifacts, Jev decisions (`run_advice`, with `policy_version`), and on `runs` the model, effort and mode the agent actually used, `duration_ms`, `tool_call_count` and `cost_source`.
 - **Metrics per agent run:** input, output, cached and thinking tokens, cost (labelled reported or estimated), context, duration and tool calls.
 - **Audit view:** a summary by model, role, provider and run, a per-turn timeline with approval waits, logs you can filter by agent, type and text, and JSONL and CSV export.
-- **Retention:** raw logs 90 days by default, summaries forever.
+- **Retention:** raw logs 14 days by default, summaries forever.
 
 ### Harness autonomy
 

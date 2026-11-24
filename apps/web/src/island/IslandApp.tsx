@@ -13,7 +13,7 @@ import './island-code.css';
 import './island-rest.css';
 import '../chat/project/project.css';
 import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { newDraftId } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
@@ -60,7 +60,7 @@ import { useIslandKeys } from './use-island-keys.ts';
 import { soonMeeting } from './home-model.ts';
 import { hasHoverLine, type StripData } from './RestStrip.tsx';
 import { useAskSession } from './use-ask-session.ts';
-import { useIslandData } from './use-island-data.ts';
+import { stepsLeaveDetail, useIslandData } from './use-island-data.ts';
 import { useIslandAttention } from './use-island-attention.ts';
 import { islandViewedChat, useIslandViewing } from './use-island-viewing.ts';
 import { PANEL_ANNOUNCEMENTS } from './panel-announcements.ts';
@@ -80,7 +80,8 @@ function isRunningChat(chat: ConversationSummary): boolean {
 }
 
 export function IslandApp() {
-  useAppEvents();
+  const liveClient = useQueryClient();
+  useAppEvents(useMemo(() => stepsLeaveDetail(liveClient), [liveClient]));
   const concealed = useConcealed();
   const reduced = useReducedMotion();
   const voice = useVoice();
