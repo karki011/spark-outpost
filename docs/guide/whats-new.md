@@ -17,8 +17,8 @@ summary: What changed in recent releases and what to do next.
 
 ## 24 November 2026
 
-| What changed                            | What to do           |
-| --------------------------------------- | -------------------- |
+| What changed                                         | What to do           |
+| ---------------------------------------------------- | -------------------- |
 | Blobs only for Sparks; company logos; plain switches | [Sparks](sparks.md). |
 
 ## 23 November 2026
