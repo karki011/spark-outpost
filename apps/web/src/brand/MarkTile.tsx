@@ -1,4 +1,5 @@
 import './mark-tile.css';
+import { LOGO_PATHS, type LogoName } from './logo-paths.ts';
 
 const LETTER_MIN_SIZE = 20;
 
@@ -6,6 +7,7 @@ interface MarkTileProps {
   letters: string;
   size: number;
   hue?: number;
+  logo?: LogoName | undefined;
 }
 
 function firstCharacter(word: string): string {
@@ -20,9 +22,9 @@ export function markLetters(name: string): string {
   return (first + second).toUpperCase();
 }
 
-export function MarkTile({ letters, size, hue }: MarkTileProps) {
+export function MarkTile({ letters, size, hue, logo }: MarkTileProps) {
   const shown =
-    size >= LETTER_MIN_SIZE
+    !logo && size >= LETTER_MIN_SIZE
       ? Array.from(letters)
           .slice(0, size >= 28 ? 2 : 1)
           .join('')
@@ -38,6 +40,12 @@ export function MarkTile({ letters, size, hue }: MarkTileProps) {
       }}
       data-letters={shown || undefined}
       aria-hidden="true"
-    />
+    >
+      {logo && (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d={LOGO_PATHS[logo]} />
+        </svg>
+      )}
+    </span>
   );
 }

@@ -23,3 +23,9 @@
     color-mix(in oklch, oklch(0.68 0.14 var(--mark-hue)) 38%, var(--panel));
   color: var(--text);
 }
+
+.mark-tile > svg {
+  width: 62%;
+  height: 62%;
+  color: var(--text);
+}

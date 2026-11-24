@@ -1,8 +1,9 @@
 import { providerIdSchema, type ConnectableId } from '@spark-outpost/contracts';
+import type { LogoName } from './logo-paths.ts';
 import { MarkTile } from './MarkTile.tsx';
 
-const PROVIDER_MARK: Record<ConnectableId, { letters: string; hue: number }> = {
-  claude: { letters: 'C', hue: 45 },
+const PROVIDER_MARK: Record<ConnectableId, { letters: string; hue: number; logo?: LogoName }> = {
+  claude: { letters: 'C', hue: 45, logo: 'claude' },
   codex: { letters: 'X', hue: 240 },
   zai: { letters: 'Z', hue: 145 },
   custom: { letters: 'E', hue: 300 },
@@ -16,7 +17,7 @@ interface ProviderMarkProps {
 
 export function ProviderMark({ providerId, size = 28 }: ProviderMarkProps) {
   const mark = PROVIDER_MARK[providerId];
-  return <MarkTile letters={mark.letters} hue={mark.hue} size={size} />;
+  return <MarkTile letters={mark.letters} hue={mark.hue} logo={mark.logo} size={size} />;
 }
 
 interface AgentMarkProps {
