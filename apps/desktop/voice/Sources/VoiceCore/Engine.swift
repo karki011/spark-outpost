@@ -6,11 +6,13 @@ public final class Engine {
     private let platform: Platform
     private let emit: Emit
     private let rules: ListenRules
+    private let clock: () -> Double
     private var model: SpeechModel?
     private var listening: Listening?
     private var speaking: String?
     private var generation = 0
-    private lazy var recorder = MeetingRecorder(platform: platform, rules: rules, emit: emit)
+    private lazy var recorder = MeetingRecorder(
+        platform: platform, rules: rules, clock: clock, emit: emit)
 
     private final class Listening {
         let id: String
@@ -37,9 +39,14 @@ public final class Engine {
         func text(with draft: String) -> String { cleanTranscript((texts + [draft]).joined(separator: " ")) }
     }
 
-    public init(platform: Platform, rules: ListenRules = ListenRules(), emit: @escaping Emit) {
+    public init(
+        platform: Platform, rules: ListenRules = ListenRules(),
+        clock: @escaping () -> Double = { ProcessInfo.processInfo.systemUptime },
+        emit: @escaping Emit
+    ) {
         self.platform = platform
         self.rules = rules
+        self.clock = clock
         self.emit = emit
     }
 

@@ -155,6 +155,7 @@ export function createVoice(effects: VoiceEffects) {
     const id = settings.model;
     const attempt = (async () => {
       if (!(await store.present(id))) return false;
+      if (disposed || !settings.enabled) return false;
       const answer = await helper
         .ask(
           {
@@ -271,7 +272,9 @@ export function createVoice(effects: VoiceEffects) {
       await store.refresh();
       if (!settings.enabled) return;
       await applyKeys();
-      if (await store.present(settings.model)) void ensureLoaded();
+      const present = await store.present(settings.model);
+      if (disposed || !settings.enabled) return;
+      if (present) void ensureLoaded();
       else fetchModel();
     },
 

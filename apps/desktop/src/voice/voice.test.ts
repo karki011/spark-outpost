@@ -206,6 +206,17 @@ describe('Voice', () => {
     scene.voice.dispose();
   });
 
+  it('does not load the speech model when Voice is turned off while it starts', async () => {
+    const scene = await setup({ enabled: true });
+    const asked = vi.spyOn(scene.helper, 'ask');
+    const starting = scene.voice.start();
+    await scene.voice.turnOff();
+    await starting;
+    await settle();
+    expect(asked.mock.calls.filter(([request]) => request.op === 'load')).toHaveLength(0);
+    scene.voice.dispose();
+  });
+
   it('leaves the speech model unloaded at start while Voice is off', async () => {
     const scene = await setup();
     const asked = vi.spyOn(scene.helper, 'ask');

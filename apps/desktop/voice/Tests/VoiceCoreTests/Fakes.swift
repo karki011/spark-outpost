@@ -112,7 +112,9 @@ final class FakePlatform: Platform {
 final class Scene {
     let platform = FakePlatform()
     var sent: [(String?, Message)] = []
-    lazy var engine = Engine(platform: platform) { [unowned self] id, message in
+    var now: Double = 0
+    lazy var engine = Engine(platform: platform, clock: { [unowned self] in self.now }) {
+        [unowned self] id, message in
         self.sent.append((id, message))
     }
     let modelPath: String

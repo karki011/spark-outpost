@@ -8,6 +8,7 @@ final class MeetingRecorder {
         let detector: SpeechDetector
         let stream: MeetingStream
         var leftover: [Float] = []
+        var offsetMs: Int?
 
         init(source: MeetingSource, detector: SpeechDetector, rules: ListenRules) {
             self.source = source
@@ -21,6 +22,7 @@ final class MeetingRecorder {
         let language: String
         let model: SpeechModel
         let generation: Int
+        let startedAt: Double
         let lanes: [MeetingSource: Lane]
         var pending = 0
         var pendingOthers = 0
@@ -28,25 +30,31 @@ final class MeetingRecorder {
         var played: [HeardLine] = []
         var parked: [HeardLine] = []
 
-        init(id: String, language: String, model: SpeechModel, generation: Int, lanes: [Lane]) {
+        init(
+            id: String, language: String, model: SpeechModel, generation: Int, startedAt: Double,
+            lanes: [Lane]
+        ) {
             self.id = id
             self.language = language
             self.model = model
             self.generation = generation
+            self.startedAt = startedAt
             self.lanes = Dictionary(uniqueKeysWithValues: lanes.map { ($0.source, $0) })
         }
     }
 
     private let platform: Platform
     private let rules: ListenRules
+    private let clock: () -> Double
     private let emit: Emit
     private let echo = EchoRules()
     private var recording: Recording?
     private var generation = 0
 
-    init(platform: Platform, rules: ListenRules, emit: @escaping Emit) {
+    init(platform: Platform, rules: ListenRules, clock: @escaping () -> Double, emit: @escaping Emit) {
         self.platform = platform
         self.rules = rules
+        self.clock = clock
         self.emit = emit
     }
 
@@ -68,6 +76,7 @@ final class MeetingRecorder {
         generation += 1
         let current = Recording(
             id: id, language: request.language, model: model, generation: generation,
+            startedAt: clock(),
             lanes: [
                 Lane(source: .you, detector: mine, rules: rules),
                 Lane(source: .others, detector: theirs, rules: rules),
@@ -107,11 +116,15 @@ final class MeetingRecorder {
             guard let lane = current.lanes[source], let segment = lane.stream.flush() else { continue }
             transcribe(segment, from: source, for: current)
         }
+        settleParked(current)
         finishIfDone(current)
     }
 
     private func take(_ samples: [Float], from source: MeetingSource, for current: Recording) {
         guard recording === current, !current.stopping, let lane = current.lanes[source] else { return }
+        if lane.offsetMs == nil {
+            lane.offsetMs = max(0, Int((clock() - current.startedAt) * 1_000))
+        }
         var buffer = lane.leftover + samples
         let size = ListenRules.frameSamples
         var start = 0
@@ -137,7 +150,9 @@ final class MeetingRecorder {
             if source == .others { current.pendingOthers -= 1 }
             let cleaned = cleanTranscript(text)
             if !cleaned.isEmpty {
-                let line = HeardLine(text: cleaned, startMs: segment.startMs, endMs: segment.endMs)
+                let offset = current.lanes[source]?.offsetMs ?? 0
+                let line = HeardLine(
+                    text: cleaned, startMs: segment.startMs + offset, endMs: segment.endMs + offset)
                 self.keep(line, from: source, for: current)
             }
             self.settleParked(current)
@@ -165,8 +180,9 @@ final class MeetingRecorder {
 
     private func othersStillSpeaking(over line: HeardLine, in current: Recording) -> Bool {
         if current.pendingOthers > 0 { return true }
-        guard !current.stopping, let open = current.lanes[.others]?.stream.openStartMs else { return false }
-        return open <= line.endMs + echo.slackMs
+        guard !current.stopping, let lane = current.lanes[.others], let open = lane.stream.openStartMs
+        else { return false }
+        return open + (lane.offsetMs ?? 0) <= line.endMs + echo.slackMs
     }
 
     private func settleParked(_ current: Recording) {

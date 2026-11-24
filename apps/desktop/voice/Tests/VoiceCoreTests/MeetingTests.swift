@@ -243,4 +243,10 @@ private let stop = #"{"id":"m","op":"meeting.stop"}"#
         #expect(withoutEcho(HeardLine(text: "Yeah, right.", startMs: 500, endMs: 1_500), of: others) != nil)
         #expect(withoutEcho(HeardLine(text: "Sounds right.", startMs: 500, endMs: 1_500), of: others) == nil)
     }
+
+    @Test func numbersAndAbbreviationsSurviveTheSentenceSplit() {
+        let line = HeardLine(
+            text: "The budget is 3.5 million in the U.S. office. Is that right?", startMs: 0, endMs: 4_000)
+        #expect(withoutEcho(line, of: []) == line.text)
+    }
 }

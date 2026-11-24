@@ -29,17 +29,19 @@ func echoWords(_ text: String) -> [String] {
 func echoSentences(_ text: String) -> [String] {
     var sentences: [String] = []
     var current = ""
+    var closing = false
     for character in text {
-        current.append(character)
-        if ".!?".contains(character) {
+        if closing && character.isWhitespace {
             sentences.append(current)
             current = ""
+            closing = false
+            continue
         }
+        current.append(character)
+        closing = ".!?".contains(character)
     }
     sentences.append(current)
-    return sentences
-        .map { $0.trimmingCharacters(in: .whitespaces) }
-        .filter { !echoWords($0).isEmpty }
+    return sentences.filter { !echoWords($0).isEmpty }
 }
 
 func sharedInOrder(_ words: [String], _ played: [String]) -> Int {
