@@ -1,9 +1,15 @@
+import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cliSignedIn } from '../src/agents/acp/agent-cli.ts';
-import { sendUserMessage } from '../src/persistence/conversations.ts';
+import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
+import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { saveConnection } from '../src/persistence/setup.ts';
 import { roundResumeKey, startRoundWith } from '../src/pr-follow-up/deps.ts';
+import { createProject } from '../src/projects/projects.ts';
 import { createProviders } from '../src/workflow/providers.ts';
 import { sendNow } from '../src/workflow/queue-drain.ts';
 import { stopRun } from '../src/workflow/stop-run.ts';
@@ -165,5 +171,50 @@ describe.skipIf(!claudeReady)('the agent sessions of one chat, with real Claude'
     expect(sessions.rowCount).toBe(1);
     expect(models[0]).toContain('haiku');
     expect(models[1]).toContain('sonnet');
+  }, 300_000);
+
+  it('moves a long command to the background and tells the agent when it ends', async () => {
+    const base = await realpath(await mkdtemp(join(tmpdir(), 'spark-live-command-')));
+    const repo = join(base, 'repo');
+    execFileSync('git', ['init', '-q', repo]);
+    await writeFile(join(repo, 'README.md'), '# Live command probe\n');
+    execFileSync('git', ['-C', repo, 'add', '.']);
+    execFileSync('git', [
+      '-C',
+      repo,
+      '-c',
+      'user.email=t@t',
+      '-c',
+      'user.name=t',
+      'commit',
+      '-qm',
+      'base',
+    ]);
+    const projectId = (await createProject(t.db, t.workspaceId, repo)).project.id;
+    const chat = (await createConversation(t.db, t.workspaceId, randomUUID())).id;
+    await setConversationProjects(t.db, t.workspaceId, chat, [projectId]);
+    const sent = await sendUserMessage(
+      t.db,
+      chat,
+      {
+        id: randomUUID(),
+        content:
+          'Run this with your shell tool as an ordinary foreground call: python3 -c "import time; time.sleep(40); print(\'SLEPT-OK\')". If it is moved to the background, wait for its completion notice, then read its output file. Reply with the word the command printed.',
+      },
+      { ...TARGET, permission: 'do', level: 'hands-off', agentMode: 'bypassPermissions' },
+      t.workspaceId,
+    );
+    const run = await settled(sent.run.id);
+    const moved = await t.db.query(
+      `SELECT 1 FROM run_protocol_log WHERE run_id = $1
+           AND payload::text LIKE '%moved to the background%' LIMIT 1`,
+      [sent.run.id],
+    );
+    const seconds = (run.finished!.getTime() - run.created.getTime()) / 1000;
+    console.log('long command', { seconds, reply: run.reply.slice(-200) });
+    expect(run.status).toBe('succeeded');
+    expect(moved.rowCount).toBe(1);
+    expect(run.reply).toContain('SLEPT-OK');
+    expect(seconds).toBeGreaterThan(40);
   }, 300_000);
 });
