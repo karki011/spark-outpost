@@ -1,5 +1,5 @@
 import { gatePaths as path, toGatePath, toNativePath } from './gate-path.ts';
-import type { GitDirs } from '../projects/path-policy.ts';
+import { namesFoldCase, type GitDirs } from '../projects/path-policy.ts';
 import { runGit } from '../ship/git.ts';
 import { REPO_GIT_CONFIG } from './git-config.ts';
 
@@ -49,19 +49,28 @@ function labelIn(dirs: GitDirs, target: string): string | null {
   return worktreeConfig ? WORKTREE_CONFIG_LABEL : null;
 }
 
+function folded(text: string): string {
+  return namesFoldCase() ? text.toLowerCase() : text;
+}
+
+function comparableDirs(dirs: GitDirs): GitDirs {
+  const gate = gateGitDirs(dirs);
+  return { ...gate, common: folded(gate.common), own: folded(gate.own) };
+}
+
 export function gitControlLabel(roots: readonly GitRoot[], target: string): string | null {
-  const written = path.normalize(toGatePath(target));
+  const written = folded(path.normalize(toGatePath(target)));
   for (const root of roots) {
-    const label = root.gitDirs ? labelIn(gateGitDirs(root.gitDirs), written) : null;
+    const label = root.gitDirs ? labelIn(comparableDirs(root.gitDirs), written) : null;
     if (label) return label;
   }
   return null;
 }
 
 export function gitFolderLabel(roots: readonly GitRoot[], target: string): string | null {
-  const written = path.normalize(toGatePath(target));
+  const written = folded(path.normalize(toGatePath(target)));
   for (const root of roots) {
-    const label = root.gitDirs ? folderLabel(gateGitDirs(root.gitDirs), written) : null;
+    const label = root.gitDirs ? folderLabel(comparableDirs(root.gitDirs), written) : null;
     if (label) return label;
   }
   return null;

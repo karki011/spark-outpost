@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import { RECOMMENDED_RULES, userRules } from '../spark-rules/recommended.ts';
 import type { SparkRuleSet } from '../spark-rules/resolve.ts';
-import { GIT_CONTROL_REASON, NO_RUN_RULES, decide, type ApprovalRequest } from './decide.ts';
+import {
+  GIT_CONTROL_REASON,
+  INSTRUCTION_REASON,
+  NO_RUN_RULES,
+  decide,
+  type ApprovalRequest,
+} from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { railCrossings } from './rail-crossings.ts';
 import { parseShell } from './shell-parse.ts';
@@ -193,4 +199,93 @@ describe("decide() for the hooks folder of a worktree's real git folder", () => 
       gitControl: [label],
     });
   });
+});
+
+describe("the real git folder's hooks in another letter case", () => {
+  const platform = process.platform;
+  afterEach(() => Object.defineProperty(process, 'platform', { value: platform }));
+
+  it.each([
+    ['darwin', ['.git/hooks/pre-commit']],
+    ['linux', undefined],
+  ] as const)('on %s', async (value, labels) => {
+    Object.defineProperty(process, 'platform', { value });
+    const repo = '/work/main';
+    const command = `cp x ${repo}/.GIT/hooks/pre-commit`;
+    const input: ApprovalRequest = {
+      ...run(command),
+      cwd: `${repo}/.spark/worktrees/chat-1`,
+      roots: [
+        {
+          path: `${repo}/.spark/worktrees/chat-1`,
+          ignore: [],
+          gitDirs: { common: `${repo}/.git`, own: `${repo}/.git/worktrees/chat-1` },
+        },
+      ],
+    };
+    const shell = await parseShell(command);
+    const options = { shell, files, sparkRules: { rules: RECOMMENDED_RULES, once: [] } };
+    const decision = decide('full_access', input, NO_RUN_RULES, [], options);
+    expect((decision as { gitControl?: string[] }).gitControl).toEqual(labels);
+  });
+});
+
+describe('decide() for git and instruction names in another letter case', () => {
+  const platform = process.platform;
+  const on = (value: NodeJS.Platform) => Object.defineProperty(process, 'platform', { value });
+  afterEach(() => on(platform));
+
+  const editOf = (relative: string): ApprovalRequest => ({
+    ...run(`edit ${relative}`),
+    kind: 'edit',
+    toolKind: 'edit',
+    command: null,
+    paths: [`${ROOT}/${relative}`],
+  });
+  const judged = async (input: ApprovalRequest) => {
+    const shell = input.command ? await parseShell(input.command) : null;
+    const options = { shell, files, sparkRules: { rules: RECOMMENDED_RULES, once: [] } };
+    return decide('full_access', input, NO_RUN_RULES, [], options);
+  };
+
+  it.each([
+    [editOf('.GIT/hooks/pre-commit'), ['.GIT/hooks/pre-commit']],
+    [editOf('.git/Config'), ['.git/Config']],
+    [run('cp x .GIT/hooks'), ['.git/hooks']],
+    [run('echo x > .git/HOOKS/x'), ['.git/HOOKS/x']],
+    [run('rm -rf .Git'), ['.git']],
+  ])('asks to hold before %#, on macOS', async (input, labels) => {
+    on('darwin');
+    expect(await judged(input)).toEqual({
+      verdict: 'ask',
+      reason: GIT_CONTROL_REASON,
+      gitControl: labels,
+    });
+  });
+
+  it('asks before editing agents.MD on macOS', async () => {
+    on('darwin');
+    expect(await judged(editOf('agents.MD'))).toEqual({
+      verdict: 'ask',
+      reason: INSTRUCTION_REASON,
+      instructionFiles: ['agents.MD'],
+    });
+  });
+
+  it.each(['src/Agents.ts', 'docs/git.md', 'Readme.MD', 'build/.github-cache'])(
+    'leaves %s to the mode on macOS',
+    async (relative) => {
+      on('darwin');
+      expect((await judged(editOf(relative))).verdict).toBe('allow');
+      expect((await judged(run(`cp x ${relative}`))).verdict).toBe('allow');
+    },
+  );
+
+  it.each(['cp x .GIT/hooks', 'rm -rf .Git'])(
+    'keeps exact case for %s on Linux',
+    async (command) => {
+      on('linux');
+      expect(await judged(run(command))).not.toHaveProperty('gitControl');
+    },
+  );
 });

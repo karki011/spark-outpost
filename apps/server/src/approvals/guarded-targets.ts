@@ -1,4 +1,4 @@
-import { protectedPath } from '../projects/path-policy.ts';
+import { namesFoldCase, protectedPath } from '../projects/path-policy.ts';
 import type { SparkRuleSet } from '../spark-rules/resolve.ts';
 import { commandTree, treeWords } from './command-tree.ts';
 import { resolveCommandPath } from './commands.ts';
@@ -50,7 +50,7 @@ function controlLabel(request: ApprovalRequest, target: string): string | null {
   const { relative } = place(request.roots, target);
   if (relative !== null) {
     if (protectedPath(relative) === 'git_control') return relative;
-    const folded = process.platform === 'win32' ? relative.toLowerCase() : relative;
+    const folded = namesFoldCase() ? relative.toLowerCase() : relative;
     if (FOLDER_LABELS.has(folded)) return folded;
   }
   return gitControlLabel(request.roots, target) ?? gitFolderLabel(request.roots, target);
