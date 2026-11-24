@@ -100,6 +100,15 @@ function runProjections(queryClient: QueryClient): RunProjections {
   return kept;
 }
 
+export function warmRunStreams(
+  queryClient: QueryClient,
+  conversationId: string,
+  runIds: readonly string[],
+): void {
+  const kept = runProjections(queryClient);
+  for (const runId of runIds) kept.warm(runId, conversationId);
+}
+
 const NOT_WATCHING = () => () => undefined;
 
 export function useRunStream(runId: string, conversationId: string, live = true): RunProjection {

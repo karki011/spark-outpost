@@ -46,6 +46,10 @@ export class RunProjections {
     };
   }
 
+  warm(runId: string, conversationId: string): void {
+    this.watch(runId, conversationId, () => undefined)();
+  }
+
   private follow(runId: string, conversationId: string): Followed {
     const run: Followed = {
       projection: initialRunProjection,

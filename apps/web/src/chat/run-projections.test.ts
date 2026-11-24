@@ -94,4 +94,13 @@ describe('following a running turn', () => {
     open();
     expect([...source.live.keys()]).toEqual(['r3', 'r4']);
   });
+
+  it('starts following a turn when its chat is hovered, before anything is on screen', () => {
+    const { source, projections } = kept();
+    projections.warm('r1', 'chat');
+    for (const event of [started, opens, says('Ready')]) source.send('r1', event);
+    expect(text(projections, 'r1')).toBe('Ready');
+    projections.watch('r1', 'chat', () => undefined);
+    expect(source.subscribed).toEqual(['r1']);
+  });
 });
