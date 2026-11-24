@@ -4,7 +4,7 @@ import {
   type CalendarGoogleStatus,
   type GoogleSignInFlow,
 } from '@spark-outpost/contracts';
-import { getGoogleEvent } from './api.ts';
+import { getGoogleEvent, replyToGoogleEvent, type GoogleReply } from './api.ts';
 import type { Db } from '../../persistence/db.ts';
 import { googleCalendarSecret, type SecretStore } from '../../setup/secrets.ts';
 import {
@@ -89,6 +89,10 @@ export interface GoogleSource {
   window(): GoogleWindowEvents;
   range(from: number, to: number): Promise<GoogleWindowEvents>;
   detail(occurrence: GoogleOccurrence): Promise<CalendarEventDetail | null>;
+  reply(
+    occurrence: GoogleOccurrence,
+    reply: GoogleReply,
+  ): Promise<'sent' | 'needs_grant' | 'not_found'>;
   signIn(request: GoogleSignInRequest): Promise<GoogleSignInFlow>;
   signInFlow(): GoogleSignInFlow;
   cancelSignIn(): GoogleSignInFlow;
@@ -335,8 +339,34 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       return signIn.start({
         accountId: account?.row.id ?? null,
         editCalendar: account ? request.editCalendar : null,
+        replies: account ? request.replies === true : false,
         loginHint: account?.row.email ?? null,
       });
+    },
+    async reply(occurrence, reply) {
+      const parts = splitGoogleEventId(occurrence.eventId);
+      const account = parts ? accounts.get(parts.accountId) : undefined;
+      const prefix = `google:${account?.row.id ?? ''}:`;
+      const calendarId = occurrence.calendarId?.startsWith(prefix)
+        ? occurrence.calendarId.slice(prefix.length)
+        : null;
+      if (!accountDeps || !parts || !account || !calendarId) return 'not_found';
+      if (!account.row.canEdit) return 'needs_grant';
+      try {
+        await withFreshToken(accountDeps, account, (api) =>
+          replyToGoogleEvent(api, calendarId, parts.eventId, reply),
+        );
+      } catch (error) {
+        if (!needsSignInAgain(error)) throw error;
+        await markSignInAgain(accountDeps, account);
+        schedule(account.row.id, null);
+        emit();
+        throw new GoogleSignInNeeded();
+      }
+      ranges?.dropAccount(account.row.id);
+      await poll(account.row.id);
+      emit();
+      return 'sent';
     },
     signInFlow: () => signIn?.flow() ?? IDLE_FLOW,
     cancelSignIn: () => signIn?.cancel() ?? IDLE_FLOW,

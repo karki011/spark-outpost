@@ -161,7 +161,7 @@ The mock (`docs/design/mocks/meetings-mock.html`) redraws the calendar screen af
 - On a Google calendar it patches the user's own attendee entry (`responseStatus`). It needs the `calendar.events` scope the **Agents can edit** switch already asks for; a user who only wants to reply is asked for the same scope with a card that says why. Unlike agent writes, a reply is sent with `sendUpdates=all`: telling the organiser is the point.
 - On a calendar that reaches Spark only through macOS Calendar the button is **Reply in Calendar** and opens the event there, since EventKit cannot change a participant's status.
 
-This reverses "Inviting and RSVP are not offered" in [Calendar](CALENDAR.md) for RSVP only; inviting and adding attendees stay out.
+Built for Google events on 2026-11-24 as **Going?** with **Yes**, **No** and **Maybe** (see **Replies** in [Calendar](CALENDAR.md)); **Reply in Calendar** for macOS Calendar events is not built, and inviting and adding attendees stay out.
 
 ## Tools
 

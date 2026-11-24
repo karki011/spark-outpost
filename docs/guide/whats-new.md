@@ -26,7 +26,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| Calendar **Week** view; **Show weekends**       | [See your day](calendar.md).                               |
+| Calendar **Week** view; Google invite replies   | [See your day](calendar.md).                               |
 | Faster; protocol logs kept 14 days              | Older [protocol logs](guardrails.md) go at first start.    |
 | Meetings drop speaker echo; faster Voice start  | —                                                          |
 | Share copies the link; checks secrets again     | [Share one](share-an-artifact.md).                         |

@@ -1,4 +1,8 @@
-import { CALENDAR_ATTENDEES_MAX, type CalendarPerson } from '@spark-outpost/contracts';
+import {
+  CALENDAR_ATTENDEES_MAX,
+  type CalendarMyStatus,
+  type CalendarPerson,
+} from '@spark-outpost/contracts';
 
 const TEXT_MAX = 300;
 const LOCATION_MAX = 2_000;
@@ -9,6 +13,7 @@ export interface Invitee {
   email: string | null;
   isMe: boolean;
   room: boolean;
+  reply?: CalendarMyStatus;
 }
 
 const isRoom = (invitee: Invitee) =>
@@ -20,7 +25,8 @@ export function peopleOf(invitees: readonly Invitee[]): CalendarPerson[] {
     .flatMap((invitee) => {
       const email = invitee.email?.trim().slice(0, TEXT_MAX) || null;
       const name = invitee.name.trim().slice(0, TEXT_MAX) || email;
-      return name ? [{ name, email }] : [];
+      const reply = invitee.reply ? { reply: invitee.reply } : {};
+      return name ? [{ name, email, ...reply }] : [];
     })
     .slice(0, CALENDAR_ATTENDEES_MAX);
 }

@@ -227,6 +227,7 @@ POST /api/calendar/refresh
 PUT /api/calendar/marks
 POST /api/calendar/open
 POST /api/calendar/event
+POST /api/calendar/reply
 GET /api/calendar/google/sign-in
 POST /api/calendar/google/sign-in
 DELETE /api/calendar/google/sign-in

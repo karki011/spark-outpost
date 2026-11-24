@@ -324,6 +324,53 @@ test('keeps Agents can edit off with a note when Google doesn’t allow editing'
   if (SHOTS) await account.screenshot({ path: `${SHOTS}/google-edit-declined.png` });
 });
 
+test('a Google invitation is answered from its popover after allowing replies', async ({
+  page,
+}) => {
+  await seedGoogle([
+    {
+      id: 'invite',
+      iCalUID: 'invite@google.com',
+      summary: 'Roadmap review',
+      start: { dateTime: iso(90) },
+      end: { dateTime: iso(120) },
+      attendees: [
+        { email: GOOGLE_STUB_EMAIL, self: true, responseStatus: 'needsAction' },
+        { email: 'ana@example.com', displayName: 'Ana Ruiz', responseStatus: 'accepted' },
+      ],
+    },
+  ]);
+  await openCard(page);
+  await addGoogle(page);
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Today/ })
+    .click();
+  await today(page).getByRole('radio', { name: 'Week' }).click();
+  await today(page).getByRole('checkbox', { name: 'Show weekends' }).check();
+  await today(page)
+    .getByRole('button', { name: /^Roadmap review, .*Not answered/ })
+    .click();
+  const popover = page.getByRole('dialog');
+  await expect(popover).toContainText('Ana Ruiz');
+  await expect(popover).toContainText('Accepted');
+  const popup = page.waitForEvent('popup');
+  await popover.getByRole('button', { name: 'Allow replies' }).click();
+  await (await popup).close();
+  const going = popover.getByRole('group', { name: 'Going?' });
+  await expect(going.getByRole('button', { name: 'Yes' })).toHaveAttribute('aria-pressed', 'false');
+  await going.getByRole('button', { name: 'Maybe' }).click();
+  await expect(going.getByRole('button', { name: 'Maybe' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(popover).toContainText('Your reply: Maybe');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/google-reply.png` });
+  const results = await new AxeBuilder({ page }).include('.mo-pop').analyze();
+  expect(results.violations).toEqual([]);
+});
+
 test('shows the Calendars access note, not a Mac account, when macOS refuses Add calendar', async ({
   page,
 }) => {

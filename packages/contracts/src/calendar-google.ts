@@ -72,9 +72,23 @@ export const calendarGoogleStatusSchema = z.object({
 export type CalendarGoogleStatus = z.infer<typeof calendarGoogleStatusSchema>;
 
 export const startGoogleSignInSchema = z
-  .object({ accountId: z.uuid().optional(), editCalendar: z.uuid().optional() })
+  .object({
+    accountId: z.uuid().optional(),
+    editCalendar: z.uuid().optional(),
+    replies: z.boolean().optional(),
+  })
   .strict()
-  .refine((request) => !request.editCalendar || request.accountId, {
+  .refine((request) => !(request.editCalendar || request.replies) || request.accountId, {
     message: 'Allowing edits needs the Google account.',
   });
 export type StartGoogleSignIn = z.infer<typeof startGoogleSignInSchema>;
+
+export const GOOGLE_REPLY_NEEDS_GRANT =
+  'Spark can’t reply for this Google account yet. Select Allow replies and approve it with Google.';
+
+export function googleEventAccountId(eventId: string): string | null {
+  if (!isGoogleEventId(eventId)) return null;
+  const rest = eventId.slice(GOOGLE_EVENT_ID_PREFIX.length);
+  const colon = rest.indexOf(':');
+  return colon > 0 ? rest.slice(0, colon) : null;
+}

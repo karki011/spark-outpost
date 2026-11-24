@@ -7,6 +7,8 @@ import {
   calendarChoicePatchSchema,
   calendarMarkRequestSchema,
   calendarOccurrenceSchema,
+  calendarReplyRequestSchema,
+  GOOGLE_REPLY_NEEDS_GRANT,
   calendarSettingsPatchSchema,
   type CalendarOccurrence,
   isGoogleEventId,
@@ -253,6 +255,40 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
       return detail;
     }),
   );
+
+  router.post('/calendar/reply', (req, res) =>
+    guarded(res, async () => {
+      const request = parseBody(calendarReplyRequestSchema, req);
+      if (!google || !isGoogleEventId(request.eventId)) {
+        throw new BadRequestError('Replies are sent for Google calendars only.');
+      }
+      const choices = await savedChoices(deps.db, deps.workspaceId);
+      const calendarId =
+        choices.find((choice) => choice.key === request.calendarKey)?.calendarId ?? null;
+      const outcome = await cloudWrite(() =>
+        google.reply({ eventId: request.eventId, start: request.start, calendarId }, request.reply),
+      );
+      if (outcome === 'needs_grant') {
+        throw new CalendarHostError('not_authorized', GOOGLE_REPLY_NEEDS_GRANT);
+      }
+      if (outcome === 'not_found') throw new CalendarHostError('not_found', 'That event is gone.');
+      return { ok: true };
+    }),
+  );
+
+  const cloudWrite = async <T>(work: () => Promise<T>): Promise<T> => {
+    try {
+      return await work();
+    } catch (error) {
+      if (error instanceof GoogleSignInNeeded) {
+        throw new CalendarHostError('not_authorized', error.message);
+      }
+      if (error instanceof GoogleApiError || error instanceof GoogleAuthError) {
+        throw new CalendarHostError('failed', error.message);
+      }
+      throw error;
+    }
+  };
 
   const cloudDetail = async (occurrence: CalendarOccurrence) => {
     const source = isGoogleEventId(occurrence.eventId) ? google : microsoft;

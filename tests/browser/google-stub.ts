@@ -81,7 +81,7 @@ export async function handleGoogle(req: IncomingMessage, res: ServerResponse, pa
   }
   const answer = await google.fetch(`http://stub${rest}${url.search}`, {
     method: req.method ?? 'GET',
-    body: req.method === 'POST' ? await body(req) : null,
+    body: req.method === 'POST' || req.method === 'PATCH' ? await body(req) : null,
     headers: { authorization: req.headers.authorization ?? '' },
   });
   res.writeHead(answer.status, { 'content-type': 'application/json' });

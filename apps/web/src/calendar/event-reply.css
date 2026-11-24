@@ -1,0 +1,36 @@
+.ev-reply {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.ev-reply-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ev-reply-ask {
+  margin-right: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ev-reply-row .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+.ev-reply-row .btn[aria-pressed='true'] {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--panel);
+}
+
+.ev-reply .td-hint {
+  margin: 0;
+}
+
+.cal-person-reply {
+  color: var(--muted);
+}

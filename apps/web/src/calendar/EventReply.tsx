@@ -1,0 +1,105 @@
+import './event-reply.css';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  googleEventAccountId,
+  type CalendarEvent,
+  type CalendarReply,
+  type GoogleSignInFlow,
+} from '@spark-outpost/contracts';
+import { calendarApi, calendarKeys } from './calendar-api.ts';
+import { useCalendarStatus } from './use-calendar.ts';
+import { useCloudSignIn } from './use-cloud-calendar.ts';
+
+const CHOICES: readonly { reply: CalendarReply; label: string }[] = [
+  { reply: 'accepted', label: 'Yes' },
+  { reply: 'declined', label: 'No' },
+  { reply: 'tentative', label: 'Maybe' },
+];
+
+function useReply(event: CalendarEvent) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reply: CalendarReply) =>
+      calendarApi.reply({
+        eventId: event.id,
+        start: event.start,
+        calendarKey: event.calendarKey,
+        reply,
+      }),
+    onSettled: () =>
+      queryClient.invalidateQueries({
+        queryKey: calendarKeys.all,
+        predicate: (query) => query.queryKey[1] !== 'status',
+      }),
+  });
+}
+
+function AllowReplies(props: { accountId: string; email: string; flow: GoogleSignInFlow }) {
+  const { flow, start } = useCloudSignIn('google', props.flow, true);
+  const waiting = flow.status === 'waiting';
+  const failed = flow.status === 'failed' ? flow.message : null;
+  return (
+    <div className="ev-reply">
+      <button
+        type="button"
+        className="btn line sm"
+        disabled={start.isPending || waiting}
+        onClick={() =>
+          start.mutate({ accountId: props.accountId, editCalendar: null, replies: true })
+        }
+      >
+        {waiting ? 'Waiting for Google…' : 'Allow replies'}
+      </button>
+      <p className="td-hint">
+        Google asks in your browser to let Spark change events for {props.email}. Spark uses it to
+        send your reply.
+      </p>
+      {(start.error || failed) && (
+        <p className="home-error" role="alert">
+          {start.error?.message ?? failed}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function EventReply({ event }: { event: CalendarEvent }) {
+  const status = useCalendarStatus();
+  const send = useReply(event);
+  const accountId = googleEventAccountId(event.id);
+  const account = status.data?.google.accounts.find((item) => item.id === accountId);
+  if (!accountId || !account || event.myStatus === 'none') return null;
+  if (!account.canEdit) {
+    return (
+      <AllowReplies accountId={accountId} email={account.email} flow={status.data!.google.signIn} />
+    );
+  }
+  const current = send.isPending ? send.variables : event.myStatus;
+  return (
+    <div className="ev-reply">
+      <div className="ev-reply-row" role="group" aria-label="Going?">
+        <span className="ev-reply-ask" aria-hidden="true">
+          Going?
+        </span>
+        {CHOICES.map((choice) => (
+          <button
+            key={choice.reply}
+            type="button"
+            className="btn line sm"
+            aria-pressed={current === choice.reply}
+            disabled={send.isPending}
+            onClick={() => send.mutate(choice.reply)}
+          >
+            {choice.label}
+          </button>
+        ))}
+      </div>
+      <p className="td-hint">Google tells the organiser and guests.</p>
+      {send.error && (
+        <p className="home-error" role="alert">
+          {send.error.message}
+        </p>
+      )}
+    </div>
+  );
+}

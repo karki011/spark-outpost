@@ -304,3 +304,31 @@ export async function deleteGoogleEvent(
 ): Promise<void> {
   await call(deps, eventPath(calendarId, eventId), NO_UPDATES(), { method: 'DELETE' });
 }
+
+export type GoogleReply = 'accepted' | 'tentative' | 'declined';
+
+const rawAttendeesSchema = z.object({
+  attendees: z.array(z.record(z.string(), z.unknown())).max(2_000).optional(),
+});
+
+export async function replyToGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  eventId: string,
+  reply: GoogleReply,
+): Promise<GoogleEvent> {
+  const path = eventPath(calendarId, eventId);
+  const current = rawAttendeesSchema.safeParse(await getJson(deps, path, new URLSearchParams()));
+  if (!current.success) throw new GoogleApiError('bad_response', 'Google sent an odd event.');
+  const attendees = current.data.attendees ?? [];
+  if (!attendees.some((attendee) => attendee.self === true)) {
+    throw new GoogleApiError('forbidden', 'You are not on this event’s guest list.');
+  }
+  const body = {
+    attendees: attendees.map((attendee) =>
+      attendee.self === true ? { ...attendee, responseStatus: reply } : attendee,
+    ),
+  };
+  const query = new URLSearchParams({ sendUpdates: 'all' });
+  return parsedEvent(await getJson(deps, path, query, { method: 'PATCH', body }));
+}
