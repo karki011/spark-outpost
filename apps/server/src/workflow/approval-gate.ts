@@ -52,6 +52,7 @@ import { chosenModeWhy } from './ask-auto.ts';
 import { runEvents } from './run-events.ts';
 import { approvalPayload, displayTitle, refusedSubject, subject } from './approval-payload.ts';
 import { parseShell } from '../approvals/shell-parse.ts';
+import { readCodexCommand } from '../approvals/powershell-read.ts';
 import { blockedNote, policyDenial } from '../approvals/policy-blocked.ts';
 import {
   allowOption,
@@ -151,6 +152,7 @@ export interface ApprovalGate extends PermissionGate {
 }
 
 export function createApprovalGate(deps: GateDeps): ApprovalGate {
+  const codexOnWindows = deps.provider === 'codex' && process.platform === 'win32';
   const grants = new Set<string>();
   let waiting = 0;
 
@@ -376,8 +378,11 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
     asked: ApprovalRequest,
     signal: AbortSignal,
   ): Promise<GateAnswer> => {
-    const sent = await secretSend(asked);
+    const reading = await readCodexCommand(asked, codexOnWindows);
+    const readAs = reading.readAs;
+    const sent = await secretSend(readAs ? { ...asked, command: readAs } : asked);
     const request = await withoutSentSecrets(asked, sent);
+    const judged = readAs ? { ...request, command: readAs } : request;
     const what = subject(request);
     await afterQueuedUpdates();
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
@@ -397,26 +402,27 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
       changesProject: deps.changesProject === true,
       askRun: deps.askRun === true,
       askEdits: deps.askEdits === true,
-      baseUpdate: await baseUpdateFor(deps, request),
+      baseUpdate: await baseUpdateFor(deps, judged),
       workRun: deps.workRun === true,
       askAutoWhy: autoAsked(deps, request) && deps.askAuto ? await deps.askAuto() : null,
       planningWhy: planningWhy(request),
-      defaultBranch: await forcePushDefault(request),
+      defaultBranch: await forcePushDefault(judged),
       observed: (await deps.observations?.labels()) ?? [],
-      own: await ownRepoFor(deps.db, deps.runId, request),
+      own: await ownRepoFor(deps.db, deps.runId, judged),
       secretSend: sent,
       instructionGrants,
       outsideWriteGrant: await outsideWriteGranted(deps.db, deps.runId),
-      shell: request.kind === 'execute' ? await parseShell(request.command) : null,
+      shell: request.kind === 'execute' ? await parseShell(judged.command) : null,
       agentAsks: Boolean(request.agentReason),
-      powershell: deps.provider === 'codex' && process.platform === 'win32',
+      powershell: reading.unreadable,
+      readAs,
       sparkRules: await sparkRulesForRun(deps.db, deps.runId),
-      ...(await publishContext(deps.db, deps.publish, request)),
+      ...(await publishContext(deps.db, deps.publish, judged)),
     };
     const weighed = await withPrefetchedFiles(
       diskFiles,
       (files): Weighed => {
-        const held = deps.holdsSends ? heldCommand(request, files, options.own ?? null) : null;
+        const held = deps.holdsSends ? heldCommand(judged, files, options.own ?? null) : null;
         if (held) {
           return {
             decision: { verdict: 'reject', reason: HELD_REASON },
@@ -427,7 +433,7 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
         }
         return {
           ...decideRuled(postureOf(request), request, runRules, allowlist, { ...options, files }),
-          secretReads: secretReadLabels(request, files, options.shell ?? null),
+          secretReads: secretReadLabels(judged, files, options.shell ?? null),
         };
       },
       UNDECIDED,

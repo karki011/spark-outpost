@@ -55,7 +55,7 @@ function addressOf(toolName: string | null, rawInput: Record<string, unknown>): 
 }
 
 function quotedScript(command: string): string | null {
-  if (!/^["']/.test(command.trim())) return null;
+  if (process.platform === 'win32' || !/^["']/.test(command.trim())) return null;
   const parts = splitCommandLine(command);
   const script = parts.length === 1 && parts[0]!.tokens.length === 1 ? parts[0]!.tokens[0]! : null;
   return script !== null && /\s/.test(script.trim()) ? script : null;

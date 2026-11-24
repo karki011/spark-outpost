@@ -50,6 +50,16 @@ describe('approvalRequestFrom', () => {
     expect(asked(`'git push --force origin main'`)).toBe('git push --force origin main');
   });
 
+  it('leaves a quoted script to the PowerShell reader on Windows', () => {
+    const platform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    try {
+      expect(asked(`"Remove-Item C:\\Users\\me"`)).toBe(`"Remove-Item C:\\Users\\me"`);
+    } finally {
+      Object.defineProperty(process, 'platform', { value: platform });
+    }
+  });
+
   it('leaves every other command as the agent sent it', () => {
     for (const command of [
       'npm test',
