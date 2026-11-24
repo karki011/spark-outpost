@@ -112,6 +112,7 @@ export * from './desktop-help.ts';
 export * from './boot-teasers.ts';
 export * from './text-match.ts';
 export * from './guide.ts';
+export * from './guide-whats-new.ts';
 export * from './guide-search.ts';
 export * from './secrets.ts';
 export * from './secret-files.ts';

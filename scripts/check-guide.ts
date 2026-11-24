@@ -19,9 +19,15 @@ const SETTINGS_SECTIONS = path.resolve(
   '../apps/web/src/settings/settings-sections.tsx',
 );
 
+function guideFileNames(directory: string): string[] {
+  return readdirSync(directory, { recursive: true, encoding: 'utf8' }).filter((entry) =>
+    entry.endsWith('.md'),
+  );
+}
+
 function readPages(): GuidePage[] {
   const files: Record<string, string> = {};
-  for (const name of readdirSync(GUIDE).filter((entry) => entry.endsWith('.md'))) {
+  for (const name of guideFileNames(GUIDE)) {
     files[name] = readFileSync(path.join(GUIDE, name), 'utf8');
   }
   return loadGuidePages(files);

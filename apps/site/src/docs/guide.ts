@@ -39,7 +39,7 @@ function guideImage(src: string): GuideImage | null {
 
 export function buildDocs(template: string): BuiltDocs {
   const sources = Object.fromEntries(
-    readdirSync(GUIDE_DIR)
+    readdirSync(GUIDE_DIR, { recursive: true, encoding: 'utf8' })
       .filter((file) => file.endsWith('.md'))
       .map((file) => [file, readFileSync(resolve(GUIDE_DIR, file), 'utf8')]),
   );

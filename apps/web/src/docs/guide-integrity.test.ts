@@ -8,7 +8,8 @@ const WEB_SRC = path.resolve(import.meta.dirname, '..');
 
 function readGuide(): GuidePage[] {
   const files: Record<string, string> = {};
-  for (const name of readdirSync(GUIDE).filter((entry) => entry.endsWith('.md'))) {
+  const names = readdirSync(GUIDE, { recursive: true, encoding: 'utf8' });
+  for (const name of names.filter((entry) => entry.endsWith('.md'))) {
     files[name] = readFileSync(path.join(GUIDE, name), 'utf8');
   }
   return loadGuidePages(files);
