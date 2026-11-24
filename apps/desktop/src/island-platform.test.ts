@@ -21,9 +21,10 @@ describe('Spark Island on Windows', () => {
     expect(islandLevel('darwin')).toBe('status');
   });
 
-  it('asks for notches only on the Mac', () => {
+  it('asks for notches everywhere but Windows', () => {
     expect(readsNotches('darwin')).toBe(true);
     expect(readsNotches('win32')).toBe(false);
+    expect(readsNotches('linux')).toBe(true);
   });
 
   it('docks at the top centre of the work area, below a taskbar at the top', () => {

@@ -199,6 +199,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         hideInShare: () => companion.status().hideInShare,
         savePosition: (position) => companion.setPosition(position),
         preventActivation,
+        platform: process.platform,
         log: options.log,
         onGone: () => {
           if (island === opened) island = null;

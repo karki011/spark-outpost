@@ -10,7 +10,7 @@ export function islandLevel(platform: NodeJS.Platform): 'status' | 'screen-saver
 }
 
 export function readsNotches(platform: NodeJS.Platform): boolean {
-  return platform === 'darwin';
+  return platform !== 'win32';
 }
 
 export function windowsDisplay(display: DisplayInfo): DisplayInfo {

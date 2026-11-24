@@ -65,13 +65,14 @@ interface IslandWindowOptions {
   savePosition: (position: IslandPosition) => void;
   onGone: () => void;
   preventActivation: PreventActivation;
+  platform: NodeJS.Platform;
   log: (line: string) => void;
 }
 
 export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const emulated = app.isPackaged ? null : emulatedNotch(process.env.SPARK_ISLAND_NOTCH);
   let notches: Notches = new Map();
-  const onWindows = process.platform === 'win32';
+  const onWindows = options.platform === 'win32';
   const info = (display: Display): DisplayInfo => {
     const described = {
       id: display.id,
@@ -98,7 +99,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   let lastPointer = '';
 
   options.preventActivation(window);
-  window.setAlwaysOnTop(true, islandLevel(process.platform));
+  window.setAlwaysOnTop(true, islandLevel(options.platform));
   window.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true,
     skipTransformProcessType: true,
@@ -181,7 +182,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   };
 
   const measure = () => {
-    if (emulated || !readsNotches(process.platform)) return;
+    if (emulated || !readsNotches(options.platform)) return;
     void readNotches().then((next) => {
       if (window.isDestroyed()) return;
       notches = next;
