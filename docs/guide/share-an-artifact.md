@@ -12,10 +12,10 @@ Give someone a page an agent made, such as a chart or a report. About 1 minute.
 2. Pick the version in the version menu, then select **Share…**.
 3. Turn on **Require a passcode** if the page is private. Spark makes the code.
 4. Pick when **Link ends after**: 1 day or 7 days (the default).
-5. Select **Create link**, then **Copy link**, and **Copy code** if there is one. Send the code separately from the link.
+5. Select **Create link**. Spark copies the link; select **Copy code** if there is one, and send the code separately from the link.
 6. Select **Done**. The button now reads **Shared**.
 
-The passcode shows only in that window. Spark doesn't keep it. To get a new one, stop sharing and share again. Five wrong codes lock the link for 15 minutes.
+The passcode shows only in that window. Spark doesn't keep it. To get a new one, stop sharing and share again. Five wrong codes lock the link for that visitor for 15 minutes.
 
 ## Stop sharing
 
@@ -32,7 +32,7 @@ Deleting the chat or artifact takes its pages down too, as does a failed share. 
 | The version you picked, as stored, and its title | Your chats, other versions, files |
 | The passcode, if any, and your theme's colours   | Your keys or sign-ins             |
 
-The page was already scrubbed of secret values when the agent made it. An SVG is sent inside a page that shows it as an image, so its scripts don't run. Markdown artifacts can't be shared yet.
+A page that holds a secret value isn't shared. An SVG is sent inside a page that shows it as an image, so its scripts don't run. Markdown artifacts can't be shared yet.
 
 Each version gets one link. To change its passcode or end date, stop sharing and share again. Only your click shares: agents, Ask Spark and [paired devices](use-your-phone.md) can't.
 

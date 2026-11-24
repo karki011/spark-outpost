@@ -1,5 +1,6 @@
 import { createShare, deleteShare } from './api.ts';
 import type { ShareEnv } from './env.ts';
+import { recordEvent } from './events.ts';
 import { methodPage } from './pages.ts';
 import { jsonError, pageResponse } from './responses.ts';
 import { removeExpired } from './storage.ts';
@@ -64,6 +65,10 @@ export async function handleRequest(
 export default {
   fetch: (request: Request, env: ShareEnv) => handleRequest(request, env),
   scheduled: (_controller: unknown, env: ShareEnv, context: ScheduledContext) => {
-    context.waitUntil(removeExpired(env, Date.now()));
+    context.waitUntil(
+      removeExpired(env, Date.now()).then((removed) => {
+        recordEvent(env, 'share_expired', { amount: removed });
+      }),
+    );
   },
 };

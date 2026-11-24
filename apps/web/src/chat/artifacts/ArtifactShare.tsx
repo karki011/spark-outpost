@@ -26,6 +26,15 @@ type Sheet = 'confirm' | 'shared' | null;
 
 const STATUS_STALE_MS = 5 * 60_000;
 
+async function copiedToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const MARKDOWN_REASON = 'Markdown artifacts can’t be shared yet. Use Copy or Save as… instead.';
 
 function failureText(error: unknown): string {
@@ -50,6 +59,7 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
   });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [passcode, setPasscode] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -80,6 +90,7 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
 
   const close = () => {
     setSheet(null);
+    setLinkCopied(false);
     setPasscode(null);
     setFailure(null);
     setNotice(null);
@@ -107,6 +118,7 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
         });
         await settle(created.share);
         setPasscode(created.passcode);
+        setLinkCopied(await copiedToClipboard(created.share.url));
       } catch (error) {
         const already = alreadySharedSchema.safeParse(
           error instanceof ApiError ? error.body : null,
@@ -162,6 +174,7 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
         <SharedSheet
           share={share}
           passcode={passcode}
+          linkCopied={linkCopied}
           notice={notice}
           canShareAgain={available}
           busy={busy}

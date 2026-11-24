@@ -143,14 +143,20 @@ export async function findShare(env: ShareEnv, id: string, now: number) {
   return liveRecord(env, id, await env.SHARES.head(shareKey(id)), now);
 }
 
-export async function readShare(env: ShareEnv, id: string, now: number): Promise<string | null> {
-  const object = await env.SHARES.get(shareKey(id));
-  const record = await liveRecord(env, id, object, now);
-  return object && record ? object.text() : null;
+export interface ReadShare {
+  record: ShareRecord;
+  html: string;
 }
 
-export async function removeExpired(env: ShareEnv, now: number): Promise<void> {
+export async function readShare(env: ShareEnv, id: string, now: number): Promise<ReadShare | null> {
+  const object = await env.SHARES.get(shareKey(id));
+  const record = await liveRecord(env, id, object, now);
+  return object && record ? { record, html: await object.text() } : null;
+}
+
+export async function removeExpired(env: ShareEnv, now: number): Promise<number> {
   let cursor: string | undefined;
+  let removed = 0;
   do {
     const page = await env.SHARES.list({
       prefix: SHARE_PREFIX,
@@ -165,8 +171,10 @@ export async function removeExpired(env: ShareEnv, now: number): Promise<void> {
       removals.push({ id, hasPasscode: Boolean(record?.passcode) });
     }
     await removeAll(env, removals);
+    removed += removals.length;
     cursor = page.truncated ? page.cursor : undefined;
   } while (cursor !== undefined);
+  return removed;
 }
 
 export async function putReport(env: ShareEnv, id: string, reason: string, now: number) {

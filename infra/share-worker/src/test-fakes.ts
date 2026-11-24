@@ -1,5 +1,6 @@
 import { ShareCounters, type CounterStorage } from './counters.ts';
 import { randomToken, shareIdFor } from './crypto.ts';
+import type { EventDataset } from './events.ts';
 import type {
   ListOptions,
   PutOptions,
@@ -86,6 +87,10 @@ class FakeStorage implements CounterStorage {
     this.values.set(key, structuredClone(value));
   }
 
+  async delete(key: string) {
+    return this.values.delete(key);
+  }
+
   async deleteAll() {
     this.values.clear();
   }
@@ -95,7 +100,9 @@ class FakeStorage implements CounterStorage {
   }
 }
 
-export function fakeEnv(options: { signingKey?: string | null; pageSize?: number } = {}) {
+export function fakeEnv(
+  options: { signingKey?: string | null; pageSize?: number; events?: EventDataset } = {},
+) {
   const bucket = new FakeBucket(options.pageSize ?? 1000);
   const storages = new Map<string, FakeStorage>();
   const counters = new Map<string, ShareCounters>();
@@ -126,8 +133,10 @@ export function fakeEnv(options: { signingKey?: string | null; pageSize?: number
       },
     },
     ...(signingKey === null ? {} : { SIGNING_KEY: signingKey }),
+    ...(options.events ? { EVENTS: options.events } : {}),
   };
-  return { env, bucket, storages };
+  const alarm = async (name: string) => counters.get(name)?.alarm();
+  return { env, bucket, storages, alarm };
 }
 
 export type FakeEnv = ReturnType<typeof fakeEnv>;
@@ -153,11 +162,12 @@ export const VALID_CREATE: CreateBody = {
 export function call(
   fake: FakeEnv,
   path: string,
-  init: RequestInit & { ip?: string } = {},
+  init: RequestInit & { ip?: string; site?: string | null } = {},
   now = START,
 ) {
   const headers = new Headers(init.headers);
   headers.set('cf-connecting-ip', init.ip ?? '203.0.113.7');
+  if (init.site !== null) headers.set('sec-fetch-site', init.site ?? 'same-origin');
   return handleRequest(new Request(`${ORIGIN}${path}`, { ...init, headers }), fake.env, now);
 }
 
