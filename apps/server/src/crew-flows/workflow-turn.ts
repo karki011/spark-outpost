@@ -18,6 +18,8 @@ import {
   removeRunCheckout,
   type PullPlace,
 } from './pr-checkout.ts';
+import { pullBlockedLine, pullBlocksRun, readRunPull } from './pull-material.ts';
+import { finishWorkflowRun, settleStep } from './run-records.ts';
 import { keepStepEdits, prepareStepEdits } from './step-edits.ts';
 import { runPull } from './step-place-gather.ts';
 import { runPullLine } from './step-place.ts';
@@ -94,15 +96,25 @@ async function pullPlaceOf(h: Handoff, turn: TurnWorkflowRun): Promise<PullPlace
   });
 }
 
+type Placed =
+  { end: WorkflowEnd | 'lease_lost'; checkout: string | null } | { end: 'blocked'; line: string };
+
 async function runOnPlace(
   h: Handoff,
   turn: TurnWorkflowRun,
   options: Parameters<typeof runWorkflow>[2],
-): Promise<{ end: WorkflowEnd | 'lease_lost'; checkout: string | null }> {
+): Promise<Placed> {
   const pull = await pullPlaceOf(h, turn);
+  const read = await readRunPull(h, turn, pull);
+  if (h.control.reason() === 'lease_lost') return { end: 'lease_lost', checkout: null };
+  const stopped = h.control.signal.aborted;
+  if (!stopped && pullBlocksRun(h, read) && pull.kind === 'unlinked') {
+    return { end: 'blocked', line: pullBlockedLine(turn.workflow.name, pull.pull, read.reason) };
+  }
+  const pullMaterial = read.kind === 'read' ? read.material : null;
   let end: WorkflowEnd | 'lease_lost';
   try {
-    end = await runWorkflow(h, turn, { ...options, pull });
+    end = await runWorkflow(h, turn, { ...options, pull, pullMaterial });
   } catch (error) {
     if (pull.kind === 'checkout') await removeRunCheckout(h.deps.db, turn.run.id);
     throw error;
@@ -110,7 +122,19 @@ async function runOnPlace(
   if (end === 'lease_lost') return { end, checkout: null };
   const changed = pull.kind === 'checkout' ? await checkoutChanges(pull.path) : [];
   if (pull.kind === 'checkout') await removeRunCheckout(h.deps.db, turn.run.id);
-  return { end, checkout: checkoutNote(pull, changed) };
+  return { end, checkout: checkoutNote(pull, changed, pullMaterial !== null) };
+}
+
+async function stopUnstarted(h: Handoff, turn: TurnWorkflowRun, line: string): Promise<void> {
+  const { db } = h.deps;
+  for (const step of turn.run.steps)
+    await settleStep(db, turn.run.id, step.stepId, 'skipped', line);
+  await finishWorkflowRun(db, turn.run.id, 'failed', null);
+  await updateOrchestration(db, h.lease.runId, { phase: 'finished' });
+  await publishOrchestration(h);
+  await h.append(runEvents.error(line, 'orchestration_failed'), {
+    transition: { status: 'failed', error: line },
+  });
 }
 
 export async function workflowTurn(
@@ -133,7 +157,12 @@ export async function workflowTurn(
     turn.run.kind === 'review'
       ? await reviewOptions(deps.db, input.workspaceId, turn.run.id)
       : undefined;
-  const { end, checkout } = await runOnPlace(h, prepared, review === undefined ? {} : { review });
+  const placed = await runOnPlace(h, prepared, review === undefined ? {} : { review });
+  if (placed.end === 'blocked') {
+    await stopUnstarted(h, turn, placed.line);
+    return 'finished';
+  }
+  const { end, checkout } = placed;
   if (end === 'lease_lost') return 'finished';
   if (review !== undefined) await settleReviewOfWorkflowRun(deps.db, turn.run.id);
   await keepStepEdits(h, prepared);
