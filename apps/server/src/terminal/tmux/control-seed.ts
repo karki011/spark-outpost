@@ -64,7 +64,8 @@ export function seedText(
   const history = modes.historySize === 0 ? [] : scrolled;
   const rows = (lines: readonly string[]) => lines.map((line) => `${RESET}${line}`).join('\r\n');
   const tail = `${RESET}${modeSequences(modes)}`;
-  const shown = newestWithin(visible, maxBytes - Buffer.byteLength(tail, 'utf8'));
+  const opening = modes.alternate ? ENTER_ALTERNATE : '';
+  const shown = newestWithin(visible, maxBytes - Buffer.byteLength(`${opening}${tail}`, 'utf8'));
   const screen = modes.alternate ? `${ENTER_ALTERNATE}${rows(shown)}` : rows(shown);
   const after = `${screen}${tail}`;
   const before = newestWithin(

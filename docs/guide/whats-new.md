@@ -10,7 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| Faster chats; protocol logs kept 14 days        | Older [protocol logs](guardrails.md) go at first start.    |
+| Faster; protocol logs kept 14 days by default   | Older [protocol logs](guardrails.md) go at first start.    |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
 | Workflow editor: one **Save**, **When it runs** | [Schedules](workflow-schedules.md).                        |
 | Spark **Setup**, **Used in**, default Spark     | [Set up a Spark](spark-setup.md).                          |

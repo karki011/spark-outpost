@@ -68,6 +68,13 @@ describe('terminal seed after adoption', () => {
     expect(cut).not.toContain('row 0 ');
   });
 
+  it('counts the alternate-screen opening in the budget', () => {
+    const screen = Array.from({ length: 40 }, (_, index) => `row ${index} ${'y'.repeat(100)}`);
+    const cut = seedText([['0 1 0 0 0 [25]'], [], [], screen], 1500);
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(1500);
+    expect(cut).toContain('row 39 ');
+  });
+
   it('sends no row at all when one row alone is over the budget', () => {
     const huge = 'z'.repeat(2 * 1024 * 1024);
     const cut = seedText([['0 0 0 0 0 [25]'], [], [], ['above', huge]], 384 * 1024);
