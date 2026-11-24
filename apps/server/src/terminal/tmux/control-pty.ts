@@ -54,7 +54,7 @@ export function controlPty(
   const pane = adopted ?? createSession(host, start);
   created?.();
   let decoder = new StringDecoder('utf8');
-  const withoutAnswered = createAnsweredQueryFilter();
+  let withoutAnswered = createAnsweredQueryFilter();
   const dataListeners: ((data: string) => void)[] = [];
   const exitListeners: ((exit: Exit) => void)[] = [];
   let client: ControlClient;
@@ -62,6 +62,7 @@ export function controlPty(
   let answered = false;
   let ended = false;
   let paused = false;
+  let unseeded: { prefix: string; maxBytes?: number | undefined } | null = null;
 
   let batch = '';
   const flush = () => {
@@ -110,24 +111,33 @@ export function controlPty(
     });
     client.onClosed(lost);
     checkDeath();
+    if (unseeded && !paused) seed(unseeded.prefix, unseeded.maxBytes);
   }
 
-  const seed = (prefix: string, maxBytes?: number) =>
+  function seed(prefix: string, maxBytes?: number) {
+    unseeded = null;
     requestSeed(
       client,
       pane.paneId,
       (text) => {
-        if (paused) return;
+        if (paused || ended) return;
+        if (text === null) {
+          unseeded = { prefix, maxBytes };
+          return;
+        }
         emit(prefix + text);
         seeded = true;
       },
       maxBytes,
     );
+  }
   const pause = () => {
     if (paused || ended) return;
     paused = true;
     seeded = false;
+    unseeded = null;
     decoder = new StringDecoder('utf8');
+    withoutAnswered = createAnsweredQueryFilter();
     client.command(`refresh-client -A '${pane.paneId}:pause'`);
   };
   const resume = () => {

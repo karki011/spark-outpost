@@ -98,17 +98,21 @@ export function seedText(
 export function requestSeed(
   client: ControlClient,
   paneId: string,
-  onSeed: (seed: string) => void,
+  onSeed: (seed: string | null) => void,
   maxBytes = Number.POSITIVE_INFINITY,
 ): void {
   const replies: string[][] = [];
-  const collect = (lines: string[] | null) => replies.push(lines ?? []);
+  let complete = true;
+  const collect = (lines: string[] | null) => {
+    if (!lines) complete = false;
+    replies.push(lines ?? []);
+  };
   const capture = (extra: string) => `capture-pane -p -e -N -t ${paneId} ${extra}`.trim();
   client.command(`display-message -p -t ${paneId} '${MODE_FORMAT}'`, collect);
   client.command(capture(`-S -${SEED_HISTORY_LINES} -E -1`), collect);
   client.command(capture('-a -q'), collect);
   client.command(capture(''), (lines) => {
     collect(lines);
-    onSeed(seedText(replies, maxBytes));
+    onSeed(complete ? seedText(replies, maxBytes) : null);
   });
 }

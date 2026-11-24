@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { modeSequences, parseModes, seedText } from './control-seed.ts';
+import type { ControlClient } from './control-client.ts';
+import { modeSequences, parseModes, requestSeed, seedText } from './control-seed.ts';
 
 describe('terminal seed after adoption', () => {
   it('reads the pane modes tmux reports', () => {
@@ -91,5 +92,34 @@ describe('terminal seed after adoption', () => {
     const cut = seedText([['0 0 0 0 0 [25]'], [], [], ['above', huge]], 384 * 1024);
     expect(Buffer.byteLength(cut, 'utf8')).toBeLessThan(100);
     expect(cut).not.toContain('above');
+  });
+});
+
+describe('requesting a seed', () => {
+  function clientAnswering(answers: (string[] | null)[]): ControlClient {
+    const left = [...answers];
+    return {
+      command: (_text, onReply) => onReply?.(left.shift() ?? null),
+      onOutput: () => undefined,
+      onNotice: () => undefined,
+      onClosed: () => undefined,
+      close: () => undefined,
+    };
+  }
+
+  it('gives the screen when every capture answered, an empty screen included', () => {
+    const seeds: (string | null)[] = [];
+    requestSeed(clientAnswering([['0 0 0 0 0 [25]'], [], [], []]), '%1', (seed) =>
+      seeds.push(seed),
+    );
+    expect(seeds).toEqual([seedText([['0 0 0 0 0 [25]'], [], [], []])]);
+  });
+
+  it('gives no seed when the connection closed before the captures answered', () => {
+    const seeds: (string | null)[] = [];
+    requestSeed(clientAnswering([['0 0 0 0 0 [25]'], ['old'], null, null]), '%1', (seed) =>
+      seeds.push(seed),
+    );
+    expect(seeds).toEqual([null]);
   });
 });
