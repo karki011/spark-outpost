@@ -26,6 +26,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Calendar **Week** view; **Show weekends**       | [See your day](calendar.md).                               |
 | Faster; protocol logs kept 14 days              | Older [protocol logs](guardrails.md) go at first start.    |
 | Meetings drop speaker echo; faster Voice start  | —                                                          |
 | Share copies the link; checks secrets again     | [Share one](share-an-artifact.md).                         |
@@ -71,4 +72,3 @@ summary: What changed in recent releases and what to do next.
 | Mac app: privacy screen, left-bar lock                     | [Turn it on](privacy-screen.md); **⇧⌘L** locks now.                                      |
 | **GitHub** page, reviews, auto-review, resizing            | [Guide](github-page.md).                                                                 |
 | **⌘1**–**⌘9** open chats                                   | [Keyboard shortcuts](keyboard-shortcuts.md#chats).                                       |
-| Agent terminal card; compact workflows; more redaction     | —                                                                                        |

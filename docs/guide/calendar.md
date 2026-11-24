@@ -18,15 +18,15 @@ Google sign-ins expire weekly until verified: **Sign in again**. Microsoft needs
 
 ## Use it
 
-- **Today**, or the clock below **Settings**, opens on **Month** and **Scheduled**; Enter opens **Day**.
+- **Today**, or the clock below **Settings**, opens **Month** and **Scheduled**, or **Week**; Enter opens **Day**.
 - Select an event: **Join**, **Start a chat for this**, **Remind me 5 min before**, **Hold alerts during this**.
 - Events show your reply (**Accepted**, **Maybe**, **Not answered**, **Declined**). **Day** marks free time.
-- **Take notes** records it: [Meeting notes (alpha)](meetings.md).
-- **Refresh now** re-reads.
+- **Take notes** records: [Meeting notes (alpha)](meetings.md).
+- **Refresh now** syncs.
 
 Settings → Notifications, in order: **Wrap-up reminder**; **Join opens** shows the meeting with **Join** and hops Scout; **Alert at** lowers the card; **Anything to capture?** opens notes Spark took.
 
-Scout lowers a card: **Join at start** until 2 min before, then **Join**; **Snooze until start**; **Join now**; **Open in Today**; **Dismiss**, for good. ✕ or Esc closes it until the start. **⌘J** joins.
+Scout lowers a card: **Join at start** until 2 min before, then **Join**; **Snooze until start**; **Join now**; **Open in Today**; **Dismiss** for good. ✕ or Esc closes it until the start. **⌘J** joins.
 
 VoiceOver and keyboard users get focus (**⌃⌥⌘M**); a silent notification mirrors it.
 

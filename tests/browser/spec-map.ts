@@ -233,6 +233,7 @@ export const SPEC_GROUPS = {
     'calendar-microsoft',
     'calendar-month',
     'calendar-nudges',
+    'calendar-week',
     'companion',
     'digest',
     'home',

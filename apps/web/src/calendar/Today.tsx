@@ -10,6 +10,7 @@ import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { CopyToasts } from './copy-toast.tsx';
 import { DayView, type TodayProps } from './DayView.tsx';
 import { MonthView } from './MonthView.tsx';
+import { WeekView } from './WeekView.tsx';
 import { RefreshCalendar } from './RefreshCalendar.tsx';
 import { TodayStatePage } from './TodayStates.tsx';
 import { todayState } from './today-model.ts';
@@ -19,11 +20,12 @@ import { MeetingsView } from './MeetingsView.tsx';
 import { PageTabs } from '../ui/PageTabs.tsx';
 import { RecordingBar, useMeetingStatus } from '../meetings/index.ts';
 
-type CalendarView = 'month' | 'day';
+type CalendarView = 'month' | 'week' | 'day';
 type CalendarPage = 'calendar' | 'transcripts';
 
 const VIEWS = [
   { id: 'month', label: 'Month' },
+  { id: 'week', label: 'Week' },
   { id: 'day', label: 'Day' },
 ];
 
@@ -61,7 +63,8 @@ const VIEW_KEY = 'spark.today.view';
 
 function savedView(): CalendarView {
   try {
-    return sessionStorage.getItem(VIEW_KEY) === 'day' ? 'day' : 'month';
+    const saved = sessionStorage.getItem(VIEW_KEY);
+    return saved === 'day' || saved === 'week' ? saved : 'month';
   } catch {
     return 'month';
   }
@@ -176,6 +179,16 @@ function TodayViews(props: TodayProps) {
               switcher={switcher}
               onDate={pickDate}
               onSelect={setSelected}
+            />
+          ) : view === 'week' ? (
+            <WeekView
+              date={date}
+              today={today}
+              now={now}
+              switcher={switcher}
+              onDate={pickDate}
+              onOpenDay={openDay}
+              onStartChat={props.onStartChat}
             />
           ) : (
             <MonthView
