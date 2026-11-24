@@ -278,7 +278,33 @@ export async function branchSafeToDelete(
   return (await pushed(root, tip)) || (await mergedInto(root, tip));
 }
 
-export async function tipMerged(root: string, tip: string | null, baseCommit: string) {
+async function ancestry(root: string, tip: string, ref: string): Promise<boolean | null> {
+  try {
+    await git(root, ['merge-base', '--is-ancestor', tip, ref]);
+    return true;
+  } catch (error) {
+    return (error as { code?: unknown }).code === 1 ? false : null;
+  }
+}
+
+export async function tipMergedAt(
+  root: string,
+  refs: RepoRefs,
+  tip: string | null,
+  baseCommit: string,
+): Promise<boolean | null> {
+  if (!tip || tip === baseCommit) return false;
+  let unknown = false;
+  for (const ref of [refs.head, refs.remoteDefault]) {
+    if (!ref) continue;
+    const merged = await ancestry(root, tip, ref);
+    if (merged) return true;
+    if (merged === null) unknown = true;
+  }
+  return unknown ? null : false;
+}
+
+async function tipMerged(root: string, tip: string | null, baseCommit: string) {
   if (!tip || tip === baseCommit) return false;
   return mergedInto(root, tip);
 }

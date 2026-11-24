@@ -6,7 +6,7 @@ import {
 } from '../persistence/chat-worktrees.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { releaseChatWorktree, type Released, type ReleaseReason } from './chat-worktree-cleanup.ts';
-import { branchMerged, repoRefsOf, tipMerged, type RepoRefs } from './chat-worktrees.ts';
+import { branchMerged, repoRefsOf, tipMergedAt, type RepoRefs } from './chat-worktrees.ts';
 
 const SWEEP_EVERY_MS = 60_000;
 const REPOS_AT_ONCE = 4;
@@ -104,11 +104,12 @@ async function sweepOne(
   const refs = await refsOf(record.repoRoot);
   const key = refsKey(refs, record.branch);
   if (key !== null && unmergedAt.get(record.id) === key) return;
+  const tip = refs?.tips.get(record.branch) ?? null;
   const merged = refs
-    ? tipMerged(record.repoRoot, refs.tips.get(record.branch) ?? null, record.baseCommit)
-    : branchMerged(record.repoRoot, record.branch, record.baseCommit);
-  if (!(await merged)) {
-    if (key === null) unmergedAt.delete(record.id);
+    ? await tipMergedAt(record.repoRoot, refs, tip, record.baseCommit)
+    : await branchMerged(record.repoRoot, record.branch, record.baseCommit);
+  if (!merged) {
+    if (key === null || merged === null) unmergedAt.delete(record.id);
     else unmergedAt.set(record.id, key);
     return;
   }

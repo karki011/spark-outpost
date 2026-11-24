@@ -53,7 +53,7 @@ export function controlPty(
   const created = start.observer?.begin('new_session');
   const pane = adopted ?? createSession(host, start);
   created?.();
-  const decoder = new StringDecoder('utf8');
+  let decoder = new StringDecoder('utf8');
   const withoutAnswered = createAnsweredQueryFilter();
   const dataListeners: ((data: string) => void)[] = [];
   const exitListeners: ((exit: Exit) => void)[] = [];
@@ -127,6 +127,7 @@ export function controlPty(
     if (paused || ended) return;
     paused = true;
     seeded = false;
+    decoder = new StringDecoder('utf8');
     client.command(`refresh-client -A '${pane.paneId}:pause'`);
   };
   const resume = () => {

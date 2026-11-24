@@ -7,6 +7,7 @@ const CURSOR_SHOWN = 25;
 const RESET = '\x1b[0m';
 const ENTER_ALTERNATE = '\x1b[?1049h\x1b[H';
 const SEED_HISTORY_LINES = 2000;
+const ROW_END = '\r\n';
 
 export interface PaneModes {
   historySize: number;
@@ -55,6 +56,24 @@ function newestWithin(lines: readonly string[], maxBytes: number): readonly stri
   return from === 0 ? lines : lines.slice(from);
 }
 
+function screenRows(visible: readonly string[], maxBytes: number) {
+  let kept = newestWithin(visible, maxBytes);
+  const skippedBytes = () => (visible.length - kept.length) * ROW_END.length;
+  while (kept.length > 0 && kept.length < visible.length) {
+    if (rowBytes(kept) + skippedBytes() <= maxBytes) break;
+    kept = kept.slice(1);
+  }
+  const skipped = kept.length === 0 ? '' : ROW_END.repeat(visible.length - kept.length);
+  return { kept, skipped };
+}
+
+function rowBytes(lines: readonly string[]): number {
+  return lines.reduce(
+    (sum, line) => sum + Buffer.byteLength(line, 'utf8') + RESET.length + ROW_END.length,
+    0,
+  );
+}
+
 export function seedText(
   replies: readonly (readonly string[])[],
   maxBytes = Number.POSITIVE_INFINITY,
@@ -65,8 +84,8 @@ export function seedText(
   const rows = (lines: readonly string[]) => lines.map((line) => `${RESET}${line}`).join('\r\n');
   const tail = `${RESET}${modeSequences(modes)}`;
   const opening = modes.alternate ? ENTER_ALTERNATE : '';
-  const shown = newestWithin(visible, maxBytes - Buffer.byteLength(`${opening}${tail}`, 'utf8'));
-  const screen = modes.alternate ? `${ENTER_ALTERNATE}${rows(shown)}` : rows(shown);
+  const shown = screenRows(visible, maxBytes - Buffer.byteLength(`${opening}${tail}`, 'utf8'));
+  const screen = `${opening}${shown.skipped}${rows(shown.kept)}`;
   const after = `${screen}${tail}`;
   const before = newestWithin(
     modes.alternate ? [...history, ...saved] : history,

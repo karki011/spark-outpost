@@ -75,6 +75,17 @@ describe('terminal seed after adoption', () => {
     expect(cut).toContain('row 39 ');
   });
 
+  it('leaves the kept rows of a cut screen on their own lines', () => {
+    const screen = Array.from({ length: 40 }, (_, index) => `row ${index} ${'y'.repeat(100)}`);
+    const cut = seedText([['0 1 0 0 0 [25]'], [], [], screen], 1500);
+    const body = cut.slice('\x1b[?1049h\x1b[H'.length);
+    const lines = body.split('\r\n');
+    expect(lines).toHaveLength(40);
+    expect(lines[39]).toContain('row 39 ');
+    expect(lines[0]).toBe('');
+    expect(Buffer.byteLength(cut, 'utf8')).toBeLessThanOrEqual(1500);
+  });
+
   it('sends no row at all when one row alone is over the budget', () => {
     const huge = 'z'.repeat(2 * 1024 * 1024);
     const cut = seedText([['0 0 0 0 0 [25]'], [], [], ['above', huge]], 384 * 1024);

@@ -10,7 +10,7 @@ import {
   addChatWorktree,
   bringChanges,
   branchMerged,
-  tipMerged,
+  tipMergedAt,
   branchTipOf,
   listBranches,
   repoRefsOf,
@@ -181,9 +181,12 @@ describe('reading the refs a merged check depends on', () => {
     const after = await repoRefsOf(root);
     expect(after?.head).toBe(tip);
     expect(await branchMerged(root, 'spark/one', base)).toBe(true);
-    expect(await tipMerged(root, tip, base)).toBe(true);
-    expect(await tipMerged(root, base, base)).toBe(false);
-    expect(await tipMerged(root, null, base)).toBe(false);
+    expect(await tipMergedAt(root, after!, tip, base)).toBe(true);
+    expect(await tipMergedAt(root, after!, base, base)).toBe(false);
+    expect(await tipMergedAt(root, after!, null, base)).toBe(false);
+    expect(await tipMergedAt(root, before!, tip, base)).toBe(false);
+    const broken = { ...after!, head: '0'.repeat(40) };
+    expect(await tipMergedAt(root, broken, tip, base)).toBeNull();
   });
 
   it('is unknown for a folder that is not a repository', async () => {
