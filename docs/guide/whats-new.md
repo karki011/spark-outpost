@@ -10,7 +10,8 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
-| Faster; protocol logs kept 14 days by default   | Older [protocol logs](guardrails.md) go at first start.    |
+| Faster; protocol logs kept 14 days              | Older [protocol logs](guardrails.md) go at first start.    |
+| Meetings drop speaker echo; faster Voice start  | —                                                          |
 | Windows: privacy screen, company rules          | [Privacy](privacy-screen.md).                              |
 | Share copies the link; checks secrets again     | [Share one](share-an-artifact.md).                         |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
@@ -41,12 +42,12 @@ summary: What changed in recent releases and what to do next.
 | Meeting card buttons on one row                 | Nothing to do.                                             |
 | **Health** in Settings                          | [Check Health](trouble-setup-and-reset.md#check-health).   |
 | Sent messages show where read                   | —                                                          |
-| Round card; top-right toasts                    | —                                                          |
 
 ## Mid-November 2026
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Cost** by tool; model switch cache note                  | [Prompt cache](statuses-and-limits.md#prompt-cache).                                     |
 | **Usage limits**; **Compact idle conversations**           | [Limits](statuses-and-limits.md#limits), [Compaction](compaction.md#compact-idle-chats). |
 | Meeting notes (alpha): live tab, delete dialog             | [Take meeting notes](meetings.md).                                                       |
 | Meeting alerts while locked; deleted links die; HTML folds | Nothing to do.                                                                           |

@@ -57,6 +57,8 @@ public final class MeetingStream {
         return atABreath ? take() : nil
     }
 
+    public var openStartMs: Int? { inSpeech ? milliseconds(segmentStart) : nil }
+
     public func flush() -> MeetingSegment? {
         guard inSpeech else { return nil }
         inSpeech = false
