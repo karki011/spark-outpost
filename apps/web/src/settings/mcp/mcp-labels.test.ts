@@ -17,6 +17,7 @@ function server(change: Partial<UserMcpServer> = {}): UserMcpServer {
     headerNames: [],
     secretNames: [],
     fingerprint: 'f1',
+    signIn: 'none',
     global: null,
     projects: [],
     check: null,

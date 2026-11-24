@@ -1,6 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import type * as acp from '@agentclientprotocol/sdk/unstable';
 import type { SecretStore } from '../../setup/secrets.ts';
+import type { McpBearer } from '../../mcp/launch.ts';
 import {
   ProviderError,
   type Provider,
@@ -34,6 +35,7 @@ export interface AcpProviderOptions {
   env?: Record<string, string>;
   loginEnv?: LoginShellEnv;
   secrets?: Pick<SecretStore, 'get'>;
+  mcpBearer?: McpBearer;
   cancelGraceMs?: number;
   sparkTools?: SparkToolsAccess;
   signedIn?: SignInCheck;

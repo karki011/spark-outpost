@@ -228,6 +228,10 @@ POST /api/calendar/refresh
 PUT /api/calendar/marks
 POST /api/calendar/open
 POST /api/calendar/event
+GET /api/mcp/servers/:id/sign-in
+POST /api/mcp/servers/:id/sign-in
+DELETE /api/mcp/servers/:id/sign-in
+POST /api/mcp/servers/:id/sign-out
 POST /api/calendar/reply
 POST /api/calendar/events
 GET /api/calendar/google/sign-in

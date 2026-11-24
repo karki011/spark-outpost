@@ -91,7 +91,7 @@ export interface AppOptions
     ChatSettingsDeps,
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
-    Pick<McpRouteDeps, 'probeMcp'>,
+    Pick<McpRouteDeps, 'probeMcp' | 'mcpOAuth'>,
     Pick<
       ConversationActionDeps,
       'deleteSettleMs' | 'chatFolders' | 'researchCopies' | 'sweepShares'

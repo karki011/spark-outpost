@@ -8,6 +8,7 @@ import { fadeReveal } from '../../ui/transitions.tsx';
 import { checkLine, scopeLine, sourceLabel, statusOf } from './mcp-labels.ts';
 import { McpProjectOverrides } from './McpProjectOverrides.tsx';
 import { McpServerDetails } from './McpServerDetails.tsx';
+import { McpSignIn } from './McpSignIn.tsx';
 import { useMcpChange } from './use-mcp.ts';
 
 interface McpServerCardProps {
@@ -98,6 +99,7 @@ export function McpServerCard({
                 )}
                 {server.check?.error && <pre className="mcp-error-text">{server.check.error}</pre>}
               </div>
+              {server.transport !== 'stdio' && <McpSignIn server={server} />}
               <div className="mcp-actions">
                 <button
                   type="button"
