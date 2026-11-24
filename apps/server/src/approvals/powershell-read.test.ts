@@ -50,8 +50,8 @@ describe('reading a PowerShell command as bash', () => {
     ['New-Item -ItemType Directory -Path x\\y -Force', 'mkdir -p -- x/y'],
     ['New-Item -Path src -Name a.ts', 'echo > src/a.ts'],
     ['mkdir out', 'mkdir -p -- out'],
-    ['ls src\\*.ts', 'ls -- src/*.ts'],
-    ['Remove-Item src\\*.tmp', 'rm -f -- src/*.tmp'],
+    ['Remove-Item -LiteralPath src\\[a].tmp', "rm -f -- 'src/[a].tmp'"],
+    ['git log > out.txt', 'git log > out.txt'],
     [
       'git status 2> $null; git diff > out.txt 2>&1',
       'git status 2> /dev/null; git diff > out.txt 2>&1',
@@ -108,16 +108,59 @@ describe('reading a PowerShell command as bash', () => {
     ['a provider-qualified path', 'Remove-Item FileSystem::C:\\x'],
     ['a long path prefix', 'Remove-Item \\\\?\\C:\\x'],
     ['an unknown program with .exe', 'robocopy.exe C:\\work\\app\\.env C:\\Users\\me'],
+    ['NEL between words', 'git push\u0085--force origin spark/fix-1'],
+    ['NEL in git config', 'git config\u0085core.hooksPath x'],
+    ['NEL in a path', 'Set-Content .git\\hooks\\pre-commit\u0085x'],
+    ['a file separator control', 'git push\u001c--force origin main'],
+    ['a non-breaking space', 'git push\u00a0--force origin main'],
+    ['non-ASCII outside quotes', 'git push origin spark/fix\u00e9'],
+    ['NEL inside quotes', "git commit -m 'a\u0085b'"],
+    ['an empty native argument', "git '' push --force origin main"],
+    [
+      'a double quote in a native argument',
+      `git push origin spark/fix-1 '--push-option=a b" main "--push-option=c'`,
+    ],
+    ['a spaced native argument ending in a backslash', "git commit -m 'a b\\'"],
+    ['a trailing dot in a path part', 'Get-Content C:\\Users\\me\\AppData\\Spark.\\Cookies'],
+    ['a trailing dot on a file', 'Set-Content AGENTS.md. x'],
+    ['a trailing space on a file', "Set-Content 'AGENTS.md ' x"],
+    ['a trailing dot on .git', 'Set-Content .git.\\hooks\\pre-commit x'],
+    ['a short name', 'Set-Content AGENTS~1.MD x'],
+    ['a short name as the new name', 'Rename-Item a.txt AGENTS~1.MD'],
+    ['a wildcard delete', "Remove-Item '.e*'"],
+    ['a bracket wildcard write', "Set-Content '[.]env' x"],
+    ['a question mark write', "Set-Content 'AGENTS.m?' x"],
+    ['a wildcard redirect', "echo x > 'AGENTS.m?'"],
+    ['a wildcard in a folder', 'Remove-Item -Recurse .git\\hoo*'],
+    ['a wildcard read', 'Get-ChildItem src\\*.ts'],
+    ['a wildcard destination', 'Copy-Item a.txt AGENTS.m?'],
+    ['a wildcard Out-File target', "Write-Output x | Out-File 'AGENTS.m?'"],
+    ['an unquoted /dev/null redirect', 'git status > /dev/null'],
+    ['a rooted path on the current drive', 'Set-Content \\dev\\null x'],
     ['certutil', 'certutil.exe -urlcache -f https://example.com a.exe'],
   ])('fails closed on %s', async (_name, command) => {
     expect(await readPowerShell(command)).toBeNull();
   });
 
-  it('reads only Codex commands on Windows', async () => {
+  it('reads only Codex commands on Windows, as Codex sent them', async () => {
     const request = { kind: 'execute', command: 'Remove-Item $x' } as ApprovalRequest;
-    expect(await readCodexCommand(request, false)).toEqual({ readAs: null, unreadable: false });
-    expect(await readCodexCommand(request, true)).toEqual({ readAs: null, unreadable: true });
+    expect(await readCodexCommand(request, false)).toEqual({
+      request,
+      readAs: null,
+      unreadable: false,
+    });
+    expect(await readCodexCommand(request, true)).toMatchObject({ readAs: null, unreadable: true });
     const read = await readCodexCommand({ ...request, command: 'git status' }, true);
-    expect(read).toEqual({ readAs: 'git status', unreadable: false });
+    expect(read).toMatchObject({ readAs: 'git status', unreadable: false });
+    const mangled = {
+      ...request,
+      command: 'Remove-Item C:Usersme',
+      sentCommand: '"Remove-Item C:\\Users\\me"',
+    };
+    const raw = await readCodexCommand(mangled, true);
+    expect(raw.request.command).toBe(mangled.sentCommand);
+    expect(raw.unreadable).toBe(true);
+    const titled = { ...request, command: 'git status', sentCommand: null };
+    expect(await readCodexCommand(titled, true)).toMatchObject({ readAs: null, unreadable: true });
   });
 });

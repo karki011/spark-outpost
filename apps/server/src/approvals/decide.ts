@@ -83,6 +83,7 @@ export interface ApprovalRequest {
   subagent?: string | null;
   attachedFiles?: readonly string[];
   readable?: readonly string[];
+  sentCommand?: string | null;
 }
 
 export type RunRule =

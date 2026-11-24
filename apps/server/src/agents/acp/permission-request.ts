@@ -55,18 +55,23 @@ function addressOf(toolName: string | null, rawInput: Record<string, unknown>): 
 }
 
 function quotedScript(command: string): string | null {
-  if (process.platform === 'win32' || !/^["']/.test(command.trim())) return null;
+  if (!/^["']/.test(command.trim())) return null;
   const parts = splitCommandLine(command);
   const script = parts.length === 1 && parts[0]!.tokens.length === 1 ? parts[0]!.tokens[0]! : null;
   return script !== null && /\s/.test(script.trim()) ? script : null;
 }
 
-function commandOf(rawInput: Record<string, unknown>, title: string): string | null {
+function sentCommandOf(rawInput: Record<string, unknown>): string | null {
   const command = rawInput.command ?? rawInput.cmd;
-  if (typeof command === 'string' && command.trim()) return quotedScript(command) ?? command;
+  if (typeof command === 'string' && command.trim()) return command;
   if (Array.isArray(command) && command.every((part) => typeof part === 'string')) {
     return command.join(' ');
   }
+  return null;
+}
+
+function commandOf(sent: string | null, title: string): string | null {
+  if (sent !== null) return quotedScript(sent) ?? sent;
   return title.trim() || null;
 }
 
@@ -159,13 +164,15 @@ export function approvalRequestFrom(
   const options = approvalOptions(params.options);
   const mcpServer = mcpServerOf(params, title);
   const agentReason = agentReasonOf(params);
+  const sentCommand = kind === 'execute' ? sentCommandOf(rawInput) : null;
   return gateRequest({
     toolCallId: toolCall.toolCallId,
     rpcId: context.rpcId,
     kind,
     toolKind,
     title,
-    command: kind === 'execute' ? commandOf(rawInput, title) : null,
+    command: kind === 'execute' ? commandOf(sentCommand, title) : null,
+    ...(kind === 'execute' ? { sentCommand } : {}),
     cwd: kind === 'execute' ? cwd : null,
     paths: kind === 'execute' ? [] : pathsOf(toolCall, rawInput, diffs, cwd),
     diffs,

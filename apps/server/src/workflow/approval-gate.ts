@@ -375,11 +375,11 @@ export function createApprovalGate(deps: GateDeps): ApprovalGate {
   };
 
   const decideRequest = async (
-    asked: ApprovalRequest,
+    given: ApprovalRequest,
     signal: AbortSignal,
   ): Promise<GateAnswer> => {
-    const reading = await readCodexCommand(asked, codexOnWindows);
-    const readAs = reading.readAs;
+    const reading = await readCodexCommand(given, codexOnWindows);
+    const { request: asked, readAs } = reading;
     const sent = await secretSend(readAs ? { ...asked, command: readAs } : asked);
     const request = await withoutSentSecrets(asked, sent);
     const judged = readAs ? { ...request, command: readAs } : request;

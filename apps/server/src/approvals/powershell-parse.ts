@@ -24,7 +24,9 @@ export type PsScript = PsStep[];
 class Unreadable extends Error {}
 
 const LOOKALIKE_QUOTES_AND_DASHES = /[‘-„–-―]/;
-const UNSAFE_TOKEN = /[$@(){},;|&<>"'`\s]/;
+const UNSAFE_TOKEN = /[$@(){},;|&<>"'`\s]|[^\x21-\x7E]/;
+export const NULL_DEVICE = '$null';
+const BLANK = /[ \t\r\n]/;
 const UNSAFE_EXPANDABLE = /[$`"]/;
 const TEMP_VARIABLE = /^\$env:(TEMP|TMP)(?=$|[\\/])/i;
 const NEGATIVE_NUMBER = /^-\d+$/;
@@ -111,7 +113,7 @@ function redirectOf(node: Node): PsRedirect {
   const unary = only(value, 'unary_expression');
   const inner = unary.namedChildren[0];
   if (inner?.type === 'variable' && inner.text.toLowerCase() === '$null') {
-    return { operator: operator.text, target: '/dev/null', quoted: false };
+    return { operator: operator.text, target: NULL_DEVICE, quoted: false };
   }
   const literal = expressionValue(value);
   if (literal.temp) fail();
@@ -122,7 +124,7 @@ function elementsOf(node: Node, command: PsCommand, walk: Walk): void {
   let previousEnd = -1;
   for (const child of children(node)) {
     if (child.type === 'command_argument_sep') {
-      if (child.text.trim() === '') continue;
+      if (/^[ \t\r\n]*$/.test(child.text)) continue;
       const last = command.args[command.args.length - 1];
       if (child.text !== ':' || last?.kind !== 'param' || last.colon) fail();
       if (child.startIndex !== previousEnd) fail();
@@ -218,7 +220,7 @@ function hasErrors(node: Node): boolean {
 
 function fullyCovered(walk: Walk): boolean {
   for (let index = 0; index < walk.source.length; index++) {
-    if (!walk.covered[index] && !/\s/.test(walk.source[index]!)) return false;
+    if (!walk.covered[index] && !BLANK.test(walk.source[index]!)) return false;
   }
   return true;
 }

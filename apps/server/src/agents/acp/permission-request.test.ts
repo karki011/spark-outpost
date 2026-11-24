@@ -50,14 +50,19 @@ describe('approvalRequestFrom', () => {
     expect(asked(`'git push --force origin main'`)).toBe('git push --force origin main');
   });
 
-  it('leaves a quoted script to the PowerShell reader on Windows', () => {
-    const platform = process.platform;
-    Object.defineProperty(process, 'platform', { value: 'win32' });
-    try {
-      expect(asked(`"Remove-Item C:\\Users\\me"`)).toBe(`"Remove-Item C:\\Users\\me"`);
-    } finally {
-      Object.defineProperty(process, 'platform', { value: platform });
-    }
+  it('keeps the command exactly as the agent sent it, or none for a title', () => {
+    const sent = (rawInput: unknown) =>
+      approvalRequestFrom(
+        {
+          sessionId: 's',
+          toolCall: { toolCallId: 'a', title: 'git push', kind: 'execute', rawInput },
+          options,
+        },
+        context,
+      ).sentCommand;
+    expect(sent({ command: `"Remove-Item C:\\Users\\me"` })).toBe(`"Remove-Item C:\\Users\\me"`);
+    expect(sent({ command: ['git', 'status'] })).toBe('git status');
+    expect(sent({})).toBeNull();
   });
 
   it('leaves every other command as the agent sent it', () => {

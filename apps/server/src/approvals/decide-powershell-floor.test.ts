@@ -1,8 +1,9 @@
 import { tmpdir } from 'node:os';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
 import {
   NO_RUN_RULES,
+  POWERSHELL_REASON,
   RUN_REJECTED_REASON,
   decide,
   ruleFor,
@@ -11,7 +12,7 @@ import {
 } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 import { toGatePath } from './gate-path.ts';
-import { readPowerShell } from './powershell-read.ts';
+import { readCodexCommand, readPowerShell } from './powershell-read.ts';
 import type { PublishGrant, TaskBranch } from './publish-policy.ts';
 import { parseShell } from './shell-parse.ts';
 import { recommendedRulesText, userRules } from '../spark-rules/recommended.ts';
@@ -155,5 +156,74 @@ describe('Codex PowerShell commands on Windows get the safety floor', () => {
     expect(
       decide('auto', run(command), rules, [], { files, readAs, shell: await parseShell(readAs) }),
     ).toEqual({ verdict: 'reject', reason: RUN_REJECTED_REASON });
+  });
+});
+
+async function gated(posture: ModePosture, command: string, extra: DecideOptions = {}) {
+  const reading = await readCodexCommand(run(command), true);
+  const shell = await parseShell(reading.readAs ?? command);
+  return decide(posture, reading.request, NO_RUN_RULES, [], {
+    changesProject: true,
+    files,
+    publish: { grant: GRANTS[0]!, task: TASK },
+    sparkRules: RECOMMENDED,
+    shell,
+    powershell: reading.unreadable,
+    readAs: reading.readAs,
+    ...extra,
+  });
+}
+
+const STILL_ASKS = { verdict: 'ask', reason: POWERSHELL_REASON };
+
+describe('PowerShell spellings the reader refuses keep asking', () => {
+  it.each([
+    'git push\u0085--force origin spark/fix-1',
+    'git config\u0085core.hooksPath x',
+    'Set-Content .git\\hooks\\pre-commit\u0085x',
+    "git '' push --force origin main",
+    `git push origin ${BRANCH} '--push-option=a b" main "--push-option=c'`,
+    'Set-Content AGENTS.md. x',
+    "Set-Content 'AGENTS.md ' x",
+    'Set-Content .git.\\hooks\\pre-commit x',
+    'Set-Content AGENTS~1.MD x',
+    "Remove-Item '.e*'",
+    "Set-Content '[.]env' x",
+    "Set-Content 'AGENTS.m?' x",
+    "echo x > 'AGENTS.m?'",
+    'Remove-Item -Recurse .git\\hoo*',
+    'git status > /dev/null',
+  ])('asks in full access: %s', async (command) => {
+    expect(await gated('full_access', command)).toEqual(STILL_ASKS);
+  });
+
+  it('refuses browser data reached through a trailing dot', async () => {
+    const command = 'Get-Content C:\\Users\\me\\AppData\\Spark.\\Cookies';
+    const browserData = '/c/Users/me/AppData/Spark';
+    expect(await gated('full_access', command, { browserData })).toEqual(STILL_ASKS);
+  });
+});
+
+describe('PowerShell paths on Windows match protected files in any letter case', () => {
+  const platform = process.platform;
+  afterEach(() => Object.defineProperty(process, 'platform', { value: platform }));
+
+  it.each([
+    ['Set-Content agents.MD x', 'instructionFiles'],
+    ['Set-Content .GIT\\hooks\\pre-commit x', 'gitControl'],
+    ['Set-Content .git\\HOOKS\\pre-commit x', 'gitControl'],
+    ['Set-Content .git\\Config x', 'gitControl'],
+  ])('asks before %s', async (command, field) => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    const decision = await gated('full_access', command);
+    expect(decision.verdict).toBe('ask');
+    expect(decision).toHaveProperty(field);
+  });
+
+  it('refuses browser data in another letter case', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    const command = 'Get-Content C:\\Users\\me\\AppData\\SPARK\\cookies';
+    const browserData = '/c/Users/me/AppData/Spark';
+    expect((await gated('full_access', command, { browserData })).verdict).toBe('reject');
   });
 });

@@ -14,6 +14,7 @@ import {
   type PsArg,
   type PsCommand,
   type PsRedirect,
+  NULL_DEVICE,
 } from './powershell-parse.ts';
 
 class Unreadable extends Error {}
@@ -29,27 +30,48 @@ function quote(text: string): string {
   return `'${text.replaceAll("'", `'\\''`)}'`;
 }
 
-function globWord(text: string): string {
-  return text.replace(/[^A-Za-z0-9_*?[\]/.:~=+@%^-]/g, (char) => `\\${char}`);
+const ODD_SPACES = /[\u0085\u00A0\u1680\u180E\u2000-\u200F\u2028-\u202F\u205F-\u206F\u3000\uFEFF]/;
+
+function unseenCharacters(text: string): boolean {
+  for (const char of text) {
+    const code = char.codePointAt(0)!;
+    const blank = char === '\t' || char === '\n' || char === '\r';
+    if ((code < 0x20 && !blank) || (code >= 0x7f && code <= 0x9f)) return true;
+  }
+  return ODD_SPACES.test(text);
 }
 
 const DRIVE_PATH = /^[A-Za-z]:\/[^:]*$/;
+const WILDCARDS = /[*?[]/;
+const SHORT_NAME = /~\d/;
+
+function spelledOnce(part: string): boolean {
+  if (part === '' || part === '.' || part === '..') return true;
+  return !/[. ]$/.test(part) && !SHORT_NAME.test(part);
+}
 
 function gatePath(text: string, temp: boolean): string {
   const forward = text.replaceAll('\\', '/');
   const colon = forward.indexOf(':');
   if (colon >= 0 && (temp || colon !== 1 || !DRIVE_PATH.test(forward))) fail();
+  if (!temp && forward.startsWith('/') && !forward.startsWith('//')) fail();
+  if (!forward.split('/').every(spelledOnce)) fail();
   if (temp) return gatePaths.join(toGatePath(tmpdir(), 'win32'), forward);
   return toGatePath(forward, 'win32');
 }
 
+function expanded(text: string): string {
+  if (WILDCARDS.test(text)) fail();
+  return text;
+}
+
 function pathWord(arg: PsArg, literal: boolean): string {
   if (arg.kind !== 'value') return fail();
-  const path = gatePath(arg.text, arg.temp);
-  if (path === '~' || path.startsWith('~/'))
+  const path = gatePath(literal ? arg.text : expanded(arg.text), arg.temp);
+  if (path === '~' || path.startsWith('~/')) {
     return `~${path.length > 1 ? quote(path.slice(1)) : ''}`;
-  const glob = !literal && !arg.quoted && /[*?[]/.test(path);
-  return glob ? globWord(path) : quote(path);
+  }
+  return quote(path);
 }
 
 function plain(arg: PsArg): string {
@@ -119,16 +141,19 @@ function newItemPath(bound: Bound): string {
   const name = one(bound, 'name');
   if (!path && !name) fail();
   if (!name) return pathWord(path!, false);
-  if (/[\\/]/.test(plain(name))) fail();
-  const base = path ? gatePath(plain(path), path.kind === 'value' && path.temp) : '.';
+  if (/[\\/]/.test(expanded(plain(name)))) fail();
+  const base = path ? gatePath(expanded(plain(path)), path.kind === 'value' && path.temp) : '.';
   return quote(gatePaths.join(base, plain(name)));
 }
 
 function renamed(bound: Bound): string {
-  const target = one(bound, 'literalpath') ?? one(bound, 'path');
+  const literal = one(bound, 'literalpath');
+  const target = literal ?? one(bound, 'path');
   const newName = one(bound, 'newname');
-  if (!target || !newName || /[\\/]/.test(plain(newName))) fail();
-  const from = gatePath(plain(target), target.kind === 'value' && target.temp);
+  if (!target || !newName || /[\\/]/.test(expanded(plain(newName)))) fail();
+  const written = plain(target);
+  const from = gatePath(target === literal ? written : expanded(written), false);
+  if (!spelledOnce(plain(newName))) fail();
   return `mv -- ${quote(from)} ${quote(gatePaths.join(gatePaths.dirname(from), plain(newName)))}`;
 }
 
@@ -159,7 +184,7 @@ function cmdletBash(spec: CmdletSpec, bound: Bound, piped: boolean): string {
     case 'Copy-Item':
     case 'Move-Item': {
       const destination = one(bound, 'destination');
-      const to = destination ? pathWord(destination, true) : quote('.');
+      const to = destination ? pathWord(destination, false) : quote('.');
       const verb = spec.name === 'Copy-Item' ? `cp${isOn(bound, 'recurse') ? ' -r' : ''}` : 'mv -f';
       return `${verb} -- ${targetOf(bound)} ${to}`;
     }
@@ -206,6 +231,10 @@ function echoed(command: PsCommand): string {
 const PATH_CHARS = /^[\w.:~\\/-]+$/;
 const WINDOWS_PATHISH = /\\|^[A-Za-z]:[\\/]/;
 
+function passesWhole(word: string): boolean {
+  return word !== '' && !word.includes('"') && !(/\s/.test(word) && word.endsWith('\\'));
+}
+
 function nativeArgs(args: readonly PsArg[]): string[] {
   const words: string[] = [];
   for (const arg of args) {
@@ -220,15 +249,16 @@ function nativeArgs(args: readonly PsArg[]): string[] {
     if (arg.glued && words.length > 0) words[words.length - 1] += word;
     else words.push(word);
   }
+  if (!words.every(passesWhole)) fail();
   return words.map(quote);
 }
 
 function redirectBash(redirect: PsRedirect): string {
   if (redirect.target === null) return redirect.operator;
   const target =
-    redirect.target === '/dev/null' && !redirect.quoted
+    redirect.target === NULL_DEVICE && !redirect.quoted
       ? '/dev/null'
-      : quote(gatePath(redirect.target, false));
+      : quote(gatePath(expanded(redirect.target), false));
   switch (redirect.operator) {
     case '>':
     case '1>':
@@ -265,6 +295,7 @@ function commandBash(command: PsCommand, piped: boolean): string {
 }
 
 export async function readPowerShell(command: string): Promise<string | null> {
+  if (unseenCharacters(command)) return null;
   const script = powershellScript(command);
   if (script === null) return null;
   const steps = await parsePowerShell(script);
@@ -283,6 +314,7 @@ export async function readPowerShell(command: string): Promise<string | null> {
 }
 
 export interface CommandReading {
+  request: ApprovalRequest;
   readAs: string | null;
   unreadable: boolean;
 }
@@ -292,8 +324,11 @@ export async function readCodexCommand(
   powershell: boolean,
 ): Promise<CommandReading> {
   if (!powershell || request.kind !== 'execute' || !request.command) {
-    return { readAs: null, unreadable: false };
+    return { request, readAs: null, unreadable: false };
   }
-  const readAs = await readPowerShell(request.command);
-  return { readAs, unreadable: readAs === null };
+  if (request.sentCommand === null) return { request, readAs: null, unreadable: true };
+  const sent =
+    request.sentCommand === undefined ? request : { ...request, command: request.sentCommand };
+  const readAs = await readPowerShell(sent.command!);
+  return { request: sent, readAs, unreadable: readAs === null };
 }
