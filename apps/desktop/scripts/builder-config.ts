@@ -13,6 +13,7 @@ import { SHARE_URL_ENV, shareServiceOrigin } from '@spark-outpost/contracts';
 import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 import { SLACK_CLIENT_ID_ENV, slackClientId } from '../src/slack-sign-in.ts';
 import { googleClientFromDownload, type GoogleClient } from '../src/google-client.ts';
+import { microsoftClientFromFile } from '../src/microsoft-client.ts';
 import { checkTmuxBinary } from './tmux-bundle.ts';
 import { MAC_CONTROL_BINARY, macControlCheck } from './mac-control-bundle.ts';
 import { checkStagedCalendar } from './calendar-bundle.ts';
@@ -93,6 +94,23 @@ export function packagedGoogleClient(
     );
   }
   return { ...client, verified: env[GOOGLE_APP_VERIFIED_ENV] === '1' };
+}
+
+export const MICROSOFT_CLIENT_FILE_ENV = 'SPARK_MICROSOFT_CLIENT_FILE';
+
+export function packagedMicrosoftClient(
+  env: Env,
+  read: (file: string) => string = (file) => readFileSync(file, 'utf8'),
+): string | null {
+  const file = (env[MICROSOFT_CLIENT_FILE_ENV] ?? '').trim();
+  if (file === '') return null;
+  const clientId = microsoftClientFromFile(read(file));
+  if (!clientId) {
+    throw new Error(
+      `${MICROSOFT_CLIENT_FILE_ENV} must name a JSON file holding the Microsoft app registration's client ID ({"client_id": "<application id>"}).`,
+    );
+  }
+  return clientId;
 }
 
 export function packagedSlackClientId(env: Env): string | null {
@@ -238,6 +256,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const githubApp = packagedGitHubApp(options.env);
   const slackApp = packagedSlackClientId(options.env);
   const google = packagedGoogleClient(options.env);
+  const microsoft = packagedMicrosoftClient(options.env);
   const shared: Configuration = {
     appId: options.appId ?? prod.appId,
     productName: prod.appName,
@@ -258,6 +277,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
             },
           }
         : {}),
+      ...(microsoft ? { microsoftApp: { client_id: microsoft } } : {}),
     },
     directories: { output: options.outputDir },
     npmRebuild: false,

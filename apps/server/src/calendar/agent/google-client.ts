@@ -24,8 +24,10 @@ import {
 } from '../google/api.ts';
 import type { GoogleClientConfig } from '../google/config.ts';
 import { splitGoogleEventId } from '../google/map.ts';
-import { googleAccounts, type GoogleAccountRow } from '../google/store.ts';
-import { collectEvents, fullSync, storedEvent, type CalendarSync } from '../google/sync.ts';
+import { cloudAccounts, type CloudAccountRow } from '../cloud/account-store.ts';
+import { fullSync, storedEvent } from '../google/sync.ts';
+import { collectEvents, type CalendarSync, type WindowEvents } from '../cloud/events.ts';
+import { settleAll } from '../cloud/poll.ts';
 import { peopleOf } from '../people.ts';
 import { dateKey } from '../service.ts';
 import { savedChoices } from '../store.ts';
@@ -43,17 +45,17 @@ export interface GoogleReads {
   reconcile(): Promise<void>;
   ready(): boolean;
   window(): { events: never[]; truncated: boolean };
-  range(from: number, to: number): Promise<ReturnType<typeof collectEvents>>;
+  range(from: number, to: number): Promise<WindowEvents>;
 }
 
-export interface GoogleTarget {
+export interface CloudCalendarTarget {
   accountId: string;
   calendarId: string;
 }
 
 export interface GoogleAgentClient {
   reads(workspaceId: string): GoogleReads;
-  account(workspaceId: string, accountId: string): Promise<GoogleAccountRow | null>;
+  account(workspaceId: string, accountId: string): Promise<CloudAccountRow | null>;
   detail(
     workspaceId: string,
     calendarId: string,
@@ -72,19 +74,17 @@ export interface GoogleAgentClient {
 export const GOOGLE_SIGN_IN_AGAIN =
   'Google sign-in for that account ran out. Ask the user to select Sign in again on the Calendar card.';
 
-export function googleTarget(calendarId: string): GoogleTarget | null {
+export function googleTarget(calendarId: string): CloudCalendarTarget | null {
   const match = /^google:([^:]+):(.+)$/.exec(calendarId);
   return match ? { accountId: match[1]!, calendarId: match[2]! } : null;
 }
-
-const RANGE_CONCURRENCY = 4;
 
 function reminderMinutes(raw: GoogleEvent): number | null {
   if (raw.reminders?.useDefault !== false) return null;
   return raw.reminders.overrides?.[0]?.minutes ?? null;
 }
 
-function detailOf(target: GoogleTarget, raw: GoogleEvent): AgentEventDetail | null {
+function detailOf(target: CloudCalendarTarget, raw: GoogleEvent): AgentEventDetail | null {
   const stored = storedEvent(target, raw);
   if (!stored) return null;
   const humans = (raw.attendees ?? []).filter((attendee) => !attendee.resource);
@@ -129,22 +129,13 @@ export function googleWriteBody(
   return body;
 }
 
-async function settled<T, R>(items: readonly T[], work: (item: T) => Promise<R>) {
-  const results: PromiseSettledResult<R>[] = [];
-  for (let index = 0; index < items.length; index += RANGE_CONCURRENCY) {
-    const batch = items.slice(index, index + RANGE_CONCURRENCY);
-    results.push(...(await Promise.allSettled(batch.map(work))));
-  }
-  return results;
-}
-
 export function createGoogleAgentClient(deps: GoogleAgentDeps): GoogleAgentClient {
   const now = deps.now ?? Date.now;
   const live = new Map<string, LiveAccount>();
 
   const accountDeps = (workspaceId: string) => ({ ...deps, workspaceId, now });
 
-  const liveOf = (row: GoogleAccountRow): LiveAccount => {
+  const liveOf = (row: CloudAccountRow): LiveAccount => {
     const known = live.get(row.id) ?? liveAccount(row);
     known.row = row;
     live.set(row.id, known);
@@ -152,7 +143,7 @@ export function createGoogleAgentClient(deps: GoogleAgentDeps): GoogleAgentClien
   };
 
   const usableAccount = async (workspaceId: string, accountId: string) => {
-    const row = (await googleAccounts(deps.db, workspaceId)).find(
+    const row = (await cloudAccounts(deps.db, 'google', workspaceId)).find(
       (candidate) => candidate.id === accountId,
     );
     if (!row) throw new CalendarAgentError('That Google account is no longer connected.');
@@ -175,13 +166,13 @@ export function createGoogleAgentClient(deps: GoogleAgentDeps): GoogleAgentClien
     }
   };
 
-  const targetOf = (calendarId: string): GoogleTarget => {
+  const targetOf = (calendarId: string): CloudCalendarTarget => {
     const target = googleTarget(calendarId);
     if (!target) throw new CalendarAgentError('That is not a Google calendar.');
     return target;
   };
 
-  const googleEventIdOf = (target: GoogleTarget, eventId: string): string => {
+  const googleEventIdOf = (target: CloudCalendarTarget, eventId: string): string => {
     const parts = splitGoogleEventId(eventId);
     if (!parts || parts.accountId !== target.accountId) {
       throw new CalendarAgentError('That event is not on this Google calendar.');
@@ -191,7 +182,7 @@ export function createGoogleAgentClient(deps: GoogleAgentDeps): GoogleAgentClien
 
   const accountRange = async (
     workspaceId: string,
-    row: GoogleAccountRow,
+    row: CloudAccountRow,
     bounds: { from: number; to: number },
   ): Promise<CalendarSync[]> => {
     const prefix = `google:${row.id}:`;
@@ -200,7 +191,7 @@ export function createGoogleAgentClient(deps: GoogleAgentDeps): GoogleAgentClien
       .map((choice) => choice.calendarId.slice(prefix.length));
     const window = { key: `${bounds.from}|${bounds.to}`, ...bounds };
     return withFreshToken(accountDeps(workspaceId), liveOf(row), async (api) => {
-      const results = await settled(calendars, (calendarId) =>
+      const results = await settleAll(calendars, (calendarId) =>
         fullSync(api, { accountId: row.id, calendarId }, window),
       );
       return results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
@@ -209,10 +200,10 @@ export function createGoogleAgentClient(deps: GoogleAgentDeps): GoogleAgentClien
 
   return {
     reads(workspaceId) {
-      let rows: GoogleAccountRow[] = [];
+      let rows: CloudAccountRow[] = [];
       return {
         async reconcile() {
-          rows = await googleAccounts(deps.db, workspaceId);
+          rows = await cloudAccounts(deps.db, 'google', workspaceId);
         },
         ready: () => rows.some((row) => !row.needsSignIn),
         window: () => ({ events: [], truncated: false }),
@@ -229,7 +220,7 @@ export function createGoogleAgentClient(deps: GoogleAgentDeps): GoogleAgentClien
       };
     },
     async account(workspaceId, accountId) {
-      const rows = await googleAccounts(deps.db, workspaceId);
+      const rows = await cloudAccounts(deps.db, 'google', workspaceId);
       return rows.find((row) => row.id === accountId) ?? null;
     },
     async detail(workspaceId, calendarId, eventId, start) {

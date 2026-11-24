@@ -6,6 +6,12 @@ order: 720
 summary: What changed in recent releases and what to do next.
 ---
 
+## End of November 2026
+
+| What changed                            | What to do                            |
+| --------------------------------------- | ------------------------------------- |
+| Microsoft 365 and Outlook.com calendars | [See your day](calendar.md#sign-ins). |
+
 ## Late November 2026
 
 | What changed                                    | What to do                                                 |
@@ -60,5 +66,3 @@ summary: What changed in recent releases and what to do next.
 | No **Ask about this**; hidden sidebar stays hidden         | Use **Add to chat**.                                                                     |
 | Home: message box, Needs you, Working set                  | [Read Home](home.md).                                                                    |
 | Worktrees start from latest remote; Codex commits          | [Where it starts](where-spark-works.md#what-to-expect).                                  |
-| PR follow-up and adopting, in any chat                     | [Work on a PR](where-spark-works.md#work-on-a-pull-request).                             |
-| **Thinking** expands; `/compact`; less “Running”           | [Follow a turn](follow-a-turn.md#see-whats-happening).                                   |

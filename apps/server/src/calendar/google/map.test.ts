@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { joinLink } from '@spark-outpost/contracts';
-import {
-  googleHtmlLink,
-  mapGoogleCalendar,
-  mapGoogleEvent,
-  notesText,
-  splitGoogleEventId,
-} from './map.ts';
+import { googleHtmlLink, mapGoogleCalendar, mapGoogleEvent, splitGoogleEventId } from './map.ts';
+import { notesText } from '../cloud/notes.ts';
 
 const ACCOUNT = '6f1c2f2e-0d7b-4a7e-9a52-0c8e1c9b2a11';
 

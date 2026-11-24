@@ -107,6 +107,11 @@ const configSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  SPARK_MICROSOFT_CLIENT_ID: z
+    .string()
+    .trim()
+    .regex(/^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})?$/)
+    .default(''),
   SPARK_SHARE_URL: z
     .string()
     .default('')
@@ -118,6 +123,8 @@ const configSchema = z.object({
   GOOGLE_ACCOUNTS_URL: providerUrl.optional(),
   GOOGLE_OAUTH_URL: providerUrl.optional(),
   GOOGLE_CALENDAR_API_URL: providerUrl.optional(),
+  MICROSOFT_LOGIN_URL: providerUrl.optional(),
+  MICROSOFT_GRAPH_URL: providerUrl.optional(),
   SPARK_LINK_SCHEME: z
     .string()
     .regex(/^[a-z][a-z0-9-]*$/)

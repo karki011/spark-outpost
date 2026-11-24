@@ -31,8 +31,10 @@ export const calendarKeys = {
   range: (from: string, to: string) => ['calendar', 'range', from, to] as const,
   detail: (occurrence: CalendarOccurrence) =>
     ['calendar', 'detail', occurrence.eventId, occurrence.start] as const,
-  googleSignIn: ['calendar', 'google-sign-in'] as const,
+  signIn: (provider: CloudProvider) => ['calendar', `${provider}-sign-in`] as const,
 };
+
+export type CloudProvider = 'google' | 'microsoft';
 
 const disconnected = z.object({ status: calendarStatusSchema, message: z.string().nullable() });
 
@@ -43,7 +45,7 @@ function post<T>(schema: z.ZodType<T>, path: string, body: unknown = {}): Promis
   return request(schema, path, { method: 'POST', body: JSON.stringify(body) });
 }
 
-export interface GoogleSignInStart {
+export interface CloudSignInStart {
   accountId: string | null;
   editCalendar: string | null;
 }
@@ -75,17 +77,20 @@ export const calendarApi = {
     post(opened, '/calendar/open', occurrence),
   detail: (occurrence: CalendarOccurrence): Promise<CalendarEventDetail> =>
     post(calendarEventDetailSchema, '/calendar/event', occurrence),
-  googleSignIn: (): Promise<GoogleSignInFlow> =>
-    request(googleSignInFlowSchema, '/calendar/google/sign-in'),
-  startGoogleSignIn: (request: GoogleSignInStart): Promise<GoogleSignInFlow> =>
-    post(googleSignInFlowSchema, '/calendar/google/sign-in', {
+  signIn: (provider: CloudProvider): Promise<GoogleSignInFlow> =>
+    request(googleSignInFlowSchema, `/calendar/${provider}/sign-in`),
+  startSignIn: (provider: CloudProvider, request: CloudSignInStart): Promise<GoogleSignInFlow> =>
+    post(googleSignInFlowSchema, `/calendar/${provider}/sign-in`, {
       ...(request.accountId ? { accountId: request.accountId } : {}),
       ...(request.editCalendar ? { editCalendar: request.editCalendar } : {}),
     }),
-  cancelGoogleSignIn: (): Promise<GoogleSignInFlow> =>
-    request(googleSignInFlowSchema, '/calendar/google/sign-in', { method: 'DELETE' }),
-  disconnectGoogle: (accountId: string): Promise<z.infer<typeof disconnected>> =>
-    request(disconnected, `/calendar/google/accounts/${encodeURIComponent(accountId)}`, {
+  cancelSignIn: (provider: CloudProvider): Promise<GoogleSignInFlow> =>
+    request(googleSignInFlowSchema, `/calendar/${provider}/sign-in`, { method: 'DELETE' }),
+  disconnectAccount: (
+    provider: CloudProvider,
+    accountId: string,
+  ): Promise<z.infer<typeof disconnected>> =>
+    request(disconnected, `/calendar/${provider}/accounts/${encodeURIComponent(accountId)}`, {
       method: 'DELETE',
     }),
 };

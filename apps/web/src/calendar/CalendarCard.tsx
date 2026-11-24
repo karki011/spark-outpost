@@ -8,18 +8,13 @@ import { SettingRow } from '../settings/SettingRow.tsx';
 import { CloudIcon, LaptopIcon, LockIcon } from '../ui/icons.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { AddCalendar } from './AddCalendar.tsx';
-import {
-  GOOGLE_CALENDAR,
-  GoogleSignInStatus,
-  GoogleSource,
-  SIGN_IN_WITH_GOOGLE,
-} from './GoogleSource.tsx';
+import { CLOUD_WORDS, CloudSignInStatus, CloudSource } from './CloudSource.tsx';
 import { DeniedBody, ErrorLine, HelperBody, MAC_CALENDAR, MacSource } from './MacSource.tsx';
 import { RefreshCalendar } from './RefreshCalendar.tsx';
 import { connectorLine, hasCalendarSource, macState, nextMeeting } from './today-model.ts';
 import { useCalendarChoices } from './use-calendar-choices.ts';
 import { useCalendarActions, useCalendarNow, useCalendarStatus } from './use-calendar.ts';
-import { useGoogleCalendar, type GoogleCalendar } from './use-google-calendar.ts';
+import { useCloudCalendar, type CloudCalendar } from './use-cloud-calendar.ts';
 
 export const AGENTS_READ_LABEL = 'Let agents read my calendar';
 
@@ -115,37 +110,48 @@ function MacTile({ status }: { status: CalendarStatus }) {
   );
 }
 
-function GoogleTile({ status, google }: { status: CalendarStatus; google: GoogleCalendar }) {
+interface Clouds {
+  google: CloudCalendar;
+  microsoft: CloudCalendar;
+}
+
+const NEW_ACCOUNT = { accountId: null, editCalendar: null };
+
+function CloudTile({ cloud, testing }: { cloud: CloudCalendar; testing: boolean }) {
+  const words = CLOUD_WORDS[cloud.provider];
   return (
     <Tile
       icon={<CloudIcon />}
-      title={GOOGLE_CALENDAR}
-      text="Sign in with Google. Works without the Mac Calendar app."
+      title={words.calendar}
+      text={`${words.signIn}. Works without the Mac Calendar app.`}
     >
-      {status.google.testing && <p className="cal-muted">{GOOGLE_TESTING_LINE}</p>}
-      {!google.waiting && (
+      {testing && <p className="cal-muted">{GOOGLE_TESTING_LINE}</p>}
+      {!cloud.waiting && (
         <div className="cx-actions">
           <button
             type="button"
             className="btn line sm"
-            disabled={google.starting}
-            onClick={() => google.begin({ accountId: null, editCalendar: null })}
+            disabled={cloud.starting}
+            onClick={() => cloud.begin(NEW_ACCOUNT)}
           >
-            {SIGN_IN_WITH_GOOGLE}
+            {words.signIn}
           </button>
         </div>
       )}
       <RefreshCalendar />
-      <GoogleSignInStatus google={google} />
+      <CloudSignInStatus cloud={cloud} />
     </Tile>
   );
 }
 
-function EmptyBody({ status, google }: { status: CalendarStatus; google: GoogleCalendar }) {
+function EmptyBody({ status, clouds }: { status: CalendarStatus; clouds: Clouds }) {
   return (
     <div className="cal-tiles">
       <MacTile status={status} />
-      {status.google.available && <GoogleTile status={status} google={google} />}
+      {status.google.available && (
+        <CloudTile cloud={clouds.google} testing={status.google.testing} />
+      )}
+      {status.microsoft.available && <CloudTile cloud={clouds.microsoft} testing={false} />}
     </div>
   );
 }
@@ -163,8 +169,13 @@ function useFocusWhenSourceLeaves(count: number) {
   return bodyRef;
 }
 
-function ConnectedBody({ status, google }: { status: CalendarStatus; google: GoogleCalendar }) {
-  const { mac, google: googleAccounts, change, error } = useCalendarChoices(status.accounts);
+function ConnectedBody({ status, clouds }: { status: CalendarStatus; clouds: Clouds }) {
+  const { mac, cloud: cloudAccounts, change, error } = useCalendarChoices(status.accounts);
+  const { google, microsoft } = clouds;
+  const signedIn = [
+    ...status.google.accounts.map((account) => ({ account, cloud: google })),
+    ...status.microsoft.accounts.map((account) => ({ account, cloud: microsoft })),
+  ];
   const { connect } = useCalendarActions();
   const state = macState(status);
   const macRefused = !status.connected && connect.isSuccess && state === 'denied';
@@ -173,12 +184,12 @@ function ConnectedBody({ status, google }: { status: CalendarStatus; google: Goo
     <>
       {status.connected && <MacSource status={status} accounts={mac} onChange={change} />}
       {macRefused && <DeniedBody />}
-      {status.google.accounts.map((account) => (
-        <GoogleSource
+      {signedIn.map(({ account, cloud }) => (
+        <CloudSource
           key={account.id}
           account={account}
-          calendars={googleAccounts.find((item) => item.id === `google:${account.id}`)}
-          google={google}
+          calendars={cloudAccounts.find((item) => item.id === `${cloud.provider}:${account.id}`)}
+          cloud={cloud}
           onChange={change}
         />
       ))}
@@ -188,15 +199,16 @@ function ConnectedBody({ status, google }: { status: CalendarStatus; google: Goo
         )}
         <AddCalendar
           onMac={canAddMac ? () => connect.mutate() : null}
-          onGoogle={
-            status.google.available
-              ? () => google.begin({ accountId: null, editCalendar: null })
-              : null
+          onGoogle={status.google.available ? () => google.begin(NEW_ACCOUNT) : null}
+          onMicrosoft={status.microsoft.available ? () => microsoft.begin(NEW_ACCOUNT) : null}
+          disabled={
+            connect.isPending ||
+            [google, microsoft].some((cloud) => cloud.starting || cloud.waiting)
           }
-          disabled={connect.isPending || google.starting || google.waiting}
         />
       </div>
-      <GoogleSignInStatus google={google} />
+      <CloudSignInStatus cloud={google} />
+      <CloudSignInStatus cloud={microsoft} />
       <ErrorLine error={error ?? connect.error} />
       <AgentsRead on={status.settings.agentsRead} />
     </>
@@ -205,15 +217,19 @@ function ConnectedBody({ status, google }: { status: CalendarStatus; google: Goo
 
 function CardBody({ status }: { status: CalendarStatus }) {
   useCalendarStatus(STATUS_REFRESH_MS);
-  const google = useGoogleCalendar(status.google);
-  const sources = (status.connected ? 1 : 0) + status.google.accounts.length;
+  const clouds = {
+    google: useCloudCalendar('google', status.google),
+    microsoft: useCloudCalendar('microsoft', status.microsoft),
+  };
+  const sources =
+    (status.connected ? 1 : 0) + status.google.accounts.length + status.microsoft.accounts.length;
   const bodyRef = useFocusWhenSourceLeaves(sources);
   return (
     <div ref={bodyRef} className="cx-body cal-body">
       {hasCalendarSource(status) ? (
-        <ConnectedBody status={status} google={google} />
+        <ConnectedBody status={status} clouds={clouds} />
       ) : (
-        <EmptyBody status={status} google={google} />
+        <EmptyBody status={status} clouds={clouds} />
       )}
       <PrivacyLine />
     </div>

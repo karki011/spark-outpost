@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { notesSnippet, notesText } from './google/map.ts';
+import { notesSnippet, notesText } from './cloud/notes.ts';
 import { splitNotes } from './notes-text.ts';
 import { linkFreeSnippet } from './snippet.ts';
 

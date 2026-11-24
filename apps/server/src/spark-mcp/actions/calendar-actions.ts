@@ -3,11 +3,17 @@ import {
   agentDetail,
   agentRemove,
   agentSave,
+  cloudCanEdit,
   type AgentCalendar,
 } from '../../calendar/agent/access.ts';
 import { CalendarAgentError } from '../../calendar/agent/detail.ts';
-import { editRefusal, factsOf, floorReasons, sameEvent } from '../../calendar/agent/edit-rules.ts';
-import { googleTarget } from '../../calendar/agent/google-client.ts';
+import {
+  editRefusal,
+  factsOf,
+  floorReasons,
+  othersRefusal,
+  sameEvent,
+} from '../../calendar/agent/edit-rules.ts';
 import { savedChoices } from '../../calendar/store.ts';
 import { nowOf } from '../deps.ts';
 import type { SparkToolContext } from '../tool.ts';
@@ -25,19 +31,19 @@ function calendarOf(context: SparkToolContext): AgentCalendar {
     workspaceId: context.scope.workspaceId,
     host: hosts.host,
     google: hosts.google,
+    microsoft: hosts.microsoft ?? null,
     now: () => nowOf(context.deps).getTime(),
   };
-}
-
-async function canEdit(calendar: AgentCalendar, calendarId: string): Promise<boolean> {
-  const target = googleTarget(calendarId);
-  if (!target || !calendar.google) return false;
-  return (await calendar.google.account(calendar.workspaceId, target.accountId))?.canEdit ?? false;
 }
 
 function within(found: readonly string[], allowed: readonly string[]): boolean {
   return found.every((reason) => allowed.includes(reason));
 }
+
+const DELETE_KEPT: Record<string, string> = {
+  google: ' Google keeps deleted events in its trash.',
+  microsoft: ' Outlook keeps it in Deleted Items.',
+};
 
 const DONE: Record<CalendarEditAction['op'], string> = {
   create: 'Added the event to',
@@ -56,7 +62,7 @@ export async function performCalendarEdit(
   if (!choice) throw new CalendarAgentError('That calendar is no longer connected.');
   const refusal = editRefusal({
     choice,
-    googleCanEdit: await canEdit(calendar, choice.calendarId),
+    cloudCanEdit: await cloudCanEdit(calendar, choice.calendarId),
     span: action.span,
   });
   if (refusal) throw new CalendarAgentError(refusal);
@@ -71,6 +77,8 @@ export async function performCalendarEdit(
       throw new CalendarAgentError(CALENDAR_CHANGED);
     }
     others = current.others;
+    const crowded = othersRefusal(choice, others);
+    if (crowded) throw new CalendarAgentError(crowded);
   }
   if (!within(floorReasons(action.op, choice, others), action.floor)) {
     throw new CalendarAgentError(CALENDAR_CHANGED);
@@ -78,9 +86,7 @@ export async function performCalendarEdit(
   if (action.op === 'delete') {
     await agentRemove(calendar, choice, target!, action.span);
     const title = action.before?.title || 'the event';
-    const kept = googleTarget(choice.calendarId)
-      ? ' Google keeps deleted events in its trash.'
-      : '';
+    const kept = DELETE_KEPT[choice.sourceKind] ?? '';
     return { message: `Deleted ${title} from ${choice.title}.${kept}`, url: null };
   }
   if (!action.after) throw new CalendarAgentError('The card has no event to save.');

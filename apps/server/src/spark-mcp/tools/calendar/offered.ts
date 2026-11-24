@@ -2,7 +2,7 @@ import type { Db } from '../../../persistence/db.ts';
 import { childRun } from '../../../mac-control/offered.ts';
 import { runFromDevice } from '../../../remote/run-mark.ts';
 import { remoteRunRefused } from '../../actions/rules-edit-session.ts';
-import { googleAccounts } from '../../../calendar/google/store.ts';
+import { cloudAccounts } from '../../../calendar/cloud/account-store.ts';
 import { calendarConnection, savedChoices } from '../../../calendar/store.ts';
 import type { SparkScope, SparkToolDeps } from '../../deps.ts';
 
@@ -29,8 +29,9 @@ async function connected(
 ): Promise<{ any: boolean; agentsRead: boolean }> {
   const connection = await calendarConnection(db, workspaceId);
   const mac = macHost && connection.connected;
-  const google = (await googleAccounts(db, workspaceId)).length > 0;
-  return { any: mac || google, agentsRead: connection.settings.agentsRead };
+  const google = (await cloudAccounts(db, 'google', workspaceId)).length > 0;
+  const microsoft = (await cloudAccounts(db, 'microsoft', workspaceId)).length > 0;
+  return { any: mac || google || microsoft, agentsRead: connection.settings.agentsRead };
 }
 
 export const CALENDAR_CARD = 'Settings → Connectors → Calendar';

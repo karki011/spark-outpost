@@ -1,6 +1,6 @@
 import './calendar-card.css';
 import type { CalendarStatus } from '@spark-outpost/contracts';
-import { CalendarAccounts, CalendarRows, RowsHeader } from './CalendarAccounts.tsx';
+import { CalendarAccounts, CalendarRows, RowsHeader, SOURCE_LABEL } from './CalendarAccounts.tsx';
 import { CalendarName } from './CalendarName.tsx';
 import { MAC_CALENDAR } from './MacSource.tsx';
 import { useCalendarChoices } from './use-calendar-choices.ts';
@@ -8,8 +8,8 @@ import { useCalendarChoices } from './use-calendar-choices.ts';
 export const NUDGE_CALENDARS_LABEL = 'Calendars that nudge';
 
 export function CalendarNudgeList({ status }: { status: CalendarStatus }) {
-  const { mac, google, change, error } = useCalendarChoices(status.accounts);
-  if (mac.length === 0 && google.length === 0) return null;
+  const { mac, cloud, change, error } = useCalendarChoices(status.accounts);
+  if (mac.length === 0 && cloud.length === 0) return null;
   return (
     <div className="cal-nudge-list" role="group" aria-labelledby="notify-calendars">
       <p className="cal-nudge-list-h">
@@ -26,10 +26,14 @@ export function CalendarNudgeList({ status }: { status: CalendarStatus }) {
           <CalendarAccounts accounts={mac} onChange={change} />
         </section>
       )}
-      {google.map((account) => (
-        <section key={account.id} className="cal-source" aria-label={`Google, ${account.title}`}>
+      {cloud.map((account) => (
+        <section
+          key={account.id}
+          className="cal-source"
+          aria-label={`${SOURCE_LABEL[account.kind]}, ${account.title}`}
+        >
           <div className="cal-src-h">
-            <h3>Google</h3>
+            <h3>{SOURCE_LABEL[account.kind]}</h3>
             <small>
               <CalendarName name={account.title} />
             </small>

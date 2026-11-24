@@ -9,20 +9,42 @@ import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { CalendarRows, RowsHeader, type ChangeChoice } from './CalendarAccounts.tsx';
 import { ConnectedPill, EDIT_HINT } from './MacSource.tsx';
 import { SourceCard } from './SourceCard.tsx';
-import type { GoogleCalendar } from './use-google-calendar.ts';
+import type { CloudCalendar } from './use-cloud-calendar.ts';
+import type { CloudProvider } from './calendar-api.ts';
 import { outsideTarget } from '../browser/outside-link.ts';
 
-export const GOOGLE_CALENDAR = 'Google Calendar';
-export const SIGN_IN_WITH_GOOGLE = 'Sign in with Google';
+interface ProviderWords {
+  name: string;
+  calendar: string;
+  signIn: string;
+  calendarName: string;
+}
 
-export function googleDisconnect(email: string) {
+export const CLOUD_WORDS: Record<CloudProvider, ProviderWords> = {
+  google: {
+    name: 'Google',
+    calendar: 'Google Calendar',
+    signIn: 'Sign in with Google',
+    calendarName: 'Google calendar',
+  },
+  microsoft: {
+    name: 'Microsoft',
+    calendar: 'Microsoft 365 or Outlook.com',
+    signIn: 'Sign in with Microsoft',
+    calendarName: 'Microsoft calendar',
+  },
+};
+
+function disconnectCopy(provider: CloudProvider, email: string) {
+  const words = CLOUD_WORDS[provider];
   return {
     title: `Disconnect ${email}?`,
-    text: 'Spark stops showing its meetings and nudges, and signs out of Google. Your Google calendar isn’t changed. You can add it back any time.',
+    text: `Spark stops showing its meetings and nudges, and signs out of ${words.name}. Your ${words.calendarName} isn’t changed. You can add it back any time.`,
   };
 }
 
-const GOOGLE_EDIT_HINT = `${EDIT_HINT} Google asks you to allow changes the first time.`;
+const editHint = (provider: CloudProvider) =>
+  `${EDIT_HINT} ${CLOUD_WORDS[provider].name} asks you to allow changes the first time.`;
 
 function syncLine(account: GoogleAccountStatus, now: number): string | null {
   if (account.state === 'sign_in_again') return null;
@@ -30,42 +52,42 @@ function syncLine(account: GoogleAccountStatus, now: number): string | null {
   return account.state === 'syncing' ? 'Syncing…' : null;
 }
 
-function GooglePill({ account }: { account: GoogleAccountStatus }) {
+function AccountPill({ account }: { account: GoogleAccountStatus }) {
   if (account.state === 'ready') return <ConnectedPill />;
   if (account.state === 'sign_in_again') return <span className="cal-pill danger">Signed out</span>;
   if (account.state === 'error') return <span className="cal-pill warn">Trying again</span>;
   return <span className="cal-pill">Syncing</span>;
 }
 
-interface GoogleSourceProps {
+interface CloudSourceProps {
   account: GoogleAccountStatus;
   calendars: CalendarAccount | undefined;
-  google: GoogleCalendar;
+  cloud: CloudCalendar;
   onChange: ChangeChoice;
 }
 
-export function GoogleSource({ account, calendars, google, onChange }: GoogleSourceProps) {
+export function CloudSource({ account, calendars, cloud, onChange }: CloudSourceProps) {
   const now = useMinuteClock();
   const rows = calendars?.calendars ?? [];
   const signIn = (editCalendar: string | null) =>
-    google.begin({ accountId: account.id, editCalendar });
+    cloud.begin({ accountId: account.id, editCalendar });
   const change = (key: string, patch: CalendarChoicePatch) => {
     if (patch.agentsEdit && !account.canEdit) signIn(key);
     else onChange(key, patch);
   };
-  const note = google.noteFor === account.id ? google.flowNote : null;
+  const note = cloud.noteFor === account.id ? cloud.flowNote : null;
   return (
     <SourceCard
       name={account.email}
       icon={<CloudIcon />}
       sync={syncLine(account, now)}
-      pill={<GooglePill account={account} />}
+      pill={<AccountPill account={account} />}
       hasCalendars={rows.length > 0}
       startChoosing={rows.every((calendar) => !calendar.include)}
-      editHint={GOOGLE_EDIT_HINT}
-      disconnect={googleDisconnect(account.email)}
-      busy={google.busy}
-      onDisconnect={() => google.remove(account.id)}
+      editHint={editHint(cloud.provider)}
+      disconnect={disconnectCopy(cloud.provider, account.email)}
+      busy={cloud.busy}
+      onDisconnect={() => cloud.remove(account.id)}
       rows={(view) => (
         <>
           <RowsHeader view={view} />
@@ -88,7 +110,7 @@ export function GoogleSource({ account, calendars, google, onChange }: GoogleSou
           <button
             type="button"
             className="btn primary sm"
-            disabled={google.busy}
+            disabled={cloud.busy}
             onClick={() => signIn(null)}
           >
             Sign in again
@@ -99,39 +121,40 @@ export function GoogleSource({ account, calendars, google, onChange }: GoogleSou
   );
 }
 
-export function GoogleSignInStatus({ google }: { google: GoogleCalendar }) {
-  const asks = google.editing ? 'change events in your calendars' : 'see your calendars';
-  const flowNote = google.noteFor === null ? google.flowNote : null;
+export function CloudSignInStatus({ cloud }: { cloud: CloudCalendar }) {
+  const name = CLOUD_WORDS[cloud.provider].name;
+  const asks = cloud.editing ? 'change events in your calendars' : 'see your calendars';
+  const flowNote = cloud.noteFor === null ? cloud.flowNote : null;
   return (
     <>
-      {google.waiting && (
-        <div className="cal-google-wait" role="group" aria-label="Google sign-in">
+      {cloud.waiting && (
+        <div className="cal-google-wait" role="group" aria-label={`${name} sign-in`}>
           <p className="gh-note">
-            Finish in your browser: Google asks you to allow Spark Outpost to {asks}, then sends you
+            Finish in your browser: {name} asks you to allow Spark Outpost to {asks}, then sends you
             back here.
           </p>
           <div className="cx-actions">
-            {google.flow.authorizeUrl && (
+            {cloud.flow.authorizeUrl && (
               <a
                 className="btn line sm"
-                href={google.flow.authorizeUrl}
+                href={cloud.flow.authorizeUrl}
                 target={outsideTarget()}
                 rel="noreferrer"
               >
-                Open Google again
+                Open {name} again
                 <ExternalLinkIcon />
               </a>
             )}
-            <button type="button" className="btn ghost sm" onClick={google.cancel}>
+            <button type="button" className="btn ghost sm" onClick={cloud.cancel}>
               Cancel
             </button>
           </div>
           <p className="gh-state warn" role="status">
-            Waiting for you to finish in Google
+            Waiting for you to finish in {name}
           </p>
         </div>
       )}
-      {[flowNote, google.note, google.error?.message ?? null].map(
+      {[flowNote, cloud.note, cloud.error?.message ?? null].map(
         (line, index) =>
           line && (
             <p key={index} className="gh-err" role="alert">

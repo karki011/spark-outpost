@@ -20,7 +20,7 @@ Chats, settings and code stay on your computer; keys stay in your keychain. Only
 | **Apple or Google push**                   | Encrypted notifications; sender contact.                                                                                     | **Notify this device**                                              |
 | **Slack**                                  | Notifications, confirmed posts; never direct messages.                                                                       | [Slack data](connect-slack.md#what-spark-reads-stores-and-sends)    |
 | **Hugging Face**                           | The Parakeet speech model, once.                                                                                             | [Voice](voice.md)                                                   |
-| **Meeting services, Google**               | The meeting you **Join**; calendar reads and changes.                                                                        | [Calendar](calendar.md)                                             |
+| **Meetings, Google, Microsoft**            | The meeting you **Join**; calendar reads and changes.                                                                        | [Calendar](calendar.md)                                             |
 | **Spark Outpost team**                     | Anonymous heartbeat; [shared](share-an-artifact.md) artifacts.                                                               | [Turn it off](mac-privacy.md#anonymous-heartbeat); **Stop sharing** |
 
 ## Where your keys live

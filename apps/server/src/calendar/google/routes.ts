@@ -6,7 +6,7 @@ import { GoogleUnavailable, type GoogleSource } from './source.ts';
 export interface GoogleRouteDeps {
   google: GoogleSource | null;
   status: () => Promise<CalendarStatus>;
-  macUids: () => Promise<string[]>;
+  otherUids: () => Promise<string[]>;
 }
 
 export const GOOGLE_NOT_REVOKED =
@@ -39,7 +39,7 @@ export function googleCalendarRoutes(deps: GoogleRouteDeps): Router {
   });
 
   router.delete('/calendar/google/accounts/:id', async (req, res) => {
-    const result = await need().disconnect(paramId(req, 'id'), await deps.macUids());
+    const result = await need().disconnect(paramId(req, 'id'), await deps.otherUids());
     if (!result.found) throw new BadRequestError('That Google account is not connected.');
     res.json({
       status: await deps.status(),

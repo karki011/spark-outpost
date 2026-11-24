@@ -10,14 +10,23 @@ import type { CalendarReadDeps } from '../service.ts';
 import { CalendarAgentError, helperAgentDetail, type AgentEventDetail } from './detail.ts';
 import {
   createGoogleAgentClient,
+  googleTarget,
   googleWriteBody,
   type GoogleAgentClient,
   type GoogleAgentDeps,
 } from './google-client.ts';
+import {
+  createMicrosoftAgentClient,
+  microsoftCalendarTarget,
+  microsoftWriteBody,
+  type MicrosoftAgentClient,
+  type MicrosoftAgentDeps,
+} from './microsoft-client.ts';
 
 export interface AgentCalendarHosts {
   host: CalendarHost | null;
   google: GoogleAgentClient | null;
+  microsoft?: MicrosoftAgentClient | null;
 }
 
 export interface AgentCalendar extends AgentCalendarHosts {
@@ -33,13 +42,24 @@ export interface EventTarget {
 
 export const CALENDAR_WRITTEN_CHANNEL = 'calendar_written';
 
+export interface AgentCalendarDeps extends Omit<GoogleAgentDeps, 'client'> {
+  client: GoogleAgentDeps['client'] | null;
+  microsoftClient: MicrosoftAgentDeps['client'] | null;
+}
+
 export function agentCalendarHosts(
   host: CalendarHost | null,
-  google: Omit<GoogleAgentDeps, 'client'> & { client: GoogleAgentDeps['client'] | null },
+  deps: AgentCalendarDeps,
 ): AgentCalendarHosts | undefined {
   if (!host) return undefined;
-  const { client, ...rest } = google;
-  return { host, google: client ? createGoogleAgentClient({ ...rest, client }) : null };
+  const { client, microsoftClient, ...rest } = deps;
+  return {
+    host,
+    google: client ? createGoogleAgentClient({ ...rest, client }) : null,
+    microsoft: microsoftClient
+      ? createMicrosoftAgentClient({ ...rest, client: microsoftClient })
+      : null,
+  };
 }
 
 export function agentReadDeps(calendar: AgentCalendar): CalendarReadDeps {
@@ -48,12 +68,32 @@ export function agentReadDeps(calendar: AgentCalendar): CalendarReadDeps {
     workspaceId: calendar.workspaceId,
     host: calendar.host,
     google: calendar.google?.reads(calendar.workspaceId) ?? null,
+    microsoft: calendar.microsoft?.reads(calendar.workspaceId) ?? null,
     now: calendar.now,
   };
 }
 
 function isGoogle(choice: CalendarChoice): boolean {
   return choice.sourceKind === 'google';
+}
+
+function isMicrosoft(choice: CalendarChoice): boolean {
+  return choice.sourceKind === 'microsoft';
+}
+
+export async function cloudCanEdit(calendar: AgentCalendar, calendarId: string): Promise<boolean> {
+  const google = googleTarget(calendarId);
+  if (google && calendar.google) {
+    return (
+      (await calendar.google.account(calendar.workspaceId, google.accountId))?.canEdit ?? false
+    );
+  }
+  const microsoft = microsoftCalendarTarget(calendarId);
+  if (microsoft && calendar.microsoft) {
+    const account = await calendar.microsoft.account(calendar.workspaceId, microsoft.accountId);
+    return account?.canEdit ?? false;
+  }
+  return false;
 }
 
 function needHost(calendar: AgentCalendar): CalendarHost {
@@ -66,6 +106,11 @@ function needHost(calendar: AgentCalendar): CalendarHost {
 function needGoogle(calendar: AgentCalendar): GoogleAgentClient {
   if (!calendar.google) throw new CalendarAgentError('This build has no Google sign-in.');
   return calendar.google;
+}
+
+function needMicrosoft(calendar: AgentCalendar): MicrosoftAgentClient {
+  if (!calendar.microsoft) throw new CalendarAgentError('This build has no Microsoft sign-in.');
+  return calendar.microsoft;
 }
 
 async function host<T>(work: Promise<T>): Promise<T> {
@@ -82,13 +127,9 @@ export async function agentDetail(
   choice: CalendarChoice,
   target: EventTarget,
 ): Promise<AgentEventDetail | null> {
-  if (isGoogle(choice)) {
-    return needGoogle(calendar).detail(
-      calendar.workspaceId,
-      choice.calendarId,
-      target.eventId,
-      target.occurrence,
-    );
+  if (isGoogle(choice) || isMicrosoft(choice)) {
+    const cloud = isGoogle(choice) ? needGoogle(calendar) : needMicrosoft(calendar);
+    return cloud.detail(calendar.workspaceId, choice.calendarId, target.eventId, target.occurrence);
   }
   try {
     const detail = await needHost(calendar).request({
@@ -124,26 +165,34 @@ export async function agentSave(
   save: AgentSave,
 ): Promise<AgentEventDetail> {
   const { choice, target, fields } = save;
+  const eventId = target?.eventId ?? null;
   const after = isGoogle(choice)
     ? await needGoogle(calendar).save(
         calendar.workspaceId,
         choice.calendarId,
-        target?.eventId ?? null,
+        eventId,
         googleWriteBody(fields, save.after),
       )
-    : helperAgentDetail(
-        (
-          await host(
-            needHost(calendar).request({
-              op: 'save',
-              calendarId: choice.calendarId,
-              ...(target ? { eventId: target.eventId, occurrence: target.occurrence } : {}),
-              fields,
-              span: save.span,
-            }),
-          )
-        ).after,
-      );
+    : isMicrosoft(choice)
+      ? await needMicrosoft(calendar).save(
+          calendar.workspaceId,
+          choice.calendarId,
+          eventId,
+          microsoftWriteBody(fields, save.after),
+        )
+      : helperAgentDetail(
+          (
+            await host(
+              needHost(calendar).request({
+                op: 'save',
+                calendarId: choice.calendarId,
+                ...(target ? { eventId: target.eventId, occurrence: target.occurrence } : {}),
+                fields,
+                span: save.span,
+              }),
+            )
+          ).after,
+        );
   await announceWrite(calendar.db);
   return after;
 }
@@ -154,8 +203,9 @@ export async function agentRemove(
   target: EventTarget,
   span: CalendarEditSpan,
 ): Promise<void> {
-  if (isGoogle(choice)) {
-    await needGoogle(calendar).remove(calendar.workspaceId, choice.calendarId, target.eventId);
+  if (isGoogle(choice) || isMicrosoft(choice)) {
+    const cloud = isGoogle(choice) ? needGoogle(calendar) : needMicrosoft(calendar);
+    await cloud.remove(calendar.workspaceId, choice.calendarId, target.eventId);
   } else {
     await host(
       needHost(calendar).request({

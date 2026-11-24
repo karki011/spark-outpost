@@ -8,6 +8,7 @@ import {
   type HelperEvent,
 } from '@spark-outpost/contracts';
 import type { GoogleAgentClient } from '../src/calendar/agent/google-client.ts';
+import type { MicrosoftAgentClient } from '../src/calendar/agent/microsoft-client.ts';
 import { syncCalendars } from '../src/calendar/service.ts';
 import { setConnected, updateSettings } from '../src/calendar/store.ts';
 import { createRunObservations } from '../src/observations/run-observations.ts';
@@ -84,6 +85,7 @@ export interface CalendarStart {
   noCards?: boolean;
   connected?: boolean;
   google?: GoogleAgentClient | null;
+  microsoft?: MicrosoftAgentClient | null;
 }
 
 function parsed(text: string): Record<string, unknown> {
@@ -172,7 +174,11 @@ export class CalendarHarness {
     await this.followThrough?.stop();
     await this.host?.close();
     const deps = toolDeps(t, {
-      calendar: { host: this.fake, google: options.google ?? null },
+      calendar: {
+        host: this.fake,
+        google: options.google ?? null,
+        microsoft: options.microsoft ?? null,
+      },
     });
     this.host = await startSparkMcpHost(deps);
     this.followThrough = await startSparkActionFollowThrough(deps, 25);
