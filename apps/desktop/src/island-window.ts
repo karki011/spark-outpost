@@ -28,7 +28,8 @@ import { systemHourCycle } from './hour-cycle.ts';
 import { setIslandFocus } from './island-focus.ts';
 import { windowPoint } from './island-pointer.ts';
 import { regionPointer } from './region-pointer.ts';
-import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
+import { ISLAND_PATH, islandWindowOptions } from './island-options.ts';
+import { islandLevel, readsNotches, windowsDisplay } from './island-platform.ts';
 import { islandVisibility } from './island-visibility.ts';
 import type { PreventActivation } from './no-activate.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
@@ -64,19 +65,24 @@ interface IslandWindowOptions {
   savePosition: (position: IslandPosition) => void;
   onGone: () => void;
   preventActivation: PreventActivation;
+  platform: NodeJS.Platform;
   log: (line: string) => void;
 }
 
 export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const emulated = app.isPackaged ? null : emulatedNotch(process.env.SPARK_ISLAND_NOTCH);
   let notches: Notches = new Map();
-  const info = (display: Display): DisplayInfo => ({
-    id: display.id,
-    bounds: display.bounds,
-    workArea: display.workArea,
-    internal: display.internal,
-    notch: emulated ?? notches.get(display.id),
-  });
+  const onWindows = options.platform === 'win32';
+  const info = (display: Display): DisplayInfo => {
+    const described = {
+      id: display.id,
+      bounds: display.bounds,
+      workArea: display.workArea,
+      internal: display.internal,
+      notch: emulated ?? notches.get(display.id),
+    };
+    return onWindows ? windowsDisplay(described) : described;
+  };
   const blob = () => restBlob(options.size());
   const currentPlacement = (saved: IslandPosition) =>
     placement(saved, screen.getAllDisplays().map(info), screen.getPrimaryDisplay().id, blob().size);
@@ -93,7 +99,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   let lastPointer = '';
 
   options.preventActivation(window);
-  window.setAlwaysOnTop(true, ISLAND_LEVEL);
+  window.setAlwaysOnTop(true, islandLevel(options.platform));
   window.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true,
     skipTransformProcessType: true,
@@ -176,7 +182,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   };
 
   const measure = () => {
-    if (emulated) return;
+    if (emulated || !readsNotches(options.platform)) return;
     void readNotches().then((next) => {
       if (window.isDestroyed()) return;
       notches = next;

@@ -297,5 +297,6 @@ export function desktopMacControl(): DesktopMacControl | null {
 }
 
 export function companionAvailable(): boolean {
-  return sparkDesktop()?.platform === 'darwin';
+  const platform = sparkDesktop()?.platform;
+  return platform === 'darwin' || platform === 'win32';
 }

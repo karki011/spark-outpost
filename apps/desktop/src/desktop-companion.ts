@@ -33,7 +33,10 @@ import { startAttentionHost, type AttentionHost } from './attention-host.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { isSize } from './island-geometry.ts';
 import { dockTemplate, trayTemplate } from './island-options.ts';
+import { islandSupported } from './island-platform.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
+import { jumpTaskIn, type JumpTask } from './deep-link.ts';
+import { jumpListTasks, type JumpLaunch } from './jump-list.ts';
 import { appLayout } from './layout.ts';
 import { menuBarItem, type MenuBarTray } from './menu-bar.ts';
 import { noActivate } from './no-activate.ts';
@@ -63,6 +66,7 @@ interface CompanionHostOptions {
 export interface CompanionHost {
   companion: Companion;
   openChat(id: string): void;
+  runJumpTask(task: JumpTask): void;
   dispose(): void;
 }
 
@@ -92,6 +96,13 @@ function broadcast(channel: string, payload: unknown): void {
 }
 
 const WINDOWS_TRAY_SIZE = 32;
+
+function jumpLaunch(): JumpLaunch {
+  return {
+    program: process.execPath,
+    leadingArgs: app.isPackaged ? [] : [app.getAppPath()],
+  };
+}
 
 function trayImage(iconFile: string): NativeImage {
   const image = nativeImage.createFromPath(iconFile);
@@ -145,6 +156,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     };
     menuBar.update(status.menuBar, trayTemplate(state, actions));
     app.dock?.setMenu(Menu.buildFromTemplate(dockTemplate(state, actions)));
+    if (process.platform === 'win32') app.setUserTasks(jumpListTasks(state, jumpLaunch()));
   };
 
   const save = async (settings: CompanionSettings) => {
@@ -163,7 +175,10 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     appPath: app.getAppPath(),
     resourcesPath: process.resourcesPath,
   });
-  const preventActivation = noActivate(layout.noActivateAddon, options.log);
+  const preventActivation =
+    process.platform === 'win32'
+      ? () => undefined
+      : noActivate(layout.noActivateAddon, options.log);
 
   const registerShortcut = (accelerator: string, run: () => void) => {
     try {
@@ -174,7 +189,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   };
 
   const companion = createCompanion(initial, {
-    supported: process.platform === 'darwin',
+    supported: islandSupported(process.platform),
     openIsland: (onGone) => {
       const opened = openIslandWindow({
         origin: options.origin,
@@ -184,6 +199,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         hideInShare: () => companion.status().hideInShare,
         savePosition: (position) => companion.setPosition(position),
         preventActivation,
+        platform: process.platform,
         log: options.log,
         onGone: () => {
           if (island === opened) island = null;
@@ -401,9 +417,17 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     navigation.openSettings(target);
   });
 
+  const runJumpTask = (task: JumpTask) => {
+    if (task === 'lock') appLockGate.lockNow();
+    else void companion.setEnabled(task === 'show-island');
+  };
+  const launchTask = jumpTaskIn(process.argv);
+  if (launchTask) runJumpTask(launchTask);
+
   return {
     companion,
     openChat,
+    runJumpTask,
     dispose: () => {
       attention?.dispose();
       viewing.dispose();

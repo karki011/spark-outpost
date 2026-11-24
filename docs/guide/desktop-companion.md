@@ -3,7 +3,7 @@ title: Use Spark Island
 section: Mac app and providers
 type: how-to
 order: 410
-summary: Turn on Spark Island in the Mac app, size and move it, and allow or deny an agent's request from the top of your screen.
+summary: Turn on Spark Island in the Mac or Windows app, size and move it, and allow or deny an agent's request from the top of your screen.
 ---
 
 Adjust Spark Island and answer agents. About 2 minutes.
@@ -15,7 +15,7 @@ Adjust Spark Island and answer agents. About 2 minutes.
 3. Pick a **Spark Island size**. Slide **Spark Island height**; **Reset** restores it.
 4. **Island chimes** sound for new requests.
 5. **Hide in screen sharing** keeps it out of shares; some apps may still show it.
-6. **Show in menu bar** adds Spark's icon. Otherwise, right-click the Dock icon to toggle Island.
+6. **Show in menu bar** adds Spark's icon. Otherwise, right-click the Dock icon (Windows: taskbar button) to toggle Island.
 
 ![The Spark Island settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 

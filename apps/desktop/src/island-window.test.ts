@@ -105,6 +105,7 @@ function open(saved: IslandPosition = { docked: true }) {
     savePosition,
     onGone: vi.fn(),
     preventActivation,
+    platform: 'darwin',
     log,
   });
   return { handle, savePosition };
