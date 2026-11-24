@@ -37,7 +37,7 @@ export function ProviderTile({
       >
         <span className="ptile-top">
           <motion.span className="plogo" layoutId={`pblob-${setup.id}`}>
-            <ProviderMark providerId={setup.id} size={42} />
+            <ProviderMark providerId={setup.id} size={36} />
           </motion.span>
           <span className="ptile-name">
             <b id={`${id}-name`}>

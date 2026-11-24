@@ -63,7 +63,7 @@ describe('SubagentsLine', () => {
     expect(within(items[0]!).getByText('Builder')).toBeTruthy();
     expect(within(items[1]!).queryByText('Verifier')).toBeNull();
     expect(within(items[1]!).getByRole('button', { name: 'Verifier, Done' })).toBeTruthy();
-    expect(container.querySelectorAll('.sl-worker .chat-glyph')).toHaveLength(6);
+    expect(container.querySelectorAll('.sl-worker .chat-face')).toHaveLength(6);
     expect(
       [...container.querySelectorAll('.sl-state')].map((element) => element.textContent),
     ).toEqual(['Working', 'Failed', 'Stopped', 'Working']);

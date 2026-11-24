@@ -13,6 +13,10 @@
   user-select: none;
 }
 
+.mark-tile[data-letters]::before {
+  content: attr(data-letters);
+}
+
 .mark-tile[data-tinted] {
   background: color-mix(in oklch, oklch(0.68 0.14 var(--mark-hue)) 24%, var(--panel));
   box-shadow: inset 0 0 0 1px

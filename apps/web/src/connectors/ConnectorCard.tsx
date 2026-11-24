@@ -47,7 +47,7 @@ export function ConnectorCard({
   const head = (
     <>
       <span className="plogo cx-logo">
-        <ConnectorMark connectorId={connectorId} size={42} />
+        <ConnectorMark connectorId={connectorId} size={36} />
         <span className="cx-glyph">{icon}</span>
       </span>
       <span className="nm">

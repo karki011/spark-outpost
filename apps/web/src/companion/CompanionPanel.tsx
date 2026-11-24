@@ -2,7 +2,6 @@ import './companion-panel.css';
 import type { KeyboardEvent, Ref } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { AgentMark } from '../brand/ProviderMark.tsx';
-import type { BlobExpression } from '../brand/blob-expression.ts';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { CheckIcon, SparkleIcon } from '../ui/icons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -48,7 +47,6 @@ function trapFocus(event: KeyboardEvent<HTMLDivElement>) {
 interface PanelItem {
   chat: ConversationSummary;
   provider: string | null;
-  expression: BlobExpression;
   sub: string;
   action: string;
 }
@@ -64,7 +62,6 @@ interface SectionSpec {
 const fromRun = (item: RunItem): PanelItem => ({
   chat: item.chat,
   provider: item.provider,
-  expression: 'thinking',
   sub: item.step,
   action: 'Watch',
 });

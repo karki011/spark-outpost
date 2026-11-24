@@ -27,9 +27,8 @@ export function MarkTile({ letters, size, hue }: MarkTileProps) {
         height: size,
         ...(hue === undefined ? {} : { ['--mark-hue' as string]: hue }),
       }}
+      data-letters={shown || undefined}
       aria-hidden="true"
-    >
-      {shown}
-    </span>
+    />
   );
 }
