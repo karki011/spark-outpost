@@ -51,6 +51,23 @@ export async function connectionForPull(
   return { connection, linked };
 }
 
+function unlinkedPull(parsed: { slug: string; number: number }, host: string): LinkedPull {
+  const [owner, name] = parsed.slug.split('/') as [string, string];
+  return { repo: { host, owner, name }, number: parsed.number };
+}
+
+export async function reachablePull(
+  deps: GitHubDeps,
+  pull: string,
+  host: string,
+): Promise<{ connection: GitHubConnection; linked: LinkedPull } | null> {
+  const parsed = parsePullId(pull);
+  if (!parsed) return null;
+  const linked = (await linkedPull(deps, pull)) ?? unlinkedPull(parsed, host);
+  const connection = await connectionFor(deps, linked.repo).catch(() => null);
+  return connection ? { connection, linked } : null;
+}
+
 const login = z.object({ login: z.string() }).nullable();
 
 export const pullSchema = z.object({
@@ -156,6 +173,15 @@ export async function gatherMaterial(
   earlier: MaterialFacts['earlier'],
 ): Promise<MaterialFacts> {
   const { connection, linked } = await connectionForPull(deps, pull);
+  return gatherMaterialFrom(deps, { connection, linked }, pull, earlier);
+}
+
+export async function gatherMaterialFrom(
+  deps: Pick<GitHubDeps, 'db' | 'workspaceId'>,
+  { connection, linked }: { connection: GitHubConnection; linked: LinkedPull },
+  pull: string,
+  earlier: MaterialFacts['earlier'],
+): Promise<MaterialFacts> {
   const { detail, files } = await pullAtOneHead(connection, linked);
   const path = `${repoPath(linked.repo)}/pulls/${linked.number}`;
   const [reviewComments, reviews, issueComments] = await Promise.all([

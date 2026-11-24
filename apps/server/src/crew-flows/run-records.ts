@@ -43,11 +43,19 @@ async function announce(db: Queryable, workflowRunId: string): Promise<void> {
   );
 }
 
-const PULL_URL = /https?:\/\/[^\s/]+\/([\w.-]+)\/([\w.-]+)\/pull\/(\d+)/;
+const PULL_URL = /https?:\/\/([^\s/]+)\/([\w.-]+)\/([\w.-]+)\/pull\/(\d+)/;
+const PULL_HOST = /^[a-z0-9.-]+(:\d+)?$/;
 
 export function pullNamedIn(message: string): string | null {
   const found = PULL_URL.exec(message);
-  return found ? `${found[1]}/${found[2]}#${found[3]}` : null;
+  return found ? `${found[2]}/${found[3]}#${found[4]}` : null;
+}
+
+export function pullHostNamedIn(message: string): string | null {
+  const host = PULL_URL.exec(message)?.[1]
+    ?.toLowerCase()
+    .replace(/^www\./, '');
+  return host && PULL_HOST.test(host) ? host : null;
 }
 
 async function pullOfRun(db: Queryable, run: NewWorkflowRun): Promise<string | null> {
