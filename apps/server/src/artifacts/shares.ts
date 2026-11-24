@@ -13,6 +13,7 @@ import { shareSecret, type SecretStore } from '../setup/secrets.ts';
 import { readVersionFile } from './files.ts';
 import { shareDocument } from './share-document.ts';
 import { newShareKey } from './share-id.ts';
+import { holdsSecret, ShareScrubError } from './share-scrub.ts';
 import {
   removeShare,
   sharePageUrl,
@@ -68,6 +69,8 @@ const DAY_MS = 86_400_000;
 const STILL_REMOVING =
   'Spark is still removing an earlier try to share this version. Try again in a minute.';
 const NOT_SAVED = 'The link could not be saved. Try again.';
+const HOLDS_SECRET =
+  'This page holds a value from a secret file or a saved sign-in, so it was not shared. Ask the agent to remove it, then share the new version.';
 
 function newPasscode(): string {
   const alphabet = ARTIFACT_SHARE_PASSCODE_ALPHABET;
@@ -186,6 +189,14 @@ async function claim(deps: ShareDeps, stored: StoredVersion, pending: PendingSha
   throw new ShareRefusedError(NOT_SAVED);
 }
 
+async function refuseSecrets(deps: ShareDeps, stored: StoredVersion, text: string) {
+  const found = await holdsSecret(deps, stored.conversationId, text).catch((error: unknown) => {
+    if (error instanceof ShareScrubError) throw new ShareRefusedError(error.message);
+    throw error;
+  });
+  if (found) throw new ShareRefusedError(HOLDS_SECRET);
+}
+
 async function upload(
   deps: ShareDeps,
   stored: StoredVersion,
@@ -194,6 +205,7 @@ async function upload(
   await dropExpired(deps, stored);
   const text = await readVersionFile(deps.chatFolders, stored);
   if (text === null) throw new ShareRefusedError('This version could not be read.');
+  await refuseSecrets(deps, stored, text);
   const html = shareDocument(stored.kind, stored.title, text);
   const passcode = choice.passcode ? newPasscode() : null;
   const { id, deleteToken } = newShareKey();

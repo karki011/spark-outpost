@@ -1,3 +1,5 @@
+import type { EventDataset } from './events.ts';
+
 export interface StoredObject {
   key: string;
   customMetadata?: Record<string, string>;
@@ -45,5 +47,6 @@ export interface CounterNamespace {
 export interface ShareEnv {
   SHARES: ShareBucket;
   COUNTERS: CounterNamespace;
+  EVENTS?: EventDataset;
   SIGNING_KEY?: string;
 }
