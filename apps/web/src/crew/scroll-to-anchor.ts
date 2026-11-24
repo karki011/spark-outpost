@@ -1,5 +1,6 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { prefersReducedMotion } from '../ui/motion.ts';
+import { revealAllTurns } from '../chat/turn-window/reveal-turns.ts';
 import { approvalAnchor } from './conversation-crew.ts';
 
 const SCROLL_TRIES = 30;
@@ -8,6 +9,7 @@ export const JUMP_TRIES = 180;
 export function scrollToAnchor(anchor: string, tries = SCROLL_TRIES) {
   const target = document.getElementById(anchor);
   if (!target) {
+    revealAllTurns();
     if (tries > 0) requestAnimationFrame(() => scrollToAnchor(anchor, tries - 1));
     return;
   }

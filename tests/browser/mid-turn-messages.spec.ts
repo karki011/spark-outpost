@@ -1,3 +1,4 @@
+import { fetchFresh } from './fresh-fetch.ts';
 import { expect, test, type Page } from '@playwright/test';
 import type { ConversationDetail } from '../../packages/contracts/src/conversations.ts';
 import { resetTestDatabase } from './database.ts';
@@ -15,7 +16,7 @@ function steer(id: string, runId: string, body: string, extra: object) {
 async function withSteers(page: Page, status: 'succeeded' | 'cancelled') {
   await page.route(/\/api\/conversations\/[0-9a-f-]{36}$/, async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
-    const response = await route.fetch().catch(() => null);
+    const response = await fetchFresh(route).catch(() => null);
     const detail = (await response?.json().catch(() => null)) as ConversationDetail | null;
     if (!response || !detail) return route.abort().catch(() => undefined);
     const run = detail.runs.find((candidate) => !candidate.parentRunId)!;
