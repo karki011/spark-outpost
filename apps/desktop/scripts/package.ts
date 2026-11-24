@@ -6,6 +6,7 @@ import path from 'node:path';
 import { parseArgs } from 'node:util';
 import {
   GOOGLE_CLIENT_FILE_ENV,
+  MICROSOFT_CLIENT_FILE_ENV,
   packagedHeartbeatUrl,
   packagedShareUrl,
   packagedSlackClientId,
@@ -43,20 +44,22 @@ function archs(value: string): MacArch[] {
   throw new Error(`Unknown --arch ${value}; use all, current, x64 or arm64.`);
 }
 
-function localGoogleClientFile(): string | undefined {
+function localClientFile(name: string): string | undefined {
   const gitDir = execFileSync('git', ['rev-parse', '--path-format=absolute', '--git-common-dir'], {
     cwd: desktopDir,
     encoding: 'utf8',
   }).trim();
   const roots = [path.resolve(desktopDir, '../..'), path.dirname(gitDir)];
-  return roots
-    .map((root) => path.join(root, '.local', 'google-oauth-client.json'))
-    .find((file) => existsSync(file));
+  return roots.map((root) => path.join(root, '.local', name)).find((file) => existsSync(file));
 }
 
-if ((process.env[GOOGLE_CLIENT_FILE_ENV] ?? '').trim() === '') {
-  const found = localGoogleClientFile();
-  if (found) process.env[GOOGLE_CLIENT_FILE_ENV] = found;
+for (const [env, name] of [
+  [GOOGLE_CLIENT_FILE_ENV, 'google-oauth-client.json'],
+  [MICROSOFT_CLIENT_FILE_ENV, 'microsoft-oauth-client.json'],
+] as const) {
+  if ((process.env[env] ?? '').trim() !== '') continue;
+  const found = localClientFile(name);
+  if (found) process.env[env] = found;
 }
 
 const manifest = JSON.parse(await readFile(path.join(desktopDir, 'package.json'), 'utf8')) as {
@@ -81,6 +84,9 @@ if (values.release) {
 }
 console.log(
   `Google Calendar: ${process.env[GOOGLE_CLIENT_FILE_ENV] ? 'on' : `off (set ${GOOGLE_CLIENT_FILE_ENV})`}`,
+);
+console.log(
+  `Microsoft Calendar: ${process.env[MICROSOFT_CLIENT_FILE_ENV] ? 'on' : `off (set ${MICROSOFT_CLIENT_FILE_ENV})`}`,
 );
 console.log(`Slack: ${packagedSlackClientId(process.env) ? 'on' : 'off'}`);
 const heartbeat = packagedHeartbeatUrl(process.env);

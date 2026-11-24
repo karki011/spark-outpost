@@ -15,23 +15,34 @@ export function isSynced(choice: CalendarChoice): boolean {
 
 export interface EditRefusalFacts {
   choice: CalendarChoice;
-  googleCanEdit: boolean;
+  cloudCanEdit: boolean;
   span: CalendarEditSpan;
 }
 
-export function editRefusal({ choice, googleCanEdit, span }: EditRefusalFacts): string | null {
+const CLOUD: Record<string, { name: string; app: string }> = {
+  google: { name: 'Google', app: 'Google Calendar' },
+  microsoft: { name: 'Microsoft', app: 'Outlook' },
+};
+
+export function editRefusal({ choice, cloudCanEdit, span }: EditRefusalFacts): string | null {
   if (!choice.agentsEdit) {
     return `Agents can’t change ${choice.title}. The user can turn on Agents can edit for it on the Calendar card in Settings → Connectors → Calendar.`;
   }
   if (!choice.writable) return `${choice.title} is read-only, so nothing can change it.`;
-  if (choice.sourceKind !== 'google') return null;
-  if (!googleCanEdit) {
-    return 'Spark can’t change events on this Google account yet. Ask the user to turn on Agents can edit for this calendar on the Calendar card and allow it in Google.';
+  const cloud = CLOUD[choice.sourceKind];
+  if (!cloud) return null;
+  if (!cloudCanEdit) {
+    return `Spark can’t change events on this ${cloud.name} account yet. Ask the user to turn on Agents can edit for this calendar on the Calendar card and allow it in ${cloud.name}.`;
   }
   if (span === 'future') {
-    return 'On a Google calendar Spark changes one occurrence at a time. Change this occurrence only, or ask the user to change the series in Google Calendar.';
+    return `On a ${cloud.name} calendar Spark changes one occurrence at a time. Change this occurrence only, or ask the user to change the series in ${cloud.app}.`;
   }
   return null;
+}
+
+export function othersRefusal(choice: CalendarChoice, others: number): string | null {
+  if (choice.sourceKind !== 'microsoft' || others === 0) return null;
+  return 'Microsoft tells attendees about every change to a meeting, so Spark doesn’t change or delete Microsoft events with other people on them. Ask the user to change it in Outlook.';
 }
 
 export function floorReasons(

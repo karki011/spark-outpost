@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { calendarEventDetailSchema } from '@spark-outpost/contracts';
-import { backoffMs, GOOGLE_POLL_MS } from '../src/calendar/google/accounts.ts';
+import { backoffMs, CLOUD_POLL_MS } from '../src/calendar/cloud/poll.ts';
 import { dateKey } from '../src/calendar/service.ts';
 import {
   EMAIL,
@@ -113,7 +113,7 @@ describe('Google sync', () => {
     expect(backoffMs(3, null, 0.5)).toBe(120_000);
     expect(backoffMs(20, null, 0.5)).toBe(30 * 60_000);
     expect(backoffMs(1, 90_000, 0)).toBe(90_000);
-    expect(GOOGLE_POLL_MS).toBe(180_000);
+    expect(CLOUD_POLL_MS).toBe(180_000);
   });
 
   it('Refresh now syncs at once but waits out a backoff', async () => {

@@ -3,12 +3,12 @@ import {
   type CalendarEventDetail,
   type CalendarGoogleStatus,
   type GoogleSignInFlow,
-  type HelperEvent,
 } from '@spark-outpost/contracts';
 import { getGoogleEvent } from './api.ts';
 import type { Db } from '../../persistence/db.ts';
 import { googleCalendarSecret, type SecretStore } from '../../setup/secrets.ts';
 import {
+  accountRange,
   isSkippable,
   liveAccount,
   markSignInAgain,
@@ -29,20 +29,21 @@ import {
   type GoogleSignInRequest,
 } from './sign-in.ts';
 import {
-  deleteGoogleAccount,
-  googleAccounts,
-  saveGoogleAccount,
-  setGoogleAgentsEdit,
-} from './store.ts';
-import { createGoogleRangeCache } from './range.ts';
+  cloudAccounts,
+  deleteCloudAccount,
+  saveCloudAccount,
+  setCloudAgentsEdit,
+} from '../cloud/account-store.ts';
+import { createRangeCache } from '../cloud/range.ts';
+import { storedEvent } from './sync.ts';
 import {
   collectEvents,
   covers,
   findStored,
-  googleWindow,
-  storedEvent,
+  syncWindow,
   type StoredEvent,
-} from './sync.ts';
+  type WindowEvents,
+} from '../cloud/events.ts';
 import { splitNotes } from '../notes-text.ts';
 import { locationOf, peopleOf } from '../people.ts';
 import { forgetMarksOf } from '../store.ts';
@@ -77,10 +78,7 @@ export interface GoogleSourceDeps {
   random?: () => number;
 }
 
-export interface GoogleWindowEvents {
-  events: HelperEvent[];
-  truncated: boolean;
-}
+export type GoogleWindowEvents = WindowEvents;
 
 export interface GoogleSource {
   start(): Promise<void>;
@@ -99,6 +97,7 @@ export interface GoogleSource {
     accountId: string,
     shownElsewhere?: readonly string[],
   ): Promise<{ found: boolean; revoked: boolean }>;
+  uids(): string[];
   refresh(): void;
   refreshNow(): Promise<void>;
   syncNow(): Promise<void>;
@@ -137,7 +136,14 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       }
     : null;
 
-  const ranges = accountDeps ? createGoogleRangeCache(accountDeps) : null;
+  const ranges = accountDeps
+    ? createRangeCache<LiveAccount>({
+        now,
+        label: 'Google Calendar',
+        idOf: (account) => account.row.id,
+        load: (account, window) => accountRange(accountDeps, account, window),
+      })
+    : null;
   const usable = () =>
     [...accounts.values()].filter((account) => account.state !== 'sign_in_again');
 
@@ -223,12 +229,18 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       throw new GoogleAccountMismatch(wanted.row.email);
     }
     await deps.secrets.set(googleCalendarSecret(grant.subject), grant.refreshToken);
-    const row = await saveGoogleAccount(deps.db, deps.workspaceId, {
+    const row = await saveCloudAccount(deps.db, 'google', deps.workspaceId, {
       subject: grant.subject,
       email: grant.email,
       canEdit: googleScopesEdit(grant.scopes),
     });
-    const edit = await setGoogleAgentsEdit(deps.db, deps.workspaceId, row, request.editCalendar);
+    const edit = await setCloudAgentsEdit(
+      deps.db,
+      'google',
+      deps.workspaceId,
+      row,
+      request.editCalendar,
+    );
     const account = accounts.get(row.id) ?? liveAccount(row);
     account.row = row;
     account.accessToken = grant.accessToken;
@@ -244,7 +256,7 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
 
   async function reconcile(): Promise<void> {
     if (!accountDeps) return;
-    const rows = await googleAccounts(deps.db, deps.workspaceId);
+    const rows = await cloudAccounts(deps.db, 'google', deps.workspaceId);
     const saved = new Set(rows.map((row) => row.id));
     for (const accountId of [...accounts.keys()]) {
       if (saved.has(accountId)) continue;
@@ -288,9 +300,9 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     },
     ready: () =>
       [...accounts.values()].some((account) => account.synced && account.state !== 'sign_in_again'),
-    window: () => windowEvents(googleWindow(now())),
+    window: () => windowEvents(syncWindow(now())),
     async range(from, to) {
-      const window = googleWindow(now());
+      const window = syncWindow(now());
       const storedCovers = usable().every((account) =>
         [...account.calendars.values()].every((sync) => sync.windowKey === window.key),
       );
@@ -331,7 +343,9 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
     signInSettled: () => signIn?.settled() ?? Promise.resolve(),
     async disconnect(accountId, shownElsewhere = []) {
       const account = accounts.get(accountId);
-      const rows = account ? [account.row] : await googleAccounts(deps.db, deps.workspaceId);
+      const rows = account
+        ? [account.row]
+        : await cloudAccounts(deps.db, 'google', deps.workspaceId);
       const row = rows.find((candidate) => candidate.id === accountId);
       if (!row) return { found: false, revoked: false };
       schedule(accountId, null);
@@ -347,11 +361,12 @@ export function createGoogleSource(deps: GoogleSourceDeps): GoogleSource {
       const revoked =
         token && client ? await revokeGoogleToken({ fetch: deps.fetch, client }, token) : !token;
       await deps.secrets.delete(secret);
-      await deleteGoogleAccount(deps.db, deps.workspaceId, accountId);
+      await deleteCloudAccount(deps.db, 'google', deps.workspaceId, accountId);
       ranges?.clear();
       emit();
       return { found: true, revoked };
     },
+    uids: () => [...accounts.values()].flatMap((account) => accountUids(account)),
     refresh() {
       ranges?.clear();
       for (const accountId of accounts.keys()) schedule(accountId, 0);

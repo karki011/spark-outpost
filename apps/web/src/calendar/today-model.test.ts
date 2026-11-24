@@ -5,6 +5,7 @@ import { at, choice, event, FAMILY, link, status, WORK } from './test-fixtures.t
 import {
   CALENDAR_TAGLINE,
   connectorLine,
+  hasCalendarSource,
   nextMeeting,
   countdown,
   joinTarget,
@@ -114,6 +115,42 @@ describe('with a Google account', () => {
 
   it('says to sign in again when Google refused the sign-in', () => {
     expect(connectorLine(google('sign_in_again')).text).toBe('1 calendar · Sign in again');
+  });
+});
+
+describe('with only a Microsoft account', () => {
+  const microsoft = (state: 'ready' | 'sign_in_again') =>
+    status({
+      helper: 'missing',
+      connected: false,
+      accounts: [
+        {
+          id: 'microsoft:a',
+          title: 'me@contoso.com',
+          kind: 'microsoft',
+          calendars: [choice(WORK, { sourceKind: 'microsoft' })],
+        },
+      ],
+      microsoft: {
+        available: true,
+        signIn: status().microsoft.signIn,
+        accounts: [
+          {
+            id: '00000000-0000-4000-8000-00000000000b',
+            email: 'me@contoso.com',
+            state,
+            message: null,
+            canEdit: false,
+            syncedAt: null,
+          },
+        ],
+      },
+    });
+
+  it('counts as a calendar source and asks to sign in again when Microsoft refused', () => {
+    expect(hasCalendarSource(microsoft('ready'))).toBe(true);
+    expect(todayState(microsoft('ready'))).toBe('ready');
+    expect(connectorLine(microsoft('sign_in_again')).text).toBe('1 calendar · Sign in again');
   });
 });
 

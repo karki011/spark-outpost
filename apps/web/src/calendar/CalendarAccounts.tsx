@@ -9,7 +9,7 @@ import type {
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import { CalendarName } from './CalendarName.tsx';
 
-const SOURCE_LABEL: Record<CalendarSourceKind, string> = {
+export const SOURCE_LABEL: Record<CalendarSourceKind, string> = {
   local: 'On this Mac',
   exchange: 'Exchange',
   caldav: 'CalDAV',
@@ -17,6 +17,7 @@ const SOURCE_LABEL: Record<CalendarSourceKind, string> = {
   subscribed: 'Subscribed',
   birthdays: 'Birthdays',
   google: 'Google',
+  microsoft: 'Microsoft',
   other: 'Other',
 };
 

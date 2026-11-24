@@ -73,7 +73,8 @@ import { fakeMeetingSource } from '../meetings/fake-source.ts';
 import { meetingNotesWriter } from '../meetings/notes.ts';
 import { createMeetingService } from '../meetings/service.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
-import { createGoogleSource } from '../calendar/google/source.ts';
+import { startCloudCalendars } from '../calendar/cloud-sources.ts';
+import { microsoftClientConfig } from '../calendar/microsoft/config.ts';
 import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/access.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { startSlackServices } from './slack-services.ts';
@@ -130,10 +131,9 @@ const { slackSignIn, slackDeps, focus, slackNotifier, slackMentions } = startSla
   secrets,
 });
 const desktopCalendar = connectDesktopCalendar(process.env, process);
-const googleCalendar = desktopCalendar
-  ? createGoogleSource({ db, workspaceId, secrets, fetch, client: googleClientConfig(config) })
-  : null;
-await googleCalendar?.start();
+const { google: googleCalendar, microsoft: microsoftCalendar } = desktopCalendar
+  ? await startCloudCalendars(config, { db, workspaceId, secrets, fetch })
+  : { google: null, microsoft: null };
 let calendarTicker: CalendarTicker | null = null;
 let chatPorts: ChatPortWatcher | null = null;
 const { keys: remotePushKeys, notifier: pushNotifier } = startPushServices({
@@ -149,6 +149,7 @@ calendarTicker = desktopCalendar
       workspaceId,
       host: desktopCalendar,
       google: googleCalendar,
+      microsoft: microsoftCalendar,
       push: pushNotifier,
     })
   : null;
@@ -281,6 +282,7 @@ const nativeMcp = await startSparkMcpHost(
       secrets,
       fetch,
       client: googleClientConfig(config),
+      microsoftClient: microsoftClientConfig(config),
     }),
   },
   undefined,
@@ -288,9 +290,10 @@ const nativeMcp = await startSparkMcpHost(
 );
 savePort(nativeMcpPortFile, nativeMcp.port);
 const nativeApprovalWaiters = new ApprovalWaiters();
-const calendarWrittenListener = await listen(config.DATABASE_URL, CALENDAR_WRITTEN_CHANNEL, () =>
-  googleCalendar?.refresh(),
-);
+const calendarWrittenListener = await listen(config.DATABASE_URL, CALENDAR_WRITTEN_CHANNEL, () => {
+  googleCalendar?.refresh();
+  microsoftCalendar?.refresh();
+});
 const nativeApprovalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
   nativeApprovalWaiters.notify(id),
 );
@@ -377,6 +380,7 @@ const { app, reconcileRemote } = createAppParts({
   pushTest: (deviceId) => pushNotifier.test(deviceId),
   calendarHost: desktopCalendar,
   googleCalendar,
+  microsoftCalendar,
   meetings,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE
     ? { pairingAttemptsPerMinute: config.PAIRING_TEST_ATTEMPTS_PER_MINUTE }
@@ -476,6 +480,7 @@ const shutdown = async (keepTerminals = false) => {
     ['Slack mentions', () => slackMentions.stop()],
     ['calendar ticker', () => calendarTicker?.stop()],
     ['Google Calendar', () => googleCalendar?.stop()],
+    ['Microsoft Calendar', () => microsoftCalendar?.stop()],
     ['push notifier', () => pushNotifier.stop()],
     ['messages between chats', () => chatAsks.close()],
     ['HTTP server', () => server.close()],

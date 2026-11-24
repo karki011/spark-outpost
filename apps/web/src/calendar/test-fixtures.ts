@@ -91,6 +91,11 @@ export function status(overrides: Partial<CalendarStatus> = {}): CalendarStatus 
       accounts: [],
       signIn: { status: 'idle', authorizeUrl: null, expiresAt: null, message: null },
     },
+    microsoft: {
+      available: false,
+      accounts: [],
+      signIn: { status: 'idle', authorizeUrl: null, expiresAt: null, message: null },
+    },
     ...overrides,
   };
 }

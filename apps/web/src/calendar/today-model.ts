@@ -51,7 +51,7 @@ export function macState(status: CalendarStatus): TodayState {
 
 export function todayState(status: CalendarStatus): TodayState {
   if (!status.supported) return 'web';
-  if (status.google.accounts.length === 0) {
+  if (cloudAccounts(status).length === 0) {
     const mac = macState(status);
     if (mac !== 'ready') return mac;
   }
@@ -69,8 +69,12 @@ const STATE_LINE: Record<Exclude<TodayState, 'ready' | 'none'>, string> = {
   connect: CALENDAR_TAGLINE,
 };
 
+function cloudAccounts(status: CalendarStatus) {
+  return [...status.google.accounts, ...status.microsoft.accounts];
+}
+
 export function hasCalendarSource(status: CalendarStatus): boolean {
-  return status.connected || status.google.accounts.length > 0;
+  return status.connected || cloudAccounts(status).length > 0;
 }
 
 export function nextMeeting(
@@ -92,7 +96,7 @@ export function connectorLine(
   const parts = [
     included === 0 ? 'No calendars included' : countLabel(included, 'calendar'),
     ...(next ? [`next: ${next.title} ${countdown(next, now)}`] : []),
-    ...(status.google.accounts.some((account) => account.state === 'sign_in_again')
+    ...(cloudAccounts(status).some((account) => account.state === 'sign_in_again')
       ? ['Sign in again']
       : []),
   ];

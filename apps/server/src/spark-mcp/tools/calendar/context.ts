@@ -34,6 +34,7 @@ export async function calendarSession(context: SparkToolContext): Promise<AgentC
     workspaceId: scope.workspaceId,
     host: deps.calendar!.host,
     google: deps.calendar!.google,
+    microsoft: deps.calendar!.microsoft ?? null,
     now: () => nowOf(deps).getTime(),
   };
 }
