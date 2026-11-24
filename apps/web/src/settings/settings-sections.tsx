@@ -39,7 +39,7 @@ import { islandRows } from './DesktopCompanionSetting.tsx';
 import { MAC_CONTROL_LABEL, MacControlSection } from './MacControlSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import { NotificationsSection } from './NotificationsSection.tsx';
-import { PrivacyScreenSection, privacyScreenRows } from './PrivacyScreenSection.tsx';
+import { privacyScreenRows, PrivacyScreenSection } from './PrivacyScreenSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { GithubSection, githubRows } from './GithubSection.tsx';
 import { HealthSection } from './health/HealthSection.tsx';

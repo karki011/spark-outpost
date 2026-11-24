@@ -14,14 +14,28 @@ const press = (
 
 describe('companion shortcut keys', () => {
   it('shows accelerators with Mac key symbols', () => {
-    expect(shortcutLabel('Alt+Space')).toBe('⌥ Space');
-    expect(shortcutLabel('Alt+Shift+Space')).toBe('⌥ ⇧ Space');
-    expect(shortcutLabel('Command+Control+K')).toBe('⌘ ⌃ K');
+    expect(shortcutLabel('Alt+Space', true)).toBe('⌥ Space');
+    expect(shortcutLabel('Alt+Shift+Space', true)).toBe('⌥ ⇧ Space');
+    expect(shortcutLabel('Command+Control+K', true)).toBe('⌘ ⌃ K');
+  });
+
+  it('names the keys on Windows', () => {
+    expect(shortcutLabel('Control+Alt+Space', false)).toBe('Ctrl+Alt+Space');
+    expect(shortcutLabel('Alt+Shift+Space', false)).toBe('Alt+Shift+Space');
+    expect(shortcutLabel('CommandOrControl+K', false)).toBe('Ctrl+K');
+    expect(shortcutLabel('Super+K', false)).toBe('Win+K');
+  });
+
+  it('records the Windows key as Super on Windows and Command on the Mac', () => {
+    expect(acceleratorFromKey(press('KeyJ', { meta: true }), false)).toBe('Super+J');
+    expect(acceleratorFromKey(press('KeyJ', { meta: true }), true)).toBe('Command+J');
   });
 
   it('records a pressed combination as an Electron accelerator', () => {
     expect(acceleratorFromKey(press('Space', { alt: true }))).toBe('Alt+Space');
-    expect(acceleratorFromKey(press('KeyJ', { meta: true, shift: true }))).toBe('Command+Shift+J');
+    expect(acceleratorFromKey(press('KeyJ', { meta: true, shift: true }), true)).toBe(
+      'Command+Shift+J',
+    );
     expect(acceleratorFromKey(press('Digit3', { ctrl: true, alt: true }))).toBe('Control+Alt+3');
   });
 

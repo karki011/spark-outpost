@@ -11,6 +11,7 @@ import {
 } from '../ui/icons.tsx';
 import type { Panel } from './island-model.ts';
 import type { IslandSound } from './island-sound.ts';
+import { shortcutText } from '../ui/shortcuts.ts';
 
 export const PANEL_ORDER: readonly Panel[] = ['home', 'ask', 'quick'];
 
@@ -45,7 +46,7 @@ export function IslandBar({ panel, counts, actions, onTab }: IslandBarProps) {
           className="isl-tab home"
           aria-pressed={panel === 'home'}
           aria-label={homeLabel(counts.waiting)}
-          title="Home · ⌘1"
+          title={`Home · ${shortcutText(['mod', '1'])}`}
           onClick={() => onTab('home')}
         >
           <BlobScout size={18} />
@@ -61,7 +62,7 @@ export function IslandBar({ panel, counts, actions, onTab }: IslandBarProps) {
           className="isl-tab"
           aria-pressed={panel === 'ask'}
           aria-label="Ask Spark"
-          title="Ask Spark · ⌘3"
+          title={`Ask Spark · ${shortcutText(['mod', '3'])}`}
           onClick={() => onTab('ask')}
         >
           <AskIcon />
@@ -71,7 +72,7 @@ export function IslandBar({ panel, counts, actions, onTab }: IslandBarProps) {
           className="isl-tab"
           aria-pressed={panel === 'quick'}
           aria-label="New chat"
-          title="New chat · ⌘2"
+          title={`New chat · ${shortcutText(['mod', '2'])}`}
           onClick={() => onTab('quick')}
         >
           <PlusIcon />
@@ -108,7 +109,7 @@ export function IslandBar({ panel, counts, actions, onTab }: IslandBarProps) {
         type="button"
         className="isl-ibtn"
         aria-label="Open Spark"
-        title="Open Spark · ⌘O"
+        title={`Open Spark · ${shortcutText(['mod', 'O'])}`}
         onClick={actions.onOpenSpark}
       >
         <ExternalLinkIcon />

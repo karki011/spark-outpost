@@ -1,4 +1,5 @@
 import type { ILinkHandler, Terminal } from '@xterm/xterm';
+import { MAC } from '../ui/shortcuts.ts';
 
 export interface LinkPoint {
   x: number;
@@ -20,16 +21,18 @@ export interface PointerFacts {
 
 export type LinkPress = 'pane' | 'browser' | 'menu' | 'pass';
 
-export function linkPress(event: PointerFacts, onLink: boolean): LinkPress {
+export function linkPress(event: PointerFacts, onLink: boolean, mac = MAC): LinkPress {
   if (!onLink || event.altKey || event.shiftKey) return 'pass';
   if (event.button === 2) return 'menu';
-  if (event.button !== 0 || event.ctrlKey) return 'pass';
-  return event.metaKey ? 'browser' : 'pane';
+  const browser = mac ? event.metaKey : event.ctrlKey;
+  const other = mac ? event.ctrlKey : event.metaKey;
+  if (event.button !== 0 || other) return 'pass';
+  return browser ? 'browser' : 'pane';
 }
 
 type ModesTerminal = Pick<Terminal, 'modes' | 'focus'>;
 
-export function terminalLinkFollower(opener: LinkOpener) {
+export function terminalLinkFollower(opener: LinkOpener, mac = MAC) {
   let hovered: string | null = null;
   const hover = (_event: MouseEvent, uri: string) => {
     hovered = uri;
@@ -39,7 +42,7 @@ export function terminalLinkFollower(opener: LinkOpener) {
   };
   const activate = (event: MouseEvent, uri: string) => {
     event.preventDefault();
-    const press = linkPress(event, true);
+    const press = linkPress(event, true, mac);
     if (press === 'pane' || press === 'browser') opener.open(uri, press);
   };
   const osc: ILinkHandler = { activate, hover, leave, allowNonHttpProtocols: true };
@@ -53,7 +56,7 @@ export function terminalLinkFollower(opener: LinkOpener) {
       const abort = new AbortController();
       const reporting = () => terminal.modes.mouseTrackingMode !== 'none';
       const onDown = (event: MouseEvent) => {
-        if (linkPress(event, hovered !== null) === 'pass' || !reporting()) return;
+        if (linkPress(event, hovered !== null, mac) === 'pass' || !reporting()) return;
         event.stopPropagation();
         event.preventDefault();
         terminal.focus();

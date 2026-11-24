@@ -1,7 +1,10 @@
 import { ATTACHMENT_IMAGE_MAX_BYTES } from '@spark-outpost/contracts';
+import { MAC, shortcutText } from '../../ui/shortcuts.ts';
 
-export const SCREENSHOT_FALLBACK =
-  'Screen capture is not available here. Take a screenshot with ⌘⇧4 and paste it with ⌘V.';
+export function screenshotFallback(mac = MAC): string {
+  const take = mac ? '⌘⇧4' : 'Win+Shift+S';
+  return `Screen capture is not available here. Take a screenshot with ${take} and paste it with ${shortcutText(['mod', 'V'], mac)}.`;
+}
 
 export function canCaptureScreen(): boolean {
   return typeof navigator.mediaDevices?.getDisplayMedia === 'function';

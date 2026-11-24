@@ -19,6 +19,7 @@ import {
   windowed,
 } from './schedule-model.ts';
 import { problemOf, toSchedule, type DraftProblem, type ScheduleDraft } from './workflow-draft.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 const UNITS: { id: ScheduleUnit; label: string }[] = [
   { id: 'minutes', label: 'Minutes' },
@@ -40,6 +41,7 @@ interface ScheduleCardProps {
 
 export function ScheduleCard({ schedule, problems, lastRunCostUsd, onChange }: ScheduleCardProps) {
   const ids = useId();
+  const missedLabel = `If the ${hostWords().computer} was asleep or Spark was closed`;
   const minute = useMinuteClock();
   const cycle = hourCycle();
   const edit = (patch: Partial<ScheduleDraft>) =>
@@ -168,9 +170,9 @@ export function ScheduleCard({ schedule, problems, lastRunCostUsd, onChange }: S
           />
         </div>
         <div className="wf-sched-field">
-          <span id={`${ids}-missed`}>If the Mac was asleep or Spark was closed</span>
+          <span id={`${ids}-missed`}>{missedLabel}</span>
           <Segmented
-            ariaLabel="If the Mac was asleep or Spark was closed"
+            ariaLabel={missedLabel}
             options={MISSED}
             value={schedule.missed}
             onChange={(missed) => edit({ missed: missed as ScheduleMissed })}

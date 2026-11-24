@@ -15,6 +15,7 @@ import { ExternalLinkIcon, VideoIcon } from '../ui/icons.tsx';
 import { afterMeeting, leadProgress, startsIn } from './home-model.ts';
 import { Kbd } from './island-parts.tsx';
 import { JoinAtStartAction } from './JoinAtStartAction.tsx';
+import { hasModifier, shortcutText } from '../ui/shortcuts.ts';
 
 interface MeetingProps {
   calendar: IslandCalendar;
@@ -39,7 +40,7 @@ function useJoinKey(event: CalendarEvent | null, calendar: IslandCalendar) {
   useEffect(() => {
     if (!on) return;
     const onKeyDown = (key: KeyboardEvent) => {
-      if (!key.metaKey || key.shiftKey || key.altKey || key.key.toLowerCase() !== 'j') return;
+      if (!hasModifier(key) || key.shiftKey || key.altKey || key.key.toLowerCase() !== 'j') return;
       const shown = latest.current;
       if (!shown.event || !canJoin(shown.event, shown.calendar)) return;
       key.preventDefault();
@@ -76,7 +77,7 @@ function JoinNow({
       aria-label={`${joinLabel(event)}: ${event.title}`}
       onClick={() => join(event, calendar)}
     >
-      Join {shortcut && <Kbd>⌘J</Kbd>}
+      Join {shortcut && <Kbd>{shortcutText(['mod', 'J'])}</Kbd>}
     </button>
   );
 }

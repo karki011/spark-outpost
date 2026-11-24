@@ -19,7 +19,10 @@ function panelLabel(panel: Panel, followUp: boolean): string {
   return panel === 'quick' && followUp ? 'Reply' : PANEL_LABELS[panel];
 }
 
-export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode } {
+export function wingsFor(
+  props: WingProps,
+  quickKeys: string,
+): { left: ReactNode; right: ReactNode } {
   const { view, greeting } = props;
   switch (view.kind) {
     case 'card':
@@ -44,7 +47,7 @@ export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode 
           view.panel === 'home' && greeting
             ? greeting
             : panelLabel(view.panel, props.followUp !== null),
-        right: <Kbd>⌥ Space</Kbd>,
+        right: <Kbd>{quickKeys}</Kbd>,
       };
     default:
       return { left: null, right: null };

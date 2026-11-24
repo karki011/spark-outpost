@@ -10,7 +10,7 @@ You'll start, check and ask about chats from any app. About 2 minutes.
 
 ## Start a chat
 
-1. Press **⌥Space** anywhere to open **New chat**.
+1. Press **⌥Space** (Windows: **Ctrl+Alt+Space**) anywhere to open **New chat**.
 2. Type your task in **Start a new chat…**.
 3. Optionally pick **Choose project** or the autonomy chip.
 4. Press **Enter**; **Esc** closes, keeping your draft.

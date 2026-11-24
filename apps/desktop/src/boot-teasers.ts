@@ -21,6 +21,7 @@ export interface TeaserInput {
   changelog: string;
   version: string;
   defaultShortcut: boolean;
+  platform: NodeJS.Platform;
   now: Date;
   timeZone?: string;
   random: () => number;
@@ -29,7 +30,6 @@ export interface TeaserInput {
 const AWAY_MAX = 3;
 const HEADLINE_MAX = 60;
 const AWAY = 'While you were away';
-const SHORTCUT_TIP = '⌥Space starts a chat from anywhere';
 const TIPS = [
   'Try the Sky view on a project’s Map: the whole repo as stars',
   'The context ring in the message box shows how full a chat is',
@@ -127,9 +127,14 @@ export function whatsNew(changelog: string, version: string, count: number): str
   return notes.filter((note) => note.length > 0);
 }
 
-function pickTip(defaultShortcut: boolean, random: () => number): string {
-  const tips = defaultShortcut ? [SHORTCUT_TIP, ...TIPS] : TIPS;
-  return tips[Math.floor(random() * tips.length)] ?? TIPS[0] ?? SHORTCUT_TIP;
+function shortcutTip(platform: NodeJS.Platform): string {
+  const keys = platform === 'win32' ? 'Ctrl+Alt+Space' : '⌥Space';
+  return `${keys} starts a chat from anywhere`;
+}
+
+function pickTip(input: TeaserInput): string {
+  const tips = input.defaultShortcut ? [shortcutTip(input.platform), ...TIPS] : TIPS;
+  return tips[Math.floor(input.random() * tips.length)] ?? TIPS[0] ?? shortcutTip(input.platform);
 }
 
 export function teaserLines(input: TeaserInput): BootTeaser[] {
@@ -138,6 +143,6 @@ export function teaserLines(input: TeaserInput): BootTeaser[] {
   return [
     ...away.map((text) => ({ label: AWAY, text })),
     ...notes.map((text) => ({ label: `New in ${input.version}`, text })),
-    { label: 'Tip', text: pickTip(input.defaultShortcut, input.random) },
+    { label: 'Tip', text: pickTip(input) },
   ];
 }

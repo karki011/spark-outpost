@@ -78,7 +78,7 @@ test('the toolbar and Alt+Cmd+I open developer tools for the shown tab', async (
   await withDesktopBrowser(page);
   const { pane, chatId } = await openPane(page);
   await push(page, chatId, { ...agentTab, owner: 'user' });
-  const open = pane.getByRole('button', { name: 'Open developer tools (⌥⌘I)' });
+  const open = pane.getByRole('button', { name: /^Open developer tools \((⌥⌘I|Ctrl\+Alt\+I)\)$/ });
   await open.click();
   expect((await calls(page, 'command')).at(-1)).toEqual({
     chatId,

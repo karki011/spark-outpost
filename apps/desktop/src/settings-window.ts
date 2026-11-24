@@ -103,6 +103,7 @@ function createWindow(options: SettingsWindowOptions, route: string): BrowserWin
       additionalArguments: [...themeArgs(options.theme()), ...hourCycleArgs(systemHourCycle())],
     },
   });
+  if (process.platform === 'win32') window.removeMenu();
   guardNavigation(window, options.origin);
   attachContextMenu(window, openLink);
   window.once('ready-to-show', () => window.show());

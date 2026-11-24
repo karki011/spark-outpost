@@ -30,6 +30,7 @@ export function startBootTeasers(options: BootTeasersOptions) {
       changelog,
       version: options.version,
       defaultShortcut: settings.shortcuts.quick === DEFAULT_SHORTCUTS.quick,
+      platform: process.platform,
       now: new Date(),
       random: Math.random,
     }),

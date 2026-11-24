@@ -6,7 +6,7 @@ order: 620
 summary: Shortcuts for chats, the Browser pane, the Changes drawer, the Map, Tickets and Spark Island.
 ---
 
-On Windows and Linux, use **Ctrl** for **⌘**.
+On Windows and Linux, use **Ctrl** for **⌘** and **⌃**, **Alt** for **⌥** and **Shift** for **⇧**, except **⌃⌘S**, which is **Ctrl+Alt+S**. The Windows app keeps **Settings…** and **Lock Spark Outpost** under **File**.
 
 ## Chats
 
@@ -98,14 +98,14 @@ On Windows and Linux, use **Ctrl** for **⌘**.
 
 ## Spark Island, Mac app
 
-| Keys            | Action                                     |
-| --------------- | ------------------------------------------ |
-| **⌥Space**      | Quick chat, or the card that waits for you |
-| **⌥⇧Space**     | The inbox                                  |
-| **⌥⇧V**         | Voice: talk, or stop talking               |
-| **⌘1** – **⌘3** | Inbox, New chat, Ask Spark                 |
-| **⌘O**          | Open Spark                                 |
-| **Y** / **N**   | Allow once / deny the top or focused card  |
-| **Esc**         | Close the panel, or leave a change         |
+| Keys            | Action                                                                   |
+| --------------- | ------------------------------------------------------------------------ |
+| **⌥Space**      | Quick chat, or the card that waits for you (Windows: **Ctrl+Alt+Space**) |
+| **⌥⇧Space**     | The inbox                                                                |
+| **⌥⇧V**         | Voice: talk, or stop talking                                             |
+| **⌘1** – **⌘3** | Inbox, New chat, Ask Spark                                               |
+| **⌘O**          | Open Spark                                                               |
+| **Y** / **N**   | Allow once / deny the top or focused card                                |
+| **Esc**         | Close the panel, or leave a change                                       |
 
 To change the two global shortcuts, see [Change a shortcut](companion-quick-chat.md#change-a-shortcut).

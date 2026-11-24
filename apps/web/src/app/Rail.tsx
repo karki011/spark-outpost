@@ -19,7 +19,8 @@ import { RailFlyout } from './RailFlyout.tsx';
 import { RailMore } from './RailMore.tsx';
 import { guideLink } from '@spark-outpost/contracts';
 import { requestFeedback } from '../help/feedback-request.ts';
-import { MAC } from '../ui/shortcuts.ts';
+import { MAC, shortcutText } from '../ui/shortcuts.ts';
+import { onWindows } from '../desktop/desktop-bridge.ts';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import { PlanRing } from './PlanRing.tsx';
 import './rail.css';
@@ -445,7 +446,7 @@ export function Rail({
                   id: 'settings',
                   label: 'Settings…',
                   icon: SETTINGS_ICON,
-                  shortcut: MAC ? '⌘,' : undefined,
+                  shortcut: MAC || onWindows() ? shortcutText(['mod', ',']) : undefined,
                   onSelect: onSettings,
                 },
                 {

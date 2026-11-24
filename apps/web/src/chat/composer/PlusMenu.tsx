@@ -1,11 +1,12 @@
 import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
 import { usePopover } from '../../ui/use-popover.ts';
 import {
-  SCREENSHOT_FALLBACK,
+  screenshotFallback,
   canCaptureScreen,
   captureScreenshot,
 } from '../attachments/capture-screenshot.ts';
 import { ChatPicker } from './ChatPicker.tsx';
+import { shortcutText } from '../../ui/shortcuts.ts';
 
 interface PlusMenuProps {
   hasProject: boolean;
@@ -82,12 +83,15 @@ export function PlusMenu({
 
   const addScreenshot = () => {
     if (!canCaptureScreen()) {
-      onNotice(SCREENSHOT_FALLBACK);
+      onNotice(screenshotFallback());
       return;
     }
     captureScreenshot().then(
       (file) => onAttach([file]),
-      () => onNotice('No screenshot was taken. You can also paste one with ⌘V.'),
+      () =>
+        onNotice(
+          `No screenshot was taken. You can also paste one with ${shortcutText(['mod', 'V'])}.`,
+        ),
     );
   };
 

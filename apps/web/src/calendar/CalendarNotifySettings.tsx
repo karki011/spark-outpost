@@ -11,6 +11,7 @@ import { Segmented } from '../ui/Segmented.tsx';
 import { CalendarNudgeList, NUDGE_CALENDARS_LABEL } from './CalendarNudgeList.tsx';
 import { parseFocusNames } from './focus-names.ts';
 import { useCalendarActions, useCalendarStatus } from './use-calendar.ts';
+import { shortcutText } from '../ui/shortcuts.ts';
 
 export const CALENDAR_BRIEF_LABEL = 'Add today’s calendar to the brief';
 const WRAP_UP_LABEL = 'Wrap-up reminder';
@@ -203,7 +204,7 @@ export function CalendarMeetingSettings() {
         />
         <ChoiceRow
           label={JOIN_LEAD_LABEL}
-          hint="Spark Island shows the meeting with Join, hops once and plays a short sound unless chimes are held or off. Join, ⌘J and Ask Spark work from then until it ends."
+          hint={`Spark Island shows the meeting with Join, hops once and plays a short sound unless chimes are held or off. Join, ${shortcutText(['mod', 'J'])} and Ask Spark work from then until it ends.`}
           options={JOIN_LEAD}
           value={String(settings.joinLead)}
           onChange={(id) => save({ joinLead: Number(id) as CalendarSettings['joinLead'] })}
