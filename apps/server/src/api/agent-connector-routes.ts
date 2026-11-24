@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { AgentConnectorsResponse } from '@spark-outpost/contracts';
 import { productLive } from '../atlassian/session.ts';
 import { connectorSummary } from '../agent-connectors/summary.ts';
-import { googleAccounts } from '../calendar/google/store.ts';
+import { cloudAccounts } from '../calendar/cloud/account-store.ts';
 import { calendarConnection } from '../calendar/store.ts';
 import { getTicketConnection } from '../persistence/ticket-connections.ts';
 import { getSlackConnection } from '../persistence/slack.ts';
@@ -52,9 +52,10 @@ export function agentConnectorRoutes(routeDeps: AgentConnectorRouteDeps): Router
         getSlackConnection(db, workspaceId),
         openSlack(slackDeps).catch(() => null),
       ]);
-    const [calendar, google] = await Promise.all([
+    const [calendar, google, microsoft] = await Promise.all([
       calendarConnection(db, workspaceId),
-      googleAccounts(db, workspaceId),
+      cloudAccounts(db, 'google', workspaceId),
+      cloudAccounts(db, 'microsoft', workspaceId),
     ]);
     const source = (id: string) => sources.some((open) => open.connection.source === id);
     const response: AgentConnectorsResponse = {
@@ -68,7 +69,8 @@ export function agentConnectorRoutes(routeDeps: AgentConnectorRouteDeps): Router
         servicenow: source('servicenow'),
         slackConnected: slackRow !== null,
         slack: slack !== null,
-        calendarConnected: calendar.connected || google.some((account) => !account.needsSignIn),
+        calendarConnected:
+          calendar.connected || [...google, ...microsoft].some((account) => !account.needsSignIn),
         calendarAgentsRead: calendar.settings.agentsRead,
       }),
     };

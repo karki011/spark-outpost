@@ -20,6 +20,9 @@ function withOverrides(
   }));
 }
 
+const isCloud = (account: CalendarAccount) =>
+  account.kind === 'google' || account.kind === 'microsoft';
+
 export function useCalendarChoices(accounts: readonly CalendarAccount[]) {
   const { choose } = useCalendarActions();
   const [overrides, setOverrides] = useState<Overrides>({});
@@ -37,8 +40,8 @@ export function useCalendarChoices(accounts: readonly CalendarAccount[]) {
   };
   const shown = withOverrides(accounts, overrides);
   return {
-    mac: shown.filter((account) => account.kind !== 'google'),
-    google: shown.filter((account) => account.kind === 'google'),
+    mac: shown.filter((account) => !isCloud(account)),
+    cloud: shown.filter(isCloud),
     change,
     error: choose.error,
   };

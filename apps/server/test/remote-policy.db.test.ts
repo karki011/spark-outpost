@@ -245,6 +245,7 @@ describe('switches', () => {
   it('tells the web app it runs on a phone, and which one', async () => {
     expect((await phone.get('/api/remote/session').expect(200)).body).toEqual({
       remote: true,
+      host: process.platform === 'win32' ? 'windows' : 'mac',
       device: { id: device.id, name: 'Test phone' },
       address: 'https://mac.tail1234.ts.net',
       switches: REMOTE_SWITCH_DEFAULTS,

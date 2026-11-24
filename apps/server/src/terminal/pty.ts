@@ -4,9 +4,11 @@ import { spawn as spawnNodePty } from 'node-pty';
 import { childEnvironment } from '../setup/environment.ts';
 import type { StartObserver } from './start-timing.ts';
 import { defaultShell } from '../setup/default-shell.ts';
+import { cliDeps, cliRun, ptyArgs } from './windows-cli.ts';
 
 export interface PtyProcess {
   readonly pid: number;
+  ready?: Promise<void>;
   write(data: string): void;
   resize(cols: number, rows: number): void;
   colors?(colors: TerminalColors): void;
@@ -45,12 +47,16 @@ const STAY_IN_FOLDER: Record<string, string> =
 
 export function loginShellSpawner(shell = defaultShell()): SpawnPty {
   return ({ cols, rows, cwd, command, args, env }) => {
-    const pty = spawnNodePty(command ?? shell, command ? (args ?? []) : ['-l'], {
+    const environment = { ...shellEnvironment(process.env), ...STAY_IN_FOLDER, ...env };
+    const run = command
+      ? cliRun(command, args ?? [], process.platform, cliDeps(environment))
+      : { file: shell, args: ['-l'], verbatim: false };
+    const pty = spawnNodePty(run.file, ptyArgs(run), {
       name: 'xterm-256color',
       cols,
       rows,
       cwd: cwd ?? os.homedir(),
-      env: { ...shellEnvironment(process.env), ...STAY_IN_FOLDER, ...env },
+      env: environment,
     });
     return {
       pid: pty.pid,

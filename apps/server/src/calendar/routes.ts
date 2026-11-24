@@ -2,6 +2,7 @@ import { Router, type Response } from 'express';
 import {
   CALENDAR_RANGE_MAX_DAYS,
   GOOGLE_EDIT_NEEDS_GRANT,
+  MICROSOFT_EDIT_NEEDS_GRANT,
   addLocalDays,
   calendarChoicePatchSchema,
   calendarMarkRequestSchema,
@@ -9,6 +10,7 @@ import {
   calendarSettingsPatchSchema,
   type CalendarOccurrence,
   isGoogleEventId,
+  isMicrosoftEventId,
   localDayStart,
 } from '@spark-outpost/contracts';
 import { BadRequestError, paramId, parseBody } from '../api/validation.ts';
@@ -17,8 +19,12 @@ import { recordedMeetings } from '../meetings/store.ts';
 import { googleCalendarRoutes } from './google/routes.ts';
 import { GoogleApiError } from './google/api.ts';
 import { GoogleAuthError } from './google/oauth.ts';
-import { googleEditBlocked } from './google/store.ts';
+import { cloudEditBlocked } from './cloud/account-store.ts';
 import { GoogleSignInNeeded, type GoogleSource } from './google/source.ts';
+import { GraphApiError } from './microsoft/api.ts';
+import { MicrosoftAuthError } from './microsoft/oauth.ts';
+import { microsoftCalendarRoutes } from './microsoft/routes.ts';
+import { MicrosoftSignInNeeded, type MicrosoftSource } from './microsoft/source.ts';
 import { CalendarHostError, type CalendarHost } from './host-client.ts';
 import {
   calendarDay,
@@ -47,6 +53,7 @@ export interface CalendarRouteDeps {
   workspaceId: string;
   calendarHost?: CalendarHost | null;
   googleCalendar?: GoogleSource | null;
+  microsoftCalendar?: MicrosoftSource | null;
   now?: () => number;
 }
 
@@ -106,8 +113,11 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
   const host = deps.calendarHost ?? null;
   const now = () => deps.now?.() ?? Date.now();
   const google = deps.googleCalendar ?? null;
-  const service = { db: deps.db, workspaceId: deps.workspaceId, host, google, now };
-  google?.onChanged(() => void announceCalendar(deps.db).catch(() => undefined));
+  const microsoft = deps.microsoftCalendar ?? null;
+  const service = { db: deps.db, workspaceId: deps.workspaceId, host, google, microsoft, now };
+  const announce = () => void announceCalendar(deps.db).catch(() => undefined);
+  google?.onChanged(announce);
+  microsoft?.onChanged(announce);
   const needHost = (): CalendarHost => {
     if (!host) throw new CalendarHostError('missing', 'Calendar is only in the Mac app.');
     return host;
@@ -146,15 +156,20 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
       const patch = parseBody(calendarChoicePatchSchema, req);
       const key = paramId(req, 'key');
       const changed = await updateChoice(deps.db, deps.workspaceId, key, patch);
-      if (
-        !changed &&
-        patch.agentsEdit &&
-        (await googleEditBlocked(deps.db, deps.workspaceId, key))
-      ) {
-        throw new BadRequestError(GOOGLE_EDIT_NEEDS_GRANT);
+      const blocked =
+        !changed && patch.agentsEdit
+          ? await cloudEditBlocked(deps.db, deps.workspaceId, key)
+          : null;
+      if (blocked) {
+        throw new BadRequestError(
+          blocked === 'google' ? GOOGLE_EDIT_NEEDS_GRANT : MICROSOFT_EDIT_NEEDS_GRANT,
+        );
       }
       if (!changed) throw new BadRequestError('That calendar is not known.');
-      if (patch.include !== undefined) google?.refresh();
+      if (patch.include !== undefined) {
+        google?.refresh();
+        microsoft?.refresh();
+      }
       await announceCalendar(deps.db);
       return calendarStatus(service);
     }),
@@ -199,7 +214,7 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
     guarded(res, async () => {
       const { connected } = await calendarConnection(deps.db, deps.workspaceId);
       if (host && connected) await rereadMac(host);
-      await google?.refreshNow();
+      await Promise.all([google?.refreshNow(), microsoft?.refreshNow()]);
       await announceCalendar(deps.db);
       return { refreshedAt: new Date(now()).toISOString() };
     }),
@@ -217,7 +232,9 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
   router.post('/calendar/open', (req, res) =>
     guarded(res, async () => {
       const occurrence = parseBody(calendarOccurrenceSchema, req);
-      if (isGoogleEventId(occurrence.eventId)) return { opened: false };
+      if (isGoogleEventId(occurrence.eventId) || isMicrosoftEventId(occurrence.eventId)) {
+        return { opened: false };
+      }
       return needHost().request({
         op: 'open',
         eventId: occurrence.eventId,
@@ -229,40 +246,57 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
   router.post('/calendar/event', (req, res) =>
     guarded(res, async () => {
       const occurrence = parseBody(calendarOccurrenceSchema, req);
-      if (!isGoogleEventId(occurrence.eventId)) return eventDetail(needHost(), occurrence);
-      const detail = await googleDetail(occurrence);
+      const cloud = isGoogleEventId(occurrence.eventId) || isMicrosoftEventId(occurrence.eventId);
+      if (!cloud) return eventDetail(needHost(), occurrence);
+      const detail = await cloudDetail(occurrence);
       if (!detail) throw new CalendarHostError('not_found', 'That event is gone.');
       return detail;
     }),
   );
 
-  const googleDetail = async (occurrence: CalendarOccurrence) => {
-    if (!google) return null;
+  const cloudDetail = async (occurrence: CalendarOccurrence) => {
+    const source = isGoogleEventId(occurrence.eventId) ? google : microsoft;
+    if (!source) return null;
     const choices = occurrence.calendarKey ? await savedChoices(deps.db, deps.workspaceId) : [];
     const calendarId =
       choices.find((choice) => choice.key === occurrence.calendarKey)?.calendarId ?? null;
     try {
-      return await google.detail({
+      return await source.detail({
         eventId: occurrence.eventId,
         start: occurrence.start,
         calendarId,
       });
     } catch (error) {
-      if (error instanceof GoogleSignInNeeded) {
+      if (error instanceof GoogleSignInNeeded || error instanceof MicrosoftSignInNeeded) {
         throw new CalendarHostError('not_authorized', error.message);
       }
-      if (error instanceof GoogleApiError || error instanceof GoogleAuthError) {
-        throw new CalendarHostError('failed', error.message);
+      const failed = [GoogleApiError, GoogleAuthError, GraphApiError, MicrosoftAuthError];
+      if (failed.some((kind) => error instanceof kind)) {
+        throw new CalendarHostError('failed', (error as Error).message);
       }
       throw error;
     }
   };
 
   const macUids = async () => {
-    const mac = await calendarState({ ...service, google: null });
+    const mac = await calendarState({ ...service, google: null, microsoft: null });
     return mac.events.map((event) => event.uid ?? event.id);
   };
-  router.use(googleCalendarRoutes({ google, status: () => calendarStatus(service), macUids }));
+  const status = () => calendarStatus(service);
+  router.use(
+    googleCalendarRoutes({
+      google,
+      status,
+      otherUids: async () => [...(await macUids()), ...(microsoft?.uids() ?? [])],
+    }),
+  );
+  router.use(
+    microsoftCalendarRoutes({
+      microsoft,
+      status,
+      otherUids: async () => [...(await macUids()), ...(google?.uids() ?? [])],
+    }),
+  );
 
   return router;
 }

@@ -85,7 +85,6 @@ export function cardNeedsStepUp(card: ApprovalPayload): boolean {
   return kind === 'rules' || kind === 'macControl' || holdsToConfirm(card);
 }
 
-export const ANSWER_ON_MAC = 'Answer on your Mac.';
 export const FIXED_ON_MAC_REASON =
   'This card acts on the Mac itself, so it is answered there. Your Mac shows it too.';
 export const STEP_UP_NEEDS_PASSKEY =

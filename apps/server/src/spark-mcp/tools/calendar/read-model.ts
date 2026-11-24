@@ -43,12 +43,14 @@ export function rangeOf(
   return { start, end };
 }
 
+const CLOUD_SOURCES: ReadonlySet<string> = new Set(['google', 'microsoft']);
+
 export function calendarRow(choice: CalendarChoice) {
   return {
     key: choice.key,
     title: choice.title,
     account: choice.sourceTitle,
-    source: choice.sourceKind === 'google' ? 'google' : 'macos',
+    source: CLOUD_SOURCES.has(choice.sourceKind) ? choice.sourceKind : 'macos',
     included: choice.include,
     agentsCanEdit: choice.agentsEdit && choice.writable,
     readOnly: !choice.writable,

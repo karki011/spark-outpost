@@ -1,16 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CalendarGoogleStatus, GoogleSignInFlow } from '@spark-outpost/contracts';
-import { calendarApi, calendarKeys, type GoogleSignInStart } from './calendar-api.ts';
+import type { GoogleSignInFlow } from '@spark-outpost/contracts';
+import {
+  calendarApi,
+  calendarKeys,
+  type CloudProvider,
+  type CloudSignInStart,
+} from './calendar-api.ts';
 import { openOutside } from '../browser/outside-link.ts';
 
 const POLL_MS = 1500;
 
-function useGoogleSignIn(initial: GoogleSignInFlow, enabled: boolean) {
+interface CloudStatus {
+  available: boolean;
+  signIn: GoogleSignInFlow;
+}
+
+function useCloudSignIn(provider: CloudProvider, initial: GoogleSignInFlow, enabled: boolean) {
   const queryClient = useQueryClient();
+  const key = calendarKeys.signIn(provider);
   const flow = useQuery({
-    queryKey: calendarKeys.googleSignIn,
-    queryFn: calendarApi.googleSignIn,
+    queryKey: key,
+    queryFn: () => calendarApi.signIn(provider),
     initialData: initial,
     enabled,
     refetchInterval: (query) => (query.state.data?.status === 'waiting' ? POLL_MS : false),
@@ -19,23 +30,25 @@ function useGoogleSignIn(initial: GoogleSignInFlow, enabled: boolean) {
   useEffect(() => {
     if (state === 'connected') void queryClient.invalidateQueries({ queryKey: calendarKeys.all });
   }, [state, queryClient]);
-  const setFlow = (next: GoogleSignInFlow) =>
-    queryClient.setQueryData(calendarKeys.googleSignIn, next);
+  const setFlow = (next: GoogleSignInFlow) => queryClient.setQueryData(key, next);
   const start = useMutation({
-    mutationFn: (request: GoogleSignInStart) => calendarApi.startGoogleSignIn(request),
+    mutationFn: (request: CloudSignInStart) => calendarApi.startSignIn(provider, request),
     onSuccess: (next) => {
       setFlow(next);
       if (next.authorizeUrl) openOutside(next.authorizeUrl);
     },
   });
-  const cancel = useMutation({ mutationFn: calendarApi.cancelGoogleSignIn, onSuccess: setFlow });
+  const cancel = useMutation({
+    mutationFn: () => calendarApi.cancelSignIn(provider),
+    onSuccess: setFlow,
+  });
   return { flow: flow.data, start, cancel };
 }
 
-function useDisconnectGoogle() {
+function useDisconnect(provider: CloudProvider) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: calendarApi.disconnectGoogle,
+    mutationFn: (accountId: string) => calendarApi.disconnectAccount(provider, accountId),
     onSuccess: ({ status }) => {
       queryClient.setQueryData(calendarKeys.status, status);
       void queryClient.invalidateQueries({
@@ -46,13 +59,14 @@ function useDisconnectGoogle() {
   });
 }
 
-export function useGoogleCalendar(google: CalendarGoogleStatus) {
-  const { flow, start, cancel } = useGoogleSignIn(google.signIn, google.available);
-  const disconnect = useDisconnectGoogle();
+export function useCloudCalendar(provider: CloudProvider, status: CloudStatus) {
+  const { flow, start, cancel } = useCloudSignIn(provider, status.signIn, status.available);
+  const disconnect = useDisconnect(provider);
   const [note, setNote] = useState<string | null>(null);
-  const [started, setStarted] = useState<GoogleSignInStart | null>(null);
+  const [started, setStarted] = useState<CloudSignInStart | null>(null);
   const waiting = flow.status === 'waiting';
   return {
+    provider,
     flow,
     waiting,
     editing: Boolean(started?.editCalendar),
@@ -62,7 +76,7 @@ export function useGoogleCalendar(google: CalendarGoogleStatus) {
     noteFor: started?.accountId ?? null,
     note,
     error: start.error ?? disconnect.error,
-    begin: (request: GoogleSignInStart) => {
+    begin: (request: CloudSignInStart) => {
       setStarted(request);
       start.mutate(request);
     },
@@ -74,4 +88,4 @@ export function useGoogleCalendar(google: CalendarGoogleStatus) {
   };
 }
 
-export type GoogleCalendar = ReturnType<typeof useGoogleCalendar>;
+export type CloudCalendar = ReturnType<typeof useCloudCalendar>;

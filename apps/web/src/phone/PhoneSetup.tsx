@@ -9,6 +9,7 @@ import {
   type SetupStep,
   type SetupStepState,
 } from './setup-steps.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 const TAILSCALE_DOWNLOAD = 'https://tailscale.com/download';
 const NOT_CONNECTED = 'Installed but not connected? Open Tailscale, sign in and connect.';
@@ -83,12 +84,22 @@ function StepCard({
 function TailscaleStep({ step, props }: { step: SetupStep; props: PhoneSetupProps }) {
   const { state, checking, onCheck } = props;
   if (step.state === 'done') {
-    return <StepCard step={step} title="Tailscale on this Mac" text="Installed and signed in." />;
+    return (
+      <StepCard
+        step={step}
+        title={`Tailscale on this ${hostWords().computer}`}
+        text="Installed and signed in."
+      />
+    );
   }
   const missing = state.status === 'not_installed';
   const text = statusCopy(state).step ?? '';
   return (
-    <StepCard step={step} title={missing ? 'Get Tailscale' : 'Tailscale on this Mac'} text={text}>
+    <StepCard
+      step={step}
+      title={missing ? 'Get Tailscale' : `Tailscale on this ${hostWords().computer}`}
+      text={text}
+    >
       {missing && <LinkButton href={TAILSCALE_DOWNLOAD} label="Download Tailscale" primary />}
       <CheckAgain checking={checking} onCheck={onCheck} />
       {missing && <p className="ph-note ph-step-aside">{NOT_CONNECTED}</p>}
@@ -129,7 +140,7 @@ function TurnOnStep({ step, props }: { step: SetupStep; props: PhoneSetupProps }
       <StepCard
         step={step}
         title={title}
-        text="Scan a code with your phone, then confirm the matching code here. Only a device you confirm on this Mac gets in."
+        text={`Scan a code with your phone, then confirm the matching code here. Only a device you confirm on this ${hostWords().computer} gets in.`}
       />
     );
   }
@@ -160,20 +171,22 @@ export function PhoneSetup(props: PhoneSetupProps) {
   );
 }
 
-const WHAT_YOU_GET: { label: string; text: string }[] = [
-  {
-    label: 'From your phone',
-    text: 'Read chats, send messages, answer approval cards, follow sub-chats, and get a notification when a chat needs you.',
-  },
-  {
-    label: 'You choose',
-    text: 'Switches grouped by risk, so you can turn off what you do not need.',
-  },
-  {
-    label: 'Only on this Mac',
-    text: 'The Browser pane, preview, shell tabs, calendar, voice, Mac control, pairing and these switches.',
-  },
-];
+function whatYouGet(): { label: string; text: string }[] {
+  return [
+    {
+      label: 'From your phone',
+      text: 'Read chats, send messages, answer approval cards, follow sub-chats, and get a notification when a chat needs you.',
+    },
+    {
+      label: 'You choose',
+      text: 'Switches grouped by risk, so you can turn off what you do not need.',
+    },
+    {
+      label: `Only on this ${hostWords().computer}`,
+      text: 'The Browser pane, preview, shell tabs, calendar, voice, Mac control, pairing and these switches.',
+    },
+  ];
+}
 
 export function WhatYouGet() {
   const headingId = useId();
@@ -181,7 +194,7 @@ export function WhatYouGet() {
     <div className="ph-card ph-what" role="group" aria-labelledby={headingId}>
       <h3 id={headingId}>What you get, and what stays here</h3>
       <dl>
-        {WHAT_YOU_GET.map((row) => (
+        {whatYouGet().map((row) => (
           <div key={row.label}>
             <dt>{row.label}</dt>
             <dd>{row.text}</dd>

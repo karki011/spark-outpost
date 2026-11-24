@@ -19,7 +19,7 @@ import { cardKeyAction, keyTarget } from './card-keys.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import {
   ADDRESS_NOTE,
-  ADDRESS_ON_THE_MAC,
+  addressOnTheHost,
   addressByline,
   addressParts,
   openInBrowser,
@@ -107,7 +107,7 @@ export function OpenAddressCard({ approval, agent, onDecided }: OpenAddressCardP
         <p>{ADDRESS_NOTE}</p>
         <ObservedNote observed={approval.payload.observed} sendsTo={approval.payload.sendsTo} />
         {remote ? (
-          <p className="appr-reason">{ADDRESS_ON_THE_MAC}</p>
+          <p className="appr-reason">{addressOnTheHost()}</p>
         ) : (
           <>
             {held && (

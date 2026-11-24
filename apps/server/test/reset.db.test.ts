@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { seedModelStats } from '../src/model-cards/ingest.ts';
 import { getSetupState } from '../src/persistence/setup.ts';
 import { stopActiveWork } from '../src/reset/stop-work.ts';
-import { saveGoogleAccount } from '../src/calendar/google/store.ts';
+import { saveCloudAccount } from '../src/calendar/cloud/account-store.ts';
 import { googleCalendarSecret, memorySecretStore, type SecretId } from '../src/setup/secrets.ts';
 import { postReset, recordingStore, rowCounts, seedAppData, seedRun } from './reset-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -104,7 +104,7 @@ describe('POST /api/reset', () => {
   });
 
   it('removes Google Calendar sign-ins, found through their accounts', async () => {
-    await saveGoogleAccount(t.db, t.workspaceId, {
+    await saveCloudAccount(t.db, 'google', t.workspaceId, {
       subject: '42',
       email: 'me@example.com',
       canEdit: false,

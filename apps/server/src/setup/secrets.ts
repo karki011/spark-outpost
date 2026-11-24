@@ -8,6 +8,9 @@ export const SLACK_SECRET_IDS: readonly SlackSecretId[] = ['slack:bot', 'slack:u
 export const SLACK_SIGN_IN_SECRET = 'slack:sign-in';
 export const PUSH_KEYS_SECRET = 'remote:push';
 export type GoogleCalendarSecretId = `calendar:google:${string}`;
+export type MicrosoftCalendarSecretId = `calendar:microsoft:${string}`;
+export const microsoftCalendarSecret = (subject: string): MicrosoftCalendarSecretId =>
+  `calendar:microsoft:${subject}`;
 export type ShareSecretId = `share:${string}`;
 export const shareSecret = (shareId: string): ShareSecretId => `share:${shareId}`;
 export const googleCalendarSecret = (subject: string): GoogleCalendarSecretId =>
@@ -23,6 +26,7 @@ export type SecretId =
   | `mcp:${string}`
   | `signin:${string}`
   | GoogleCalendarSecretId
+  | MicrosoftCalendarSecretId
   | ShareSecretId;
 
 export interface SecretStore {
@@ -37,7 +41,9 @@ export const DEFAULT_KEYCHAIN_SERVICE = 'Spark Outpost';
 
 function account(provider: SecretId): string {
   if (provider.startsWith('mcp:') || provider.startsWith('signin:')) return provider;
-  if (provider.startsWith('calendar:google:')) return `${provider}:refresh`;
+  if (provider.startsWith('calendar:google:') || provider.startsWith('calendar:microsoft:')) {
+    return `${provider}:refresh`;
+  }
   if (provider.startsWith('share:')) return `${provider}:delete`;
   if (provider === 'github') return 'github:token';
   if (provider === 'github-app') return 'github:app';

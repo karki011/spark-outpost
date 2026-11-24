@@ -6,7 +6,7 @@ import { CodeBoxes } from '../app-lock/CodeBoxes.tsx';
 import { codeChangeProblem, isFullCode } from '../app-lock/lock-code.ts';
 import { canRecover, useCodeRecovery } from '../app-lock/lock-recovery.ts';
 import { appLock, refreshAppLock, useAppLock } from '../app-lock/use-app-lock.ts';
-import { onWindows } from '../desktop/desktop-bridge.ts';
+import { unlockCopy } from '../app-lock/unlock-copy.ts';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 
 const FOCUSABLE = 'button:not(:disabled), input:not(:disabled)';
@@ -122,9 +122,8 @@ export function LockCodeSheet({ change, onSaved, onClose }: LockCodeSheetProps) 
           <h3 id={`${ids}title`}>{asksCurrent ? 'Change code' : 'Set a code'}</h3>
         </div>
         <p className="fdlg-lede" id={`${ids}lede`}>
-          {onWindows()
-            ? 'Six digits. You type it to unlock Spark Outpost.'
-            : 'Six digits. You type it to unlock Spark Outpost, and it always works when Touch ID doesn’t.'}
+          Six digits. You type it to unlock Spark Outpost, and it always works when{' '}
+          {unlockCopy().name} doesn’t.
         </p>
         <div className="lock-sheet-fields">
           {fields.map((field) => (

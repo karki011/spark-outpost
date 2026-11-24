@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { isRecord } from '../agent-config/records.ts';
 import { nativeHookNames, type NativeProvider } from './native-hooks.ts';
+import { cliDeps, cliRun, verbatimOption } from './windows-cli.ts';
 
 const exec = promisify(execFile);
 const checks = new Map<string, Promise<boolean>>();
@@ -23,7 +24,12 @@ export function verifyNativeOption(
   const key = JSON.stringify(['option', command, version, option]);
   let pending = checks.get(key);
   if (!pending) {
-    pending = exec(command, ['--help'], { timeout: 5000, maxBuffer: 1_000_000 })
+    const run = cliRun(command, ['--help']);
+    pending = exec(run.file, run.args, {
+      timeout: 5000,
+      maxBuffer: 1_000_000,
+      ...verbatimOption(run),
+    })
       .then(({ stdout }) => stdout.split(/\s+/).includes(option))
       .catch((error: unknown) => forgetIfTimedOut(key, error));
     checks.set(key, pending);
@@ -83,11 +89,20 @@ async function probe(
     const groups = [{ hooks: [{ type: 'command', command: 'true', timeout: 3 }] }];
     const hooks = Object.fromEntries(nativeHookNames(provider).map((name) => [name, groups]));
     hooks.SparkCapabilityProbe = [];
-    const { stdout } = await exec(
+    const run = cliRun(
       command,
       ['--setting-sources', '', '--settings', JSON.stringify({ hooks }), 'doctor'],
-      { cwd: directory, env, signal, timeout: 5000, maxBuffer: 1_000_000 },
+      process.platform,
+      cliDeps(env),
     );
+    const { stdout } = await exec(run.file, run.args, {
+      cwd: directory,
+      env,
+      signal,
+      timeout: 5000,
+      maxBuffer: 1_000_000,
+      ...verbatimOption(run),
+    });
     const events = /Valid events:\s*([^\r\n]+)/
       .exec(stdout)?.[1]
       ?.split(',')
@@ -113,7 +128,14 @@ async function codexCapabilities(
     args.push('-c', `hooks.${event}=[{hooks=[{type="command",command="true"}]}]`);
   args.push('app-server');
   return new Promise<boolean>((resolve) => {
-    const child = spawn(command, args, { cwd, env, signal, stdio: ['pipe', 'pipe', 'ignore'] });
+    const run = cliRun(command, args, process.platform, cliDeps(env));
+    const child = spawn(run.file, run.args, {
+      cwd,
+      env,
+      signal,
+      stdio: ['pipe', 'pipe', 'ignore'],
+      ...verbatimOption(run),
+    });
     let buffer = '';
     let size = 0;
     let finished = false;

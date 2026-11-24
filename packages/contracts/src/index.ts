@@ -160,6 +160,7 @@ export * from './meeting-bridge.ts';
 export * from './presence-bridge.ts';
 export * from './calendar-api.ts';
 export * from './calendar-google.ts';
+export * from './calendar-microsoft.ts';
 export * from './calendar-actions.ts';
 export * from './meeting-alert.ts';
 export * from './atlassian.ts';

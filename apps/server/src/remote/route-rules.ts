@@ -231,6 +231,10 @@ GET /api/calendar/google/sign-in
 POST /api/calendar/google/sign-in
 DELETE /api/calendar/google/sign-in
 DELETE /api/calendar/google/accounts/:id
+GET /api/calendar/microsoft/sign-in
+POST /api/calendar/microsoft/sign-in
+DELETE /api/calendar/microsoft/sign-in
+DELETE /api/calendar/microsoft/accounts/:id
 GET /api/island/requests
 POST /api/island/requests/:id/claim
 GET /api/remote/access

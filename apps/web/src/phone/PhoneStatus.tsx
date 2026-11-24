@@ -2,6 +2,7 @@ import { useId } from 'react';
 import type { TailscaleState } from '@spark-outpost/contracts';
 import { statusHeadline } from './phone-copy.ts';
 import { PhoneSetup, WhatYouGet } from './PhoneSetup.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 interface PhoneStatusProps {
   state: TailscaleState;
@@ -13,8 +14,9 @@ interface PhoneStatusProps {
   onTurn: (to: 'on' | 'off') => void;
 }
 
-const SETUP_NOTE =
-  'Three steps, about five minutes. The work stays on this Mac and nothing is public.';
+function setupNote(): string {
+  return `Three steps, about five minutes. The work stays on this ${hostWords().computer} and nothing is public.`;
+}
 
 export function PhoneStatus({
   state,
@@ -34,7 +36,7 @@ export function PhoneStatus({
             <i className="ph-dot" aria-hidden="true" />
             {statusHeadline(state, null)}
           </h2>
-          <p className="ph-step">{SETUP_NOTE}</p>
+          <p className="ph-step">{setupNote()}</p>
         </div>
       </div>
       <PhoneSetup

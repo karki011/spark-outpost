@@ -1,11 +1,12 @@
 import { connectableIdSchema, ticketSourceIdSchema } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { signInRefs } from '../persistence/browser-sign-ins.ts';
-import { googleSubjects } from '../calendar/google/store.ts';
+import { cloudSubjects } from '../calendar/cloud/account-store.ts';
 import {
   SLACK_SECRET_IDS,
   SLACK_SIGN_IN_SECRET,
   googleCalendarSecret,
+  microsoftCalendarSecret,
   type SecretId,
 } from '../setup/secrets.ts';
 
@@ -23,6 +24,7 @@ export async function storedSecretIds(db: Queryable, keepApiKeys: boolean): Prom
     SLACK_SIGN_IN_SECRET,
     ...rows.map((row) => `mcp:${row.id}` as const),
     ...signIns,
-    ...(await googleSubjects(db)).map(googleCalendarSecret),
+    ...(await cloudSubjects(db, 'google')).map(googleCalendarSecret),
+    ...(await cloudSubjects(db, 'microsoft')).map(microsoftCalendarSecret),
   ];
 }

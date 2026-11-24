@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createCompanion, SHORTCUT_TAKEN, type CompanionEffects } from './companion.ts';
-import { DEFAULT_SETTINGS, parseSettings, type CompanionSettings } from './companion-settings.ts';
+import {
+  DEFAULT_SETTINGS,
+  DEFAULT_SHORTCUTS,
+  parseSettings,
+  type CompanionSettings,
+} from './companion-settings.ts';
+
+const QUICK = DEFAULT_SHORTCUTS.quick;
 
 function effectsFor(taken: string[] = []) {
   const registered = new Map<string, () => void>();
@@ -47,8 +54,8 @@ describe('desktop companion lifecycle', () => {
 
     companion.resume();
     expect(islands).toHaveLength(1);
-    expect([...registered.keys()]).toEqual(['Alt+Space', 'Alt+Shift+Space']);
-    registered.get('Alt+Space')!();
+    expect([...registered.keys()]).toEqual([QUICK, 'Alt+Shift+Space']);
+    registered.get(QUICK)!();
     expect(islands[0]!.command).toHaveBeenCalledWith('quick');
   });
 
@@ -64,7 +71,7 @@ describe('desktop companion lifecycle', () => {
     const status = companion.setEnabled(true);
     expect(status.enabled).toBe(true);
     expect(islands).toHaveLength(1);
-    expect([...registered.keys()]).toEqual(['Alt+Space', 'Alt+Shift+Space']);
+    expect([...registered.keys()]).toEqual([QUICK, 'Alt+Shift+Space']);
     expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: true }));
     expect(effects.changed).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: true }));
 
@@ -86,7 +93,7 @@ describe('desktop companion lifecycle', () => {
   });
 
   it('reports a shortcut another app holds without failing the rest', () => {
-    const { companion, registered } = setup({ enabled: true }, ['Alt+Space']);
+    const { companion, registered } = setup({ enabled: true }, [QUICK]);
     expect(companion.status().failed).toEqual(['quick']);
     expect([...registered.keys()]).toEqual(['Alt+Shift+Space']);
   });
@@ -95,14 +102,14 @@ describe('desktop companion lifecycle', () => {
     const { companion, registered } = setup({ enabled: true }, ['Alt+K']);
     expect(companion.setShortcut('quick', 'Control+Alt+J')).toEqual({ ok: true });
     expect(registered.has('Control+Alt+J')).toBe(true);
-    expect(registered.has('Alt+Space')).toBe(false);
+    expect(registered.has(QUICK)).toBe(false);
 
     expect(companion.setShortcut('quick', 'Alt+K')).toEqual({ ok: false, error: SHORTCUT_TAKEN });
     expect(registered.has('Control+Alt+J')).toBe(true);
     expect(companion.status().shortcuts.quick).toBe('Control+Alt+J');
 
     expect(companion.setShortcut('quick', null)).toEqual({ ok: true });
-    expect(companion.status().shortcuts.quick).toBe('Alt+Space');
+    expect(companion.status().shortcuts.quick).toBe(QUICK);
   });
 
   it('refuses invalid or duplicate shortcuts', () => {

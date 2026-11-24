@@ -7,6 +7,7 @@ import { requestSettings } from '../settings-request.ts';
 import { healthSummary } from './health-summary.ts';
 import type { HealthFix, HealthItem } from './health-model.ts';
 import { useHealth, type HealthSource } from './use-health.ts';
+import { hostWords } from '../../desktop/host-words.ts';
 
 interface OpenChat {
   onOpenChat: (conversationId: string) => void;
@@ -112,7 +113,7 @@ export function HealthSection({ onOpenChat }: OpenChat) {
         turns, sign-ins and helpers, each with where to fix it.
       </p>
       {remote ? (
-        <p className="set-hint">Health is on your Mac.</p>
+        <p className="set-hint">Health is on your {hostWords().computer}.</p>
       ) : (
         <HealthReport onOpenChat={onOpenChat} />
       )}

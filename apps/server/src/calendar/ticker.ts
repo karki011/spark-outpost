@@ -7,6 +7,7 @@ import {
 import type { Db } from '../persistence/db.ts';
 import { SentKeys } from '../remote/push-plan.ts';
 import type { GoogleSource } from './google/source.ts';
+import type { MicrosoftSource } from './microsoft/source.ts';
 import type { CalendarHost } from './host-client.ts';
 import { activeHold, meetingPushDue } from './planner.ts';
 import { announceCalendar } from './routes.ts';
@@ -24,6 +25,7 @@ export interface CalendarTickerDeps {
   workspaceId: string;
   host: CalendarHost | null;
   google: GoogleSource | null;
+  microsoft?: MicrosoftSource | null;
   push: MeetingPushes;
   now?: () => number;
   tickMs?: number;
@@ -82,6 +84,7 @@ export function startCalendarTicker(deps: CalendarTickerDeps): CalendarTicker {
     void tick();
   });
   deps.google?.onChanged(() => void tick());
+  deps.microsoft?.onChanged(() => void tick());
   const timer = setInterval(() => void tick(), deps.tickMs ?? CALENDAR_TICK_MS);
   timer.unref();
 

@@ -7,9 +7,10 @@ import { CheckIcon, CopyIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
-import { ON_NOTE, statusCopy, statusHeadline } from './phone-copy.ts';
+import { onNote, statusCopy, statusHeadline } from './phone-copy.ts';
 import { QrCode } from './QrCode.tsx';
 import { groupCount, shownGroups } from './switch-groups.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 interface PhoneRailProps {
   state: TailscaleState;
@@ -64,7 +65,9 @@ function Address({ address, connected }: { address: string; connected: boolean }
         </button>
       </div>
       <div id={qrId} className="ph-address-qr" hidden={!qr}>
-        {qr && <QrCode text={address} label="QR code for this Mac's address" />}
+        {qr && (
+          <QrCode text={address} label={`QR code for this ${hostWords().computer}'s address`} />
+        )}
       </div>
     </div>
   );
@@ -114,7 +117,7 @@ export function PhoneRail({
   const active = (devices ?? []).filter((device) => !device.revokedAt);
   const online = active.filter((device) => device.connected).length;
   const on = state.status === 'on' || (state.status === 'error' && wanted);
-  const note = state.status === 'on' ? ON_NOTE : statusCopy(state).step;
+  const note = state.status === 'on' ? onNote() : statusCopy(state).step;
   const risky = shownGroups().find((group) => group.id === 'high-risk');
 
   return (

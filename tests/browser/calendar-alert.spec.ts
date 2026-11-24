@@ -188,7 +188,9 @@ test('the hanging card shows every action on one row, and Esc closes once clicke
   await expect(card).toContainText('3 people');
   await expect(card.getByRole('button', { name: 'Join at start' })).toBeVisible();
   await expect(card.getByRole('button', { name: /^Join Zoom(?! now)/ })).toBeHidden();
-  await expect(card).toHaveAccessibleDescription('Esc closes · ⌘J joins · ⌃⌥⌘M focuses this card');
+  await expect(card).toHaveAccessibleDescription(
+    /^Esc closes · (⌘J joins · ⌃⌥⌘M|Ctrl\+J joins · Ctrl\+Alt\+Win\+M) focuses this card$/,
+  );
   await expect
     .poll(() => alertWindow(page, (window) => window.alertRegions.at(-1)?.boxes.length ?? 0))
     .toBe(2);

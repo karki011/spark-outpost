@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_SETTINGS,
+  defaultShortcuts,
   isAccelerator,
   loadSettings,
   parseSettings,
@@ -17,6 +18,16 @@ afterEach(() => {
 });
 
 describe('companion shortcut config', () => {
+  it('keeps Alt+Space on the Mac and avoids the window menu and AltGr on Windows', () => {
+    expect(defaultShortcuts('darwin')).toEqual({ quick: 'Alt+Space', sessions: 'Alt+Shift+Space' });
+    expect(defaultShortcuts('win32')).toEqual({
+      quick: 'Control+Shift+Space',
+      sessions: 'Alt+Shift+Space',
+    });
+    expect(isAccelerator(defaultShortcuts('win32').quick)).toBe(true);
+    expect(defaultShortcuts('win32').quick).not.toMatch(/Control\+Alt|Alt\+Control/);
+  });
+
   it('accepts modifier + key accelerators Electron understands', () => {
     for (const value of ['Alt+Space', 'Alt+Shift+Space', 'CommandOrControl+K', 'Control+Alt+F5']) {
       expect(isAccelerator(value)).toBe(true);

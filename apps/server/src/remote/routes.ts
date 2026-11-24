@@ -12,6 +12,7 @@ import {
   type PendingPairingList,
   type RemoteAuditList,
   type RemoteDevice,
+  remoteHostOf,
   type RemoteDeviceList,
   type RemoteSession,
 } from '@spark-outpost/contracts';
@@ -228,6 +229,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
     const passkeys = device ? await devicePasskeys(db, workspaceId, device.id) : [];
     const session: RemoteSession = {
       remote: isRemote(res),
+      host: remoteHostOf(process.platform),
       device,
       address: access.hostname ? `https://${access.hostname}` : null,
       switches: access.switches,

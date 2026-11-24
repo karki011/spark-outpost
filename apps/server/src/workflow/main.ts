@@ -33,6 +33,7 @@ import { POLL_CHANNEL } from '../pr-tracking/refresh.ts';
 import { connectDesktopBrowser } from '../browser/host-client.ts';
 import { agentCalendarHosts } from '../calendar/agent/access.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
+import { microsoftClientConfig } from '../calendar/microsoft/config.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { processKillsSent } from '../terminal/process-group.ts';
 
@@ -82,6 +83,7 @@ const sparkDeps: SparkToolDeps = {
     secrets,
     fetch,
     client: googleClientConfig(config),
+    microsoftClient: microsoftClientConfig(config),
   }),
   agentRuntime: config.AGENT_RUNTIME,
   chatFolders,

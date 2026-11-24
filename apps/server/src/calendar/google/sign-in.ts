@@ -8,7 +8,7 @@ import {
   type GoogleSignInFlow,
 } from '@spark-outpost/contracts';
 import { newPkce, sameText } from '../../setup/pkce.ts';
-import { startLoopback, type Loopback, type LoopbackCallback } from './loopback.ts';
+import { startLoopback, type Loopback, type LoopbackCallback } from '../cloud/loopback.ts';
 import {
   GoogleAuthError,
   exchangeGoogleCode,
@@ -138,7 +138,7 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
       clear();
       const pkce = newPkce();
       let waiting: Pending | null = null;
-      const loopback = await startLoopback((callback) => {
+      const loopback = await startLoopback('Google Calendar', (callback) => {
         if (!waiting || pending !== waiting) return;
         const answered = waiting;
         clear();

@@ -7,6 +7,7 @@ import { BrowserHistorySetting } from './BrowserHistorySetting.tsx';
 import { BrowserArchiveSetting } from './BrowserArchiveSetting.tsx';
 import { BrowserLinksSetting } from './BrowserLinksSetting.tsx';
 import { BrowserSearchSetting } from './BrowserSearchSetting.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 export const SIGNED_IN_SITES_LABEL = 'Signed-in sites';
 export const SIGN_OUT_ALL_LABEL = 'Sign out of everything';
@@ -62,13 +63,14 @@ function SignedInSites() {
 
 export function BrowserSection() {
   const { remote } = useRemoteClient();
-  if (remote) return <p className="lede">The Browser pane is available on your Mac.</p>;
+  if (remote)
+    return <p className="lede">The Browser pane is available on your {hostWords().computer}.</p>;
   return (
     <>
       <p className="lede">
-        One browser profile for every chat and project, kept on this Mac. A site you or an agent
-        sign in to in the Browser pane stays signed in everywhere, and agent tabs use it too.{' '}
-        <DocLink topic="Browser pane" doc={{ page: 'use-the-browser' }} />
+        One browser profile for every chat and project, kept on this {hostWords().computer}. A site
+        you or an agent sign in to in the Browser pane stays signed in everywhere, and agent tabs
+        use it too. <DocLink topic="Browser pane" doc={{ page: 'use-the-browser' }} />
       </p>
       <BrowserLinksSetting />
       <SignedInSites />

@@ -18,10 +18,8 @@ const PAGE = (heading: string, line: string) =>
   `padding:0 1rem;color:#222;background:#fafafa}@media(prefers-color-scheme:dark){body{` +
   `color:#eee;background:#1c1c1e}}</style></head><body><h1>${heading}</h1><p>${line}</p></body></html>`;
 
-export const LOOPBACK_DONE_PAGE = PAGE(
-  'You can close this tab',
-  'Go back to Spark Outpost to finish connecting Google Calendar.',
-);
+const donePage = (service: string) =>
+  PAGE('You can close this tab', `Go back to Spark Outpost to finish connecting ${service}.`);
 const NOT_HERE_PAGE = PAGE('Nothing here', 'This address only finishes a Spark Outpost sign-in.');
 
 function callbackOf(url: URL): LoopbackCallback | null {
@@ -32,8 +30,10 @@ function callbackOf(url: URL): LoopbackCallback | null {
 }
 
 export async function startLoopback(
+  service: string,
   onCallback: (callback: LoopbackCallback) => void,
 ): Promise<Loopback> {
+  const done = donePage(service);
   let answered = false;
   const server: Server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
@@ -49,7 +49,7 @@ export async function startLoopback(
       return;
     }
     answered = true;
-    response.writeHead(200, headers).end(LOOPBACK_DONE_PAGE);
+    response.writeHead(200, headers).end(done);
     onCallback(callback);
   });
   await new Promise<void>((resolve, reject) => {

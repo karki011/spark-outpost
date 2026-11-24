@@ -1,5 +1,10 @@
 import { join, resolve } from 'node:path';
-import { DEV_API_TOKEN_FILE, artifactPortFor, isKeepTerminalsStop } from '@spark-outpost/contracts';
+import {
+  DEV_API_TOKEN_FILE,
+  artifactPortFor,
+  isEndTerminalsStop,
+  isKeepTerminalsStop,
+} from '@spark-outpost/contracts';
 import { LOCAL_DATA_DIR, loadConfig, sparkDataDir } from '../config.ts';
 import { chatFoldersBase } from '../chat-files/folders.ts';
 import { chatResearchBase } from '../chat-files/research-copies.ts';
@@ -27,8 +32,7 @@ import { configuredSecretStore } from '../setup/secrets.ts';
 import { processKillsSent } from '../terminal/process-group.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { savedPort, savePort } from '../terminal/tmux/stable-port.ts';
-import { chooseTmux, killTmuxServer, tmuxChoiceLine } from '../terminal/tmux/tmux-host.ts';
-import { tmuxSpawner } from '../terminal/tmux/tmux-spawner.ts';
+import { chooseKeptSessions } from '../terminal/kept-choice.ts';
 import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
 import { defaultLimits, TerminalSessions } from '../terminal/sessions.ts';
 import { shellRegistry } from '../terminal/shell-registry.ts';
@@ -58,6 +62,7 @@ import { loadInbox } from '../tickets/inbox.ts';
 import { pullRequestChanged } from '../tickets/inbox-snapshot.ts';
 import { RunEventHub } from './run-event-hub.ts';
 import { systemPortProbe } from '../terminal/chat-port-probe.ts';
+import { terminalCliLocator } from '../terminal/windows-cli.ts';
 import { chatPortWatcher, type ChatPortWatcher } from '../terminal/chat-port-watcher.ts';
 import { postgresPort } from '../terminal/chat-ports.ts';
 import { resolveRunTarget } from './run-target.ts';
@@ -69,7 +74,8 @@ import { fakeMeetingSource } from '../meetings/fake-source.ts';
 import { meetingNotesWriter } from '../meetings/notes.ts';
 import { createMeetingService } from '../meetings/service.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
-import { createGoogleSource } from '../calendar/google/source.ts';
+import { startCloudCalendars } from '../calendar/cloud-sources.ts';
+import { microsoftClientConfig } from '../calendar/microsoft/config.ts';
 import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/access.ts';
 import { startSlackSocket } from '../slack/socket.ts';
 import { startSlackServices } from './slack-services.ts';
@@ -126,10 +132,9 @@ const { slackSignIn, slackDeps, focus, slackNotifier, slackMentions } = startSla
   secrets,
 });
 const desktopCalendar = connectDesktopCalendar(process.env, process);
-const googleCalendar = desktopCalendar
-  ? createGoogleSource({ db, workspaceId, secrets, fetch, client: googleClientConfig(config) })
-  : null;
-await googleCalendar?.start();
+const { google: googleCalendar, microsoft: microsoftCalendar } = desktopCalendar
+  ? await startCloudCalendars(config, { db, workspaceId, secrets, fetch })
+  : { google: null, microsoft: null };
 let calendarTicker: CalendarTicker | null = null;
 let chatPorts: ChatPortWatcher | null = null;
 const { keys: remotePushKeys, notifier: pushNotifier } = startPushServices({
@@ -145,6 +150,7 @@ calendarTicker = desktopCalendar
       workspaceId,
       host: desktopCalendar,
       google: googleCalendar,
+      microsoft: microsoftCalendar,
       push: pushNotifier,
     })
   : null;
@@ -213,25 +219,27 @@ const chatFolders = chatFoldersBase(nativeDataDir, config.BRANCH_PREFIX);
 const researchCopies = chatResearchBase(nativeDataDir, config.BRANCH_PREFIX);
 const nativeSessionsDir = join(nativeDataDir, config.BRANCH_PREFIX, 'terminal-sessions');
 const perInstance = config.SPARK_DATA_DIR ? '' : `-${config.API_PORT}`;
-const terminalTmux = chooseTmux(
-  process.env,
-  join(nativeDataDir, config.BRANCH_PREFIX, `tmux${perInstance}`),
-  config.SPARK_DATA_DIR ? null : localDir,
-);
-if (terminalTmux.host) console.log(tmuxChoiceLine(terminalTmux));
-else console.warn(tmuxChoiceLine(terminalTmux));
+const terminalKept = chooseKeptSessions({
+  env: process.env,
+  platform: process.platform,
+  tmuxDirectory: join(nativeDataDir, config.BRANCH_PREFIX, `tmux${perInstance}`),
+  hostDirectory: join(nativeSessionsDir, `host${perInstance}`),
+  localDir: config.SPARK_DATA_DIR ? null : localDir,
+});
+if (terminalKept.kept) console.log(terminalKept.line);
+else console.warn(terminalKept.line);
 const sparkPorts = new Set([config.API_PORT, artifactPortFor(config.API_PORT)]);
 const databasePort = postgresPort(config.DATABASE_URL);
 if (databasePort) sparkPorts.add(databasePort);
 chatPorts = chatPortWatcher({
-  probe: systemPortProbe(terminalTmux.host),
+  probe: systemPortProbe(terminalKept.tmux),
   agentRoots: () => agentTerminals.roots(),
   excluded: sparkPorts,
   changed: () =>
     appEvents.publish(JSON.stringify({ kind: 'chat_ports', conversationId: null, runId: null })),
 });
 const terminals = new TerminalSessions(
-  tmuxSpawner(loginShellSpawner(), terminalTmux.host),
+  terminalKept.kept?.spawner(loginShellSpawner()) ?? loginShellSpawner(),
   defaultLimits,
   shellWatchers(
     shellRegistry(db, workspaceId),
@@ -275,6 +283,7 @@ const nativeMcp = await startSparkMcpHost(
       secrets,
       fetch,
       client: googleClientConfig(config),
+      microsoftClient: microsoftClientConfig(config),
     }),
   },
   undefined,
@@ -282,9 +291,10 @@ const nativeMcp = await startSparkMcpHost(
 );
 savePort(nativeMcpPortFile, nativeMcp.port);
 const nativeApprovalWaiters = new ApprovalWaiters();
-const calendarWrittenListener = await listen(config.DATABASE_URL, CALENDAR_WRITTEN_CHANNEL, () =>
-  googleCalendar?.refresh(),
-);
+const calendarWrittenListener = await listen(config.DATABASE_URL, CALENDAR_WRITTEN_CHANNEL, () => {
+  googleCalendar?.refresh();
+  microsoftCalendar?.refresh();
+});
 const nativeApprovalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
   nativeApprovalWaiters.notify(id),
 );
@@ -295,25 +305,23 @@ const nativeTerminals = await createNativeRuntime({
   dataDir: nativeDataDir,
   channel: config.BRANCH_PREFIX,
   mcp: nativeMcp,
-  tmux: terminalTmux.host,
-  locateCli: loginShellLocator(loginShell),
+  kept: terminalKept.kept,
+  locateCli: terminalCliLocator(loginShell),
   branchPrefix: config.BRANCH_PREFIX,
   approvalWaiters: nativeApprovalWaiters,
   onStartPhase: (conversationId) =>
     appEvents.publish(JSON.stringify({ kind: 'terminal_start', conversationId, runId: null })),
 });
-const [artifactPages] = await Promise.all([
-  startArtifactOrigin({
-    db,
-    chatFolders,
-    port: artifactPortFor(config.API_PORT),
-    frameAncestors: [`http://127.0.0.1:${config.API_PORT}`, ...config.ALLOWED_ORIGINS],
-  }).catch((error: unknown) => {
-    console.error('Could not start the artifact page server', (error as Error).message);
-    return null;
-  }),
-  nativeTerminals.recover(),
-]);
+const startingArtifactPages = startArtifactOrigin({
+  db,
+  chatFolders,
+  port: artifactPortFor(config.API_PORT),
+  frameAncestors: [`http://127.0.0.1:${config.API_PORT}`, ...config.ALLOWED_ORIGINS],
+}).catch((error: unknown) => {
+  console.error('Could not start the artifact page server', (error as Error).message);
+  return null;
+});
+const [artifactPages] = await Promise.all([startingArtifactPages, nativeTerminals.recover()]);
 sparkPorts.add(nativeMcp.port).add(nativeTerminals.port);
 desktopBrowser?.blockPorts([
   nativeMcp.port,
@@ -373,6 +381,7 @@ const { app, reconcileRemote } = createAppParts({
   pushTest: (deviceId) => pushNotifier.test(deviceId),
   calendarHost: desktopCalendar,
   googleCalendar,
+  microsoftCalendar,
   meetings,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE
     ? { pairingAttemptsPerMinute: config.PAIRING_TEST_ATTEMPTS_PER_MINUTE }
@@ -449,7 +458,7 @@ const shutdown = async (keepTerminals = false) => {
     [
       'tmux',
       () => {
-        if (terminalTmux.host && !keepTerminals) killTmuxServer(terminalTmux.host);
+        if (!keepTerminals) return terminalKept.kept?.stopAll();
       },
     ],
     ['native MCP', () => nativeMcp.close()],
@@ -472,6 +481,7 @@ const shutdown = async (keepTerminals = false) => {
     ['Slack mentions', () => slackMentions.stop()],
     ['calendar ticker', () => calendarTicker?.stop()],
     ['Google Calendar', () => googleCalendar?.stop()],
+    ['Microsoft Calendar', () => microsoftCalendar?.stop()],
     ['push notifier', () => pushNotifier.stop()],
     ['messages between chats', () => chatAsks.close()],
     ['HTTP server', () => server.close()],
@@ -483,8 +493,8 @@ const shutdown = async (keepTerminals = false) => {
   ]);
   process.exit(0);
 };
-process.once('SIGINT', () => void shutdown());
-process.once('SIGTERM', () => void shutdown());
+for (const signal of ['SIGINT', 'SIGTERM'] as const) process.once(signal, () => void shutdown());
 process.on('message', (message) => {
   if (isKeepTerminalsStop(message)) void shutdown(true);
+  else if (isEndTerminalsStop(message)) void shutdown();
 });

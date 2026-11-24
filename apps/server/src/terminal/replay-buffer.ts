@@ -9,7 +9,10 @@ function ownCopy(text: string): string {
   return Buffer.from(text, 'utf16le').toString('utf16le');
 }
 
-export function createReplayBuffer(limit: number): ReplayBuffer {
+export function createReplayBuffer(
+  limit: number,
+  filter: (text: string) => string = (text) => text,
+): ReplayBuffer {
   let chunks: string[] = [];
   let head = 0;
   let length = 0;
@@ -27,7 +30,8 @@ export function createReplayBuffer(limit: number): ReplayBuffer {
   };
 
   return {
-    push(data) {
+    push(raw) {
+      const data = filter(raw);
       if (data === '') return;
       const kept = data.length > limit ? ownCopy(data.slice(-limit)) : data;
       chunks.push(kept);

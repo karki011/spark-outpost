@@ -3,8 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import type { RemoteSession, RemoteSwitch } from '@spark-outpost/contracts';
 import { rememberRemoteClient } from '../app/connection/remote-hint.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
-export const PHONE_SWITCH_OFF = 'Turned off for remote control on your Mac';
+export function phoneSwitchOff(): string {
+  return `Turned off for remote control on your ${hostWords().computer}`;
+}
 
 const SESSION_FRESH_MS = 60_000;
 
@@ -21,7 +24,7 @@ export function useRemoteClient(): RemoteClient {
     staleTime: SESSION_FRESH_MS,
   });
   useEffect(() => {
-    if (session.data) rememberRemoteClient(session.data.remote);
+    if (session.data) rememberRemoteClient(session.data.remote, session.data.host);
   }, [session.data]);
   const remote = session.data?.remote ?? false;
   const switches = session.data?.switches;

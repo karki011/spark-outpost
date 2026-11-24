@@ -3,6 +3,7 @@ import { browserDownloadsSchema, type BrowserDownload } from '@spark-outpost/con
 import { desktopBrowserView } from '../desktop/desktop-bridge.ts';
 import { CheckIcon, DownloadIcon, FolderIcon, SpinnerIcon, WarnIcon, XIcon } from '../ui/icons.tsx';
 import { downloadStatus, type DownloadTone } from './downloads-model.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 function useDownloads(): readonly BrowserDownload[] {
   const [list, setList] = useState<readonly BrowserDownload[]>([]);
@@ -57,7 +58,7 @@ function DownloadRow({ entry }: { entry: BrowserDownload }) {
         <button
           type="button"
           className="icon-btn bv-dl-act"
-          aria-label={`Show ${entry.filename} in Finder`}
+          aria-label={`Show ${entry.filename} in ${hostWords().fileManager}`}
           onClick={() => act(entry.id, 'show')}
         >
           <FolderIcon />

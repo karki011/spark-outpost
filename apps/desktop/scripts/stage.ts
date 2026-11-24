@@ -19,6 +19,7 @@ import { buildMacControl, stageMacControl } from './mac-control-bundle.ts';
 import { buildCalendar, stageCalendar } from './calendar-bundle.ts';
 import { buildVoice, stageVoice } from './voice-bundle.ts';
 import { buildNoActivate, stageNoActivate } from './no-activate-bundle.ts';
+import { stageWinHelper } from './win-helper-bundle.ts';
 
 const run = promisify(execFile);
 
@@ -102,7 +103,10 @@ async function stageArch(stageDir: string, arch: MacArch, platform: BuildPlatfor
     recursive: true,
     filter: (source) => !source.includes(`${path.sep}images`),
   });
-  if (platform === 'win') return;
+  if (platform === 'win') {
+    await stageWinHelper(repoRoot, arch, archDir);
+    return;
+  }
   await stageTmux(await buildTmux(repoRoot, arch), arch, archDir);
   await stageMacControl(await buildMacControl(repoRoot, arch), arch, archDir);
   await stageCalendar(await buildCalendar(repoRoot, arch), arch, archDir);

@@ -23,12 +23,17 @@ const quiet: BootTeaserSnapshot = {
   waiting: [],
 };
 
-function lines(snapshot: BootTeaserSnapshot | null, defaultShortcut = true) {
+function lines(
+  snapshot: BootTeaserSnapshot | null,
+  defaultShortcut = true,
+  platform: NodeJS.Platform = 'darwin',
+) {
   return teaserLines({
     snapshot,
     changelog,
     version,
     defaultShortcut,
+    platform,
     now: NOW,
     timeZone: 'UTC',
     random: first,
@@ -130,6 +135,12 @@ describe('teaser lines', () => {
 
   it('leaves out the shortcut tip when the shortcut was changed', () => {
     expect(lines(quiet, false).at(-1)?.text).not.toContain('⌥Space');
+  });
+
+  it('names the Windows quick chat keys on Windows', () => {
+    expect(lines(quiet, true, 'win32').at(-1)?.text).toBe(
+      'Ctrl+Shift+Space starts a chat from anywhere',
+    );
   });
 });
 

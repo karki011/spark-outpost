@@ -4,7 +4,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { toGatePath } from './gate-path.ts';
-import { gateGitDirs, gitControlGlobs, gitControlLabel, readGitDirs } from './git-dirs.ts';
+import {
+  gateGitDirs,
+  gitControlGlobs,
+  gitControlLabel,
+  gitFolderLabel,
+  readGitDirs,
+} from './git-dirs.ts';
 
 let repo: string;
 const at = (...parts: string[]) => toGatePath(join(...parts));
@@ -105,6 +111,27 @@ describe('gitControlLabel()', () => {
 
   it('knows nothing about a root whose git folder was not read', () => {
     expect(gitControlLabel([{ path: worktree }], join(repo, '.git/config'))).toBeNull();
+  });
+});
+
+describe('gitFolderLabel()', () => {
+  it.each([
+    ['.git', '.git'],
+    ['.git/hooks', '.git/hooks'],
+    ['.git/worktrees/chat-1', '.git/config.worktree'],
+  ])('reads the folder %s of the real git folder as %s', async (inside, label) => {
+    expect(gitFolderLabel([await rootOf(worktree)], join(repo, inside))).toBe(label);
+  });
+
+  it.each(['.git/objects', '.git/hooks/pre-commit', '.git/worktrees', 'src'])(
+    'reads %s as no git folder',
+    async (inside) => {
+      expect(gitFolderLabel([await rootOf(worktree)], join(repo, inside))).toBeNull();
+    },
+  );
+
+  it("does not name a checkout's own git folder as its worktree folder", async () => {
+    expect(gitFolderLabel([await rootOf(repo)], join(repo, '.git'))).toBe('.git');
   });
 });
 

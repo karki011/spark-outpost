@@ -298,7 +298,10 @@ test('the privacy screen is not offered without the Mac app', async ({ page }) =
 test('the left bar locks at once, and the blob follows what you type', async ({ page }) => {
   await fakeDesktop(page);
   await page.goto('/');
-  await expect(railLock(page)).toHaveAttribute('title', /^Lock Spark Outpost · ⇧ ?⌘ ?L$/);
+  await expect(railLock(page)).toHaveAttribute(
+    'title',
+    /^Lock Spark Outpost · (⇧ ?⌘ ?L|Ctrl Shift L)$/,
+  );
   await railLock(page).click();
   await expect(overlay(page)).toBeVisible();
   expect(await lockCalls(page)).toEqual([['lockNow']]);
@@ -439,7 +442,7 @@ test('the lock is also in the More sheet, the Settings window and the island', a
   await fakeDesktop(settings);
   await settings.goto('/settings');
   const inSettings = settings.getByRole('button', { name: 'Lock Spark Outpost' });
-  await expect(inSettings).toHaveAttribute('title', /⇧ ?⌘ ?L$/);
+  await expect(inSettings).toHaveAttribute('title', /(⇧ ?⌘ ?L|Ctrl Shift L)$/);
   await inSettings.click();
   await expect(overlay(settings)).toBeVisible();
 

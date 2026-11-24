@@ -34,6 +34,7 @@ import {
   rigFor,
   shortcutJoin,
 } from './alert-model.ts';
+import { hasModifier, MAC, shortcutText } from '../../ui/shortcuts.ts';
 
 const CLIMB_MS = 600;
 const FADE_MS = 160;
@@ -221,6 +222,11 @@ function ClashList({ payload, at, act }: { payload: MeetingAlertPayload; at: num
   );
 }
 
+function alertHint(): string {
+  const focus = MAC ? '⌃⌥⌘M' : 'Ctrl+Alt+Win+M';
+  return `Esc closes · ${shortcutText(['mod', 'J'])} joins · ${focus} focuses this card`;
+}
+
 export function MeetingAlertApp() {
   const reduced = useReducedMotion();
   const bridge = sparkDesktop()?.meetingAlert;
@@ -304,7 +310,7 @@ export function MeetingAlertApp() {
       key.preventDefault();
       act('close');
     }
-    if (key.key.toLowerCase() === 'j' && key.metaKey) {
+    if (key.key.toLowerCase() === 'j' && hasModifier(key)) {
       key.preventDefault();
       const joinable = shortcutJoin(payload.events, at, payload.joinLeadMs);
       if (joinable?.link) {
@@ -373,7 +379,7 @@ export function MeetingAlertApp() {
               closeLabel={`Close ${alertTitle(payload.events, at)}`}
               onClose={() => act('close')}
               onDismiss={() => act('dismiss')}
-              hint={<span id="ma-hint">Esc closes · ⌘J joins · ⌃⌥⌘M focuses this card</span>}
+              hint={<span id="ma-hint">{alertHint()}</span>}
             >
               {counting ? (
                 <>

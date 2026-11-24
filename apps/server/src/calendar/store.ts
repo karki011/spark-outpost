@@ -153,9 +153,19 @@ function choiceOf(row: ChoiceRow): CalendarChoice {
   };
 }
 
-export type ChoiceOwner = { googleAccountId: string | null };
+export interface ChoiceOwner {
+  googleAccountId: string | null;
+  microsoftAccountId?: string | null;
+}
 
-export const EVENTKIT_OWNER: ChoiceOwner = { googleAccountId: null };
+export const EVENTKIT_OWNER: ChoiceOwner = { googleAccountId: null, microsoftAccountId: null };
+
+const microsoftOf = (owner: ChoiceOwner | undefined) => owner?.microsoftAccountId ?? null;
+
+function ownerKey(owner: ChoiceOwner): string {
+  if (owner.microsoftAccountId) return `microsoft:${owner.microsoftAccountId}`;
+  return owner.googleAccountId ?? 'eventkit';
+}
 
 export async function savedChoices(
   db: Queryable,
@@ -166,9 +176,11 @@ export async function savedChoices(
   const { rows } = await db.query<ChoiceRow>(
     `SELECT * FROM calendar_calendars
      WHERE workspace_id = $1
-       AND (NOT $2 OR google_account_id IS NOT DISTINCT FROM $3)
-     ORDER BY google_account_id IS NOT NULL, google_account_id, position, title, key`,
-    [workspaceId, scoped, owner?.googleAccountId ?? null],
+       AND (NOT $2 OR (google_account_id IS NOT DISTINCT FROM $3
+         AND microsoft_account_id IS NOT DISTINCT FROM $4))
+     ORDER BY google_account_id IS NOT NULL, google_account_id,
+       microsoft_account_id IS NOT NULL, microsoft_account_id, position, title, key`,
+    [workspaceId, scoped, owner?.googleAccountId ?? null, microsoftOf(owner)],
   );
   return rows.map(choiceOf);
 }
@@ -187,7 +199,7 @@ export async function lockChoices(
   owner: ChoiceOwner,
 ): Promise<void> {
   await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
-    `calendar_calendars:${workspaceId}:${owner.googleAccountId ?? 'eventkit'}`,
+    `calendar_calendars:${workspaceId}:${ownerKey(owner)}`,
   ]);
 }
 
@@ -199,16 +211,17 @@ export async function replaceChoices(
 ): Promise<void> {
   await client.query(
     `DELETE FROM calendar_calendars
-     WHERE workspace_id = $1 AND google_account_id IS NOT DISTINCT FROM $2`,
-    [workspaceId, owner.googleAccountId],
+     WHERE workspace_id = $1 AND google_account_id IS NOT DISTINCT FROM $2
+       AND microsoft_account_id IS NOT DISTINCT FROM $3`,
+    [workspaceId, owner.googleAccountId, microsoftOf(owner)],
   );
   for (const [position, write] of writes.entries()) {
     const { calendar } = write;
     await client.query(
       `INSERT INTO calendar_calendars (key, workspace_id, calendar_id, title, source_id,
          source_title, source_kind, color, writable, subscribed, ownership, include, nudges,
-         position, google_account_id, agents_edit)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+         position, google_account_id, agents_edit, microsoft_account_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
       [
         write.key ?? randomUUID(),
         workspaceId,
@@ -226,6 +239,7 @@ export async function replaceChoices(
         position,
         owner.googleAccountId,
         write.agentsEdit && calendar.writable,
+        microsoftOf(owner),
       ],
     );
   }
@@ -245,14 +259,17 @@ export async function updateChoice(
 ): Promise<boolean> {
   const entries = Object.entries(patch) as [keyof CalendarChoicePatch, boolean][];
   const sets = entries.map(([name], index) => `${CHOICE_COLUMNS[name]} = $${index + 3}`);
-  const googleMayEdit = patch.agentsEdit
+  const cloudMayEdit = patch.agentsEdit
     ? `AND (google_account_id IS NULL OR EXISTS (
          SELECT 1 FROM calendar_google_accounts account
-         WHERE account.id = calendar_calendars.google_account_id AND account.can_edit))`
+         WHERE account.id = calendar_calendars.google_account_id AND account.can_edit))
+       AND (microsoft_account_id IS NULL OR EXISTS (
+         SELECT 1 FROM calendar_microsoft_accounts account
+         WHERE account.id = calendar_calendars.microsoft_account_id AND account.can_edit))`
     : '';
   const { rowCount } = await db.query(
     `UPDATE calendar_calendars SET ${sets.length ? sets.join(', ') : 'include = include'}
-     WHERE workspace_id = $1 AND key = $2 ${googleMayEdit}`,
+     WHERE workspace_id = $1 AND key = $2 ${cloudMayEdit}`,
     [workspaceId, key, ...entries.map(([, value]) => value)],
   );
   return (rowCount ?? 0) > 0;

@@ -3,7 +3,8 @@ import { existsSync } from 'node:fs';
 import type { ProviderId, TerminalEndReason, TerminalStep } from '@spark-outpost/contracts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
-import { processTable, runningCommand } from './process-group.ts';
+import { createAnsweredQueryFilter } from './tmux/answered-queries.ts';
+import { processTable, runningCommand, stopPty } from './process-group.ts';
 import type { PtyProcess, SpawnPty } from './pty.ts';
 import { createReplayBuffer, type ReplayBuffer } from './replay-buffer.ts';
 import type {
@@ -17,13 +18,12 @@ import type {
   TerminalView,
 } from './session-types.ts';
 import { defaultLimits, TerminalAuthError, TerminalLimitError } from './session-types.ts';
-import { stopPty } from './stop-pty.ts';
+import { createViewHold } from './view-hold.ts';
 
 export * from './session-types.ts';
 
 const OUTPUT_TAIL_BYTES = 8_000;
 const REPLAY_BYTES = 256_000;
-const VIEW_RESYNC = '\x1b[0m\r\n';
 
 interface SetupKind {
   type: 'setup';
@@ -247,14 +247,21 @@ export class TerminalSessions {
     spawned?.();
     session.pty = pty;
     if (kind.type === 'shell') {
-      this.watcher?.opened({
-        id: session.id,
-        conversationId: kind.conversationId,
-        label: kind.label ?? kind.cwd,
-        cwd: kind.cwd,
-        pid: pty.pid,
-        ...(kind.agent ? { agent: true } : {}),
-      });
+      const opened = () =>
+        this.watcher?.opened({
+          id: session.id,
+          conversationId: kind.conversationId,
+          label: kind.label ?? kind.cwd,
+          cwd: kind.cwd,
+          pid: pty.pid,
+          ...(kind.agent ? { agent: true } : {}),
+        });
+      if (!pty.ready) opened();
+      else
+        void pty.ready.then(() => {
+          if (this.sessions.get(session.id) === session && session.pty === pty && pty.pid > 0)
+            opened();
+        });
     }
     let prefilled = kind.type === 'shell';
     pty.onData((data) => {
@@ -282,12 +289,10 @@ export class TerminalSessions {
     kind: ViewKind,
     size: { cols: number; rows: number },
   ): AttachedTerminal {
-    let held = false;
+    const hold = createViewHold((data) => session.client?.output(data));
     const view = kind.open(
       {
-        output: (data) => {
-          if (!held) session.client?.output(data);
-        },
+        output: hold.output,
         ended: () => this.end(session, 'exited', null),
       },
       size,
@@ -301,14 +306,8 @@ export class TerminalSessions {
       input: (data) => view.input(data),
       resize: (cols, rows) => view.resize(cols, rows),
       colors: () => undefined,
-      pause: () => {
-        held = true;
-      },
-      resume: () => {
-        if (!held) return;
-        held = false;
-        session.client?.output(VIEW_RESYNC);
-      },
+      pause: hold.pause,
+      resume: hold.resume,
       close: () => this.end(session, 'closed', null),
       disconnect: () => this.end(session, 'disconnected', null),
     };
@@ -344,7 +343,7 @@ export class TerminalSessions {
 
   async runningCommand(id: string): Promise<string | null> {
     const session = this.sessions.get(id);
-    if (session?.kind.type !== 'shell' || !session.pty) return null;
+    if (session?.kind.type !== 'shell' || !session.pty || session.pty.pid <= 0) return null;
     return runningCommand(session.pty.pid, await processTable());
   }
 
@@ -372,7 +371,7 @@ export class TerminalSessions {
       kind,
       attached: false,
       tokenExpiresAt: Date.now() + this.limits.tokenTtlMs,
-      replay: createReplayBuffer(REPLAY_BYTES),
+      replay: createReplayBuffer(REPLAY_BYTES, createAnsweredQueryFilter()),
       view: null,
       pty: null,
       client: null,

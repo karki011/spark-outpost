@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import { friendlyStep, type TerminalTranscriptItem } from '@spark-outpost/contracts';
 import { Markdown } from '../../chat/markdown/Markdown.tsx';
 import { StepToggle, stepCount } from '../../chat/WorkLog.tsx';
+import { hostWords } from '../../desktop/host-words.ts';
 
 type Row =
   | { kind: 'item'; item: TerminalTranscriptItem }
@@ -42,7 +43,9 @@ export function RemoteTerminalItems({
   if (items.length === 0) return <p className="rt-empty">Nothing in this session yet.</p>;
   return (
     <ol className="rt-items">
-      {truncated && <li className="rt-earlier">Earlier messages are on your Mac.</li>}
+      {truncated && (
+        <li className="rt-earlier">Earlier messages are on your {hostWords().computer}.</li>
+      )}
       {transcriptRows(items).map((row) =>
         row.kind === 'steps' ? (
           <li key={row.tools[0]!.id} className="rt-item rt-steps">
@@ -85,7 +88,9 @@ function ToolLine({ item }: { item: TerminalTranscriptItem }) {
 }
 
 function Continues({ item }: { item: TerminalTranscriptItem }) {
-  return item.clipped ? <p className="rt-continues">Continues on your Mac.</p> : null;
+  return item.clipped ? (
+    <p className="rt-continues">Continues on your {hostWords().computer}.</p>
+  ) : null;
 }
 
 function RemoteTerminalItem({ item }: { item: TerminalTranscriptItem }) {

@@ -12,6 +12,7 @@ import type { PtyOptions, PtyProcess } from '../src/terminal/pty.ts';
 import { loginShellSpawner } from '../src/terminal/pty.ts';
 import { TerminalSessions } from '../src/terminal/sessions.ts';
 import { chooseTmux, killTmuxServer, type TmuxHost } from '../src/terminal/tmux/tmux-host.ts';
+import { tmuxKept } from '../src/terminal/kept-sessions.ts';
 import { tmuxSpawner } from '../src/terminal/tmux/tmux-spawner.ts';
 import { readPane } from '../src/terminal/tmux/tmux-session.ts';
 import { UNTRACKED_REASON } from '../src/terminal/untracked-launch.ts';
@@ -224,7 +225,7 @@ describe.skipIf(!bin)('an untracked Terminal session across a Spark restart', ()
       dataDir: folder,
       channel: 'test',
       mcp: fakeMcp(),
-      tmux,
+      kept: tmuxKept(tmux),
       now: () => new Date('2026-11-05T09:00:00.000Z'),
       locateCli: async () => cli,
     });

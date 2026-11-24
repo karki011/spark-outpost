@@ -7,15 +7,18 @@ import {
   type RemoteSwitchGroup,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
+import { hostWords } from '../desktop/host-words.ts';
 
-export const MAC_ONLY_LINE =
-  'The Browser pane, preview, shell tabs and starting a Terminal session stay on the Mac.';
+export function hostOnlyLine(): string {
+  return `The Browser pane, preview, shell tabs and starting a Terminal session stay on the ${hostWords().computer}.`;
+}
 
 export const NOTIFY_UPDATES_NOTE =
   'Sends only the chat title and "Finished" or "Failed". Works only while "Notify when a chat needs you" is on.';
 
-export const NOTIFY_AWAY_ONLY_NOTE =
-  'Holds alerts while you used the keyboard or mouse in the last 2 minutes and the screen is unlocked, then sends what is still unread when you step away. Needs the Mac app.';
+export function notifyAwayOnlyNote(): string {
+  return `Holds alerts while you used the keyboard or mouse in the last 2 minutes and the screen is unlocked, then sends what is still unread when you step away. Needs the ${hostWords().app}.`;
+}
 
 export const SHOWN_SWITCHES = (Object.keys(REMOTE_SWITCH_LABELS) as RemoteSwitch[]).filter(
   (id) => !REMOTE_MAC_ONLY_SWITCHES.includes(id) && !REMOTE_SIGN_IN_SWITCHES.includes(id),

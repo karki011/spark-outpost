@@ -57,6 +57,7 @@ import type { CalendarHost } from '../calendar/host-client.ts';
 import { meetingRoutes } from '../meetings/routes.ts';
 import { createMeetingService, type MeetingService } from '../meetings/service.ts';
 import type { GoogleSource } from '../calendar/google/source.ts';
+import type { MicrosoftSource } from '../calendar/microsoft/source.ts';
 import { teammateRoutes } from './teammate-routes.ts';
 import { workflowRoutes } from '../crew-flows/routes.ts';
 import { scheduleRoutes } from '../crew-flows/schedule-routes.ts';
@@ -112,6 +113,7 @@ export interface AppOptions
   pushTest?: (deviceId: string) => Promise<PushTestResult>;
   calendarHost?: CalendarHost | null;
   googleCalendar?: GoogleSource | null;
+  microsoftCalendar?: MicrosoftSource | null;
   meetings?: MeetingService;
   pairingAttemptsPerMinute?: number;
   diagnostics?: DiagnosticsPlaces;

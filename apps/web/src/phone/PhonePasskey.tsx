@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { RemoteSession } from '@spark-outpost/contracts';
+import { hostWords } from '../desktop/host-words.ts';
 import { KeyIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
@@ -7,8 +8,8 @@ import { relativeTime } from '../ui/relative-time.ts';
 import { passkeysSupported } from './passkey-browser.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import {
-  PASSKEY_OFF,
-  PASSKEY_PURPOSE,
+  passkeyOff,
+  passkeyPurpose,
   PASSKEY_SAVE,
   PASSKEY_SAVED,
   PASSKEY_UNSUPPORTED,
@@ -70,9 +71,9 @@ export function PhonePasskey({ session }: { session: RemoteSession }) {
     <section className="ph-card" aria-labelledby="ph-passkey-title">
       <h2 id="ph-passkey-title">Passkey</h2>
       <p className="ph-note">
-        {PASSKEY_PURPOSE} To remove a passkey, open Remote control on your Mac.
+        {passkeyPurpose()} To remove a passkey, open Remote control on your {hostWords().computer}.
       </p>
-      {session.switches.passkeys ? <SavedPasskeys /> : <p className="ph-note">{PASSKEY_OFF}</p>}
+      {session.switches.passkeys ? <SavedPasskeys /> : <p className="ph-note">{passkeyOff()}</p>}
     </section>
   );
 }

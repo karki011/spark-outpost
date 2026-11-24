@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import type { SetupState } from '@spark-outpost/contracts';
-import { PHONE_SWITCH_OFF, useRemoteClient } from '../phone/use-remote-client.ts';
+import { phoneSwitchOff, useRemoteClient } from '../phone/use-remote-client.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import type { SettingsSection } from './section-ids.ts';
 import {
@@ -30,7 +30,7 @@ function PartBody({ part, setup, onOpenChat }: PartProps) {
     <>
       {off && (
         <p className="set-off-note" role="note">
-          {PHONE_SWITCH_OFF}
+          {phoneSwitchOff()}
         </p>
       )}
       <div className={off ? 'set-off' : undefined} inert={off}>

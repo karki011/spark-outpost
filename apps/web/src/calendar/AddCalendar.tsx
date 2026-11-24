@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
 import { anchorFor } from '../conversations/menu-anchor.ts';
 import { CloudIcon, LaptopIcon, PlusIcon } from '../ui/icons.tsx';
-import { GOOGLE_CALENDAR } from './GoogleSource.tsx';
+import { CLOUD_WORDS } from './CloudSource.tsx';
 import { MAC_CALENDAR } from './MacSource.tsx';
 
 export const ADD_CALENDAR_LABEL = 'Add calendar';
@@ -11,12 +11,13 @@ export const ADD_CALENDAR_LABEL = 'Add calendar';
 interface AddCalendarProps {
   onMac: (() => void) | null;
   onGoogle: (() => void) | null;
+  onMicrosoft: (() => void) | null;
   disabled: boolean;
 }
 
-export function AddCalendar({ onMac, onGoogle, disabled }: AddCalendarProps) {
+export function AddCalendar({ onMac, onGoogle, onMicrosoft, disabled }: AddCalendarProps) {
   const [menu, setMenu] = useState<MenuAnchor | null>(null);
-  if (!onMac && !onGoogle) return null;
+  if (!onMac && !onGoogle && !onMicrosoft) return null;
   const close = () => {
     menu?.focusBack?.focus();
     setMenu(null);
@@ -48,7 +49,18 @@ export function AddCalendar({ onMac, onGoogle, disabled }: AddCalendarProps) {
         >
           {onMac && <MenuItem icon={<LaptopIcon />} label={MAC_CALENDAR} onSelect={pick(onMac)} />}
           {onGoogle && (
-            <MenuItem icon={<CloudIcon />} label={GOOGLE_CALENDAR} onSelect={pick(onGoogle)} />
+            <MenuItem
+              icon={<CloudIcon />}
+              label={CLOUD_WORDS.google.calendar}
+              onSelect={pick(onGoogle)}
+            />
+          )}
+          {onMicrosoft && (
+            <MenuItem
+              icon={<CloudIcon />}
+              label={CLOUD_WORDS.microsoft.calendar}
+              onSelect={pick(onMicrosoft)}
+            />
           )}
         </MenuShell>
       )}

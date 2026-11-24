@@ -13,12 +13,13 @@ import { PhoneGroup, PhoneSection } from './PhoneSection.tsx';
 import {
   groupCount,
   labelsByState,
-  MAC_ONLY_LINE,
-  NOTIFY_AWAY_ONLY_NOTE,
+  hostOnlyLine,
+  notifyAwayOnlyNote,
   NOTIFY_UPDATES_NOTE,
   SHOWN_SWITCHES,
   shownGroups,
 } from './switch-groups.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 interface SwitchRowProps {
   id: RemoteSwitch;
@@ -88,10 +89,9 @@ function FixedRow({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-const NOTIFY_NOTES: Partial<Record<RemoteSwitch, string>> = {
-  notifyUpdates: NOTIFY_UPDATES_NOTE,
-  notifyAwayOnly: NOTIFY_AWAY_ONLY_NOTE,
-};
+function notifyNotes(): Partial<Record<RemoteSwitch, string>> {
+  return { notifyUpdates: NOTIFY_UPDATES_NOTE, notifyAwayOnly: notifyAwayOnlyNote() };
+}
 
 function SwitchGroup({
   group,
@@ -102,6 +102,7 @@ function SwitchGroup({
   switches: RemoteSwitches;
   notificationsExtra: ReactNode;
 }) {
+  const notes = notifyNotes();
   return (
     <PhoneGroup
       id={`group-${group.id}`}
@@ -110,23 +111,26 @@ function SwitchGroup({
       count={groupCount(group.switches, switches)}
     >
       <ul className="ph-switches ph-switch-grid">
-        {group.switches.map((id) => (
-          <Fragment key={id}>
-            {NOTIFY_NOTES[id] ? (
-              <SwitchRow
-                id={id}
-                checked={switches[id]}
-                disabled={!switches.notifications && !switches[id]}
-                note={NOTIFY_NOTES[id]}
-              />
-            ) : (
-              <SwitchRow id={id} checked={switches[id]} />
-            )}
-            {id === 'notifications' && notificationsExtra && (
-              <li className="ph-switch-extra">{notificationsExtra}</li>
-            )}
-          </Fragment>
-        ))}
+        {group.switches.map((id) => {
+          const note = notes[id];
+          return (
+            <Fragment key={id}>
+              {note ? (
+                <SwitchRow
+                  id={id}
+                  checked={switches[id]}
+                  disabled={!switches.notifications && !switches[id]}
+                  note={note}
+                />
+              ) : (
+                <SwitchRow id={id} checked={switches[id]} />
+              )}
+              {id === 'notifications' && notificationsExtra && (
+                <li className="ph-switch-extra">{notificationsExtra}</li>
+              )}
+            </Fragment>
+          );
+        })}
       </ul>
     </PhoneGroup>
   );
@@ -151,7 +155,7 @@ export function PhoneSwitches({ switches, notificationsExtra, cards }: PhoneSwit
         />
       ))}
       {cards}
-      <FixedRow label="Never">{MAC_ONLY_LINE}</FixedRow>
+      <FixedRow label="Never">{hostOnlyLine()}</FixedRow>
     </PhoneSection>
   );
 }
@@ -161,7 +165,7 @@ export function PhoneSwitchesReadOnly({ switches }: { switches: RemoteSwitches }
   return (
     <section className="ph-card ph-readonly" aria-labelledby="ph-switches-title">
       <h2 id="ph-switches-title">What this device can do</h2>
-      <p className="ph-note">Change these on your Mac.</p>
+      <p className="ph-note">Change these on your {hostWords().computer}.</p>
       <div className="ph-can">
         <h3>Allowed</h3>
         <ul>
@@ -172,7 +176,7 @@ export function PhoneSwitchesReadOnly({ switches }: { switches: RemoteSwitches }
         </ul>
       </div>
       <div className="ph-can">
-        <h3>Off on your Mac</h3>
+        <h3>Off on your {hostWords().computer}</h3>
         {off.length === 0 ? (
           <p className="ph-note">Nothing is off.</p>
         ) : (
@@ -184,8 +188,8 @@ export function PhoneSwitchesReadOnly({ switches }: { switches: RemoteSwitches }
         )}
       </div>
       <div className="ph-can">
-        <h3>Only on the Mac</h3>
-        <p className="ph-note">{MAC_ONLY_LINE}</p>
+        <h3>Only on the {hostWords().computer}</h3>
+        <p className="ph-note">{hostOnlyLine()}</p>
       </div>
     </section>
   );

@@ -17,6 +17,8 @@ The **agent's mode** decides what the agent may do without asking; **Spark auton
 
 Spark, not the model, runs the checks, so no agent can approve its own request.
 
+On Windows, Spark reads Codex's PowerShell commands; one it can't fully read asks first.
+
 ![An approval card showing a file diff](images/approvals-edit-light.png)
 
 ## What never goes on without you
