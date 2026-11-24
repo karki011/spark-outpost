@@ -30,6 +30,7 @@ final class FakeModel: SpeechModel {
     var deferred: [() -> Void] = []
     var holdTranscripts = false
     var resets = 0
+    var lines: [String] = []
 
     func resetDetector() { resets += 1 }
 
@@ -45,7 +46,7 @@ final class FakeModel: SpeechModel {
             text = draftText ?? "draft\(drafted.count)"
         } else {
             transcribed.append(samples.count)
-            text = "part\(transcribed.count)"
+            text = lines.isEmpty ? "part\(transcribed.count)" : lines.removeFirst()
         }
         if holdTranscripts { deferred.append { done(text) } } else { done(text) }
     }
@@ -111,7 +112,9 @@ final class FakePlatform: Platform {
 final class Scene {
     let platform = FakePlatform()
     var sent: [(String?, Message)] = []
-    lazy var engine = Engine(platform: platform) { [unowned self] id, message in
+    var now: Double = 0
+    lazy var engine = Engine(platform: platform, clock: { [unowned self] in self.now }) {
+        [unowned self] id, message in
         self.sent.append((id, message))
     }
     let modelPath: String

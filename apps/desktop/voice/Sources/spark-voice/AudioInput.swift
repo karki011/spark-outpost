@@ -43,6 +43,7 @@ final class Microphone {
 
     func start(queue: DispatchQueue, onFrames: @escaping ([Float]) -> Void) -> ErrorCode? {
         guard Self.permission() == "granted" else { return .micDenied }
+        guard AVCaptureDevice.default(for: .audio) != nil else { return .noInputDevice }
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)

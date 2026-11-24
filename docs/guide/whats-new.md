@@ -10,6 +10,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Meetings drop speaker echo; faster Voice start  | —                                                          |
 | Windows: privacy screen, company rules          | [Privacy](privacy-screen.md).                              |
 | Share copies the link; checks secrets again     | [Share one](share-an-artifact.md).                         |
 | Working line names Sparks; **No output for 2m** | [Follow a turn](follow-a-turn.md).                         |
@@ -42,12 +43,12 @@ summary: What changed in recent releases and what to do next.
 | Sent messages show where read                   | —                                                          |
 | Round card; top-right toasts                    | —                                                          |
 | Chat rows show steps; plans name chats          | [Chat list](statuses-and-limits.md#chat-list).             |
-| **Cost** by tool; model switch cache note       | [Prompt cache](statuses-and-limits.md#prompt-cache).       |
 
 ## Mid-November 2026
 
 | What changed                                               | What to do                                                                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **Cost** by tool; model switch cache note                  | [Prompt cache](statuses-and-limits.md#prompt-cache).                                     |
 | **Usage limits**; **Compact idle conversations**           | [Limits](statuses-and-limits.md#limits), [Compaction](compaction.md#compact-idle-chats). |
 | Meeting notes (alpha): live tab, delete dialog             | [Take meeting notes](meetings.md).                                                       |
 | Meeting alerts while locked; deleted links die; HTML folds | Nothing to do.                                                                           |
