@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { delegationPolicy } from '../agents/delegation-policy.ts';
-import { ASSIGNED_WORK_LINE } from '../agents/delegation-policy.ts';
+import { ASSIGNED_WORK_LINE, REDIRECT_WORK_LINE } from '../agents/delegation-policy.ts';
 import {
   chatPrompt,
   chatTurnNote,
@@ -138,6 +138,10 @@ describe('chatPrompt', () => {
     const before = build({});
     expect(chatPrompt({ ...base, project: worktree, followUpRound: true } as never)).toBe(before);
     expect(build({ level: 'hands-off' })).not.toContain(text.PUBLISH_FOLLOW_UP);
+  });
+
+  it('tells the lead to stop and re-brief a worker when the user changes its work', () => {
+    expect(build({ level: 'hands-off' })).toContain(REDIRECT_WORK_LINE);
   });
 
   it('tells the chat agent how to stop or message a follow-up round running in its folder', () => {
