@@ -82,38 +82,41 @@
   padding-bottom: 104px;
 }
 
-.spk-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+.spk-list > ul {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.spk-card {
-  display: flex;
-  min-height: 116px;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  background: var(--panel);
+.spk-list-head,
+.spk-crew-open {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) minmax(72px, 0.5fr);
+  align-items: center;
+  gap: 16px;
+  padding: 0 8px;
 }
 
-.spk-card:hover {
-  border-color: var(--line-strong);
+.spk-list-head {
+  height: 32px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.spk-crew {
+  border-bottom: 1px solid var(--line);
+}
+
+.spk-crew:hover {
   background: var(--raise);
 }
 
-.spk-card-open {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  min-width: 0;
-  padding: 14px;
+.spk-crew-open {
+  width: 100%;
+  min-height: 52px;
   border: 0;
-  border-radius: inherit;
   background: none;
   color: inherit;
   font: inherit;
@@ -121,44 +124,55 @@
   cursor: pointer;
 }
 
-.spk-card-open:focus-visible,
+.spk-crew-open:focus-visible,
 .spk-tree-row:focus-visible,
 .spk-code:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
-.spk-card-top {
+.spk-crew-who {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-  max-width: 100%;
-  margin-bottom: 6px;
 }
 
-.spk-card-who {
+.spk-crew-name {
   min-width: 0;
 }
 
-.spk-card-who b,
-.spk-card-who small {
+.spk-crew-name b,
+.spk-crew-name small,
+.spk-crew-meta {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.spk-card-who b {
-  font-size: 15px;
+.spk-crew-name b {
+  font-size: 14px;
   font-weight: 600;
 }
 
-.spk-card-who small,
-.spk-card-meta,
+.spk-crew-name small,
+.spk-crew-meta,
 .spk-hint {
   color: var(--muted);
   font-size: 12.5px;
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .spk-list-head {
+    display: none;
+  }
+
+  .spk-crew-open {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: 10px 8px;
+  }
 }
 
 .spk-hint {

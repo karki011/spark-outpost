@@ -39,7 +39,6 @@ export function MorningBriefSetting({ enabled, time }: MorningBriefSettingProps)
   return (
     <SwitchValueSetting
       label={MORNING_BRIEF_LABEL}
-      blob="sun"
       info={INFO}
       hint={hint}
       on={on.value}

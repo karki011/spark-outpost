@@ -4,7 +4,7 @@ import {
   type VoiceFnSetting,
   type VoiceStatus,
 } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { CheckIcon } from '../ui/icons.tsx';
 import { Keys } from '../ui/Keys.tsx';
@@ -77,7 +77,7 @@ function Pill({ ok, text }: { ok: boolean; text: string }) {
   );
 }
 
-function Switch(props: {
+function VoiceSwitch(props: {
   label: string;
   hint: string;
   checked: boolean;
@@ -97,8 +97,7 @@ function Switch(props: {
       hintId={hintId}
       standsFor={props.standsFor}
     >
-      <BlobToggle
-        kind="plain"
+      <Switch
         id={id}
         label={props.label}
         checked={props.checked}
@@ -255,7 +254,7 @@ export function VoiceSection() {
   };
   return (
     <div className="mac-control">
-      <Switch
+      <VoiceSwitch
         label="Voice"
         info={VOICE_INFO}
         standsFor={hiddenRows(on, status.settings.shortcutMode === 'fn')}
@@ -274,7 +273,7 @@ export function VoiceSection() {
       {on && <Setup status={status} />}
       {on && <Shortcut status={status} onStatus={take} />}
       {on && status.settings.shortcutMode === 'fn' && (
-        <Switch
+        <VoiceSwitch
           label={HOLD_LABEL}
           info={{
             lead: 'Listen while the second Fn press is held, and stop when you let go.',
@@ -289,7 +288,7 @@ export function VoiceSection() {
           onChange={(next) => void speech.update({ hold: next }).then(take)}
         />
       )}
-      <Switch
+      <VoiceSwitch
         label="Speak answers"
         info={SPEAK_INFO}
         checked={status.settings.speakAnswers}

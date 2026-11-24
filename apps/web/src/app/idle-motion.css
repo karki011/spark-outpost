@@ -14,7 +14,6 @@
     .scout:not(.working, .alert, .sad, .sleep) .sc-spark,
     .scout.alert :is(.sc-ant, .sc-spark),
     .cmp-float,
-    .btog-z,
     .mh-dust,
     .mh-star,
     .isl-sstatus .shim,

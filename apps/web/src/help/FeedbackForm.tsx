@@ -1,5 +1,5 @@
 import { useCallback, useId, useRef, useState, type FormEvent } from 'react';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { exportDiagnostics, type DiagnosticsOutcome } from './export-diagnostics.ts';
 import {
   draftKind,
@@ -134,7 +134,7 @@ export function FeedbackForm({ version, beta }: FeedbackFormProps) {
       </label>
       <div className="field">
         <label className="check-row">
-          <BlobToggle
+          <Switch
             size="sm"
             label="Include diagnostics"
             checked={withDiagnostics}

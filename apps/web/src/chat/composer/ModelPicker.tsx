@@ -13,7 +13,7 @@ import {
   type Run,
 } from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../../api/client.ts';
-import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
+import { ProviderMark } from '../../brand/ProviderMark.tsx';
 import { countLabel } from '../../ui/count-label.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import { reveal } from '../../ui/transitions.tsx';
@@ -203,7 +203,7 @@ export function ModelPicker({
             toggle();
           }}
         >
-          <ProviderBlob providerId={provider} size={18} animate="hover" />
+          <ProviderMark providerId={provider} size={18} />
           <span className="mname">{modelName}</span>
           {effort && <span className="meffort">· {effort.label}</span>}
           <ChevronIcon />

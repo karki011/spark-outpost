@@ -4,7 +4,7 @@ import type {
   CalendarSettingsPatch,
   CalendarStatus,
 } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { useMeetingStatus } from '../meetings/index.ts';
 import { Segmented } from '../ui/Segmented.tsx';
@@ -99,7 +99,7 @@ function SwitchRow(props: {
   const hintId = useId();
   return (
     <SettingRow label={props.label} controlId={id} hint={props.hint} hintId={hintId}>
-      <BlobToggle
+      <Switch
         id={id}
         label={props.label}
         checked={props.checked}

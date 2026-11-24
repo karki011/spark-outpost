@@ -8,7 +8,8 @@ import {
 } from '@spark-outpost/contracts';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import { AUTOMATIC, moveChoices, moveNotes, withMove } from './move-status-model.ts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
+import { SettingRow } from '../settings/SettingRow.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 
 type SyncKey = 'moveOnShip' | 'moveOnMerge';
@@ -69,25 +70,25 @@ export function TicketSyncSettings({ connection }: { connection: TicketConnectio
         const chosen = moveStatuses[row.move];
         const notes = moveNotes(options.data, row.move, chosen);
         const { toggle } = row;
+        const switchId = `${id}-${row.move}-switch`;
+        const hintId = `${id}-${row.move}`;
         return (
-          <div key={row.move}>
+          <div key={row.move} className="tk-set-row">
             {toggle ? (
-              <label className="tk-switch">
-                <BlobToggle
-                  size="sm"
+              <SettingRow label={row.label} controlId={switchId} hint={row.hint} hintId={hintId}>
+                <Switch
+                  id={switchId}
                   label={row.label}
                   checked={pending?.[toggle] ?? connection[toggle]}
-                  describedBy={`${id}-${row.move}`}
+                  describedBy={hintId}
                   onChange={(next) => save.mutate({ [toggle]: next })}
                 />
-                <span>{row.label}</span>
-              </label>
+              </SettingRow>
             ) : (
-              <p className="tk-move-title">{row.label}</p>
+              <SettingRow label={row.label} hint={row.hint} hintId={hintId}>
+                {null}
+              </SettingRow>
             )}
-            <p id={`${id}-${row.move}`} className="tk-field-help">
-              {row.hint}
-            </p>
             <div className="tk-move">
               <ChoicePicker
                 label={row.picker}

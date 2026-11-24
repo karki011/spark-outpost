@@ -1,7 +1,7 @@
 import './attention-card.css';
 import { useId, useState } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
+import { AgentMark } from '../brand/ProviderMark.tsx';
 import { CrewBlob } from '../crew/CrewBlob.tsx';
 import { attentionLine, type Attention, waitingHeadline } from './row-state.ts';
 
@@ -20,7 +20,7 @@ function WaitingBlob({ chat }: { chat: ConversationSummary }) {
     );
   }
   if (attention?.provider) {
-    return <AgentBlob provider={attention.provider} size={22} expression="unsure" />;
+    return <AgentMark provider={attention.provider} size={22} />;
   }
   return <i className="ask" aria-hidden="true" />;
 }

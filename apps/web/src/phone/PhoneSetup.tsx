@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react';
 import type { TailscaleState } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { CheckIcon, ClockIcon, ExternalLinkIcon, WarnIcon } from '../ui/icons.tsx';
 import { statusCopy } from './phone-copy.ts';
 import {
@@ -146,7 +146,7 @@ function TurnOnStep({ step, props }: { step: SetupStep; props: PhoneSetupProps }
   }
   return (
     <StepCard step={step} title={title} text={statusCopy(state).step ?? ''} textId={describedBy}>
-      <BlobToggle
+      <Switch
         label="Remote control"
         checked={on}
         disabled={turning}

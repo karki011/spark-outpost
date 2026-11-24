@@ -4,7 +4,7 @@ import {
   type ScheduleMissed,
   type ScheduleUnit,
 } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { Switch } from '../ui/Switch.tsx';
 import { hourCycle } from '../desktop/hour-cycle.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
@@ -68,7 +68,7 @@ export function ScheduleCard({ schedule, problems, lastRunCostUsd, onChange }: S
             {state}
           </small>
         </span>
-        <BlobToggle
+        <Switch
           label="Run on a schedule"
           checked={schedule.enabled}
           describedBy={`${ids}-state`}
