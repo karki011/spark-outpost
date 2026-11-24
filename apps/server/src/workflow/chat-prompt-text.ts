@@ -73,3 +73,7 @@ const BREAKS_A_LINE = /[\p{Cc}\p{Zl}\p{Zp}]+/gu;
 export function oneLine(value: string): string {
   return value.replace(BREAKS_A_LINE, ' ').trim();
 }
+
+export function roundRunningNote(round: { number: number; round: number; doing: string }): string {
+  return `A separate follow-up agent is working in this folder right now on PR #${round.number} (round ${round.round}; ${oneLine(round.doing)}). It has its own session and does not see this conversation. Answer the user as usual. Before you or the user change the work it is doing, or edit files it may be editing, stop it with spark_pr_follow_up_round (action "stop"), or tell it to wait or what changed with action "message". Don't commit or push its unfinished edits.`;
+}

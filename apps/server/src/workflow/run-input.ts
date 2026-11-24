@@ -56,6 +56,7 @@ export interface RunInput {
   continuesRunId?: string | null;
   modelSwitch?: ModelSwitch | null;
   followUpRound?: boolean;
+  followUpLane?: boolean;
   sparkRuleRetry?: boolean;
   assistantSent?: boolean;
   workflowStarted?: boolean;
@@ -104,6 +105,7 @@ interface RunRow {
   start_as: StartAs | null;
   run_level: InvolvementLevel | null;
   follow_up_round: boolean | null;
+  follow_up_lane: boolean | null;
   spark_rule_retry: boolean | null;
   assistant_sent: boolean | null;
   workflow_started?: boolean | null;
@@ -204,6 +206,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             COALESCE(m.content, '') AS content, r.source = 'agent_cycle' AS agent_cycle,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'pr_follow_up' AS follow_up_round,
+            (r.parent_run_id IS NULL AND r.source = 'pr_follow_up') AS follow_up_lane,
             COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
               = 'spark_rule' AS spark_rule_retry,
             (COALESCE((SELECT p.source FROM runs p WHERE p.id = r.parent_run_id), r.source)
@@ -307,6 +310,8 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     parentRunId: null,
     userRequest: row.content,
     followUpRound: row.follow_up_round === true,
+    followUpLane: row.follow_up_lane === true,
+    ...(row.follow_up_lane === true ? { resumeKey: row.resume_key } : {}),
     sparkRuleRetry: row.spark_rule_retry === true,
     assistantSent: row.assistant_sent === true,
     workflowStarted: row.workflow_started === true,
@@ -419,6 +424,7 @@ function childInput(runId: string, row: RunRow): RunInput {
     parentRunId: row.parent_run_id,
     userRequest: row.content,
     followUpRound: row.follow_up_round === true,
+    followUpLane: row.follow_up_lane === true,
     sparkRuleRetry: row.spark_rule_retry === true,
     assistantSent: row.assistant_sent === true,
     workflowStep: row.workflow_step === true,

@@ -23,6 +23,7 @@ import {
   removeMemberMessages,
   urgentLeftovers,
 } from '../persistence/member-messages.ts';
+import { chatTurn, notFollowUp } from '../persistence/chat-turns.ts';
 
 export type ResolveTarget = (conversationId: string) => Promise<RunTarget>;
 export type DrainOutcome = 'sent' | 'busy' | 'paused' | 'held' | 'archived' | 'empty';
@@ -31,7 +32,7 @@ const ACTIVE = `('queued', 'running', 'awaiting_approval')`;
 
 async function activeTurn(db: Queryable, conversationId: string): Promise<string | null> {
   const { rows } = await db.query<{ id: string }>(
-    `SELECT id FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+    `SELECT id FROM runs WHERE conversation_id = $1 AND ${chatTurn()}
        AND status IN ${ACTIVE}
      ORDER BY created_at DESC LIMIT 1`,
     [conversationId],
@@ -41,7 +42,7 @@ async function activeTurn(db: Queryable, conversationId: string): Promise<string
 
 async function lastTurnSucceeded(db: Queryable, conversationId: string): Promise<boolean> {
   const { rows } = await db.query<{ status: string }>(
-    `SELECT status FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+    `SELECT status FROM runs WHERE conversation_id = $1 AND ${chatTurn()}
      ORDER BY created_at DESC LIMIT 1`,
     [conversationId],
   );
@@ -204,7 +205,7 @@ export async function sendNow(
 }
 
 const LAST_TURN_FLOWS = `COALESCE((
-  SELECT r.status FROM runs r WHERE r.conversation_id = q.conversation_id AND r.parent_run_id IS NULL
+  SELECT r.status FROM runs r WHERE r.conversation_id = q.conversation_id AND ${chatTurn('r')}
   ORDER BY r.created_at DESC LIMIT 1
 ), 'succeeded') = 'succeeded'`;
 
@@ -219,12 +220,13 @@ export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]
        WHERE m.message_id IS NULL
          AND (m.status = 'interrupting'
            OR (m.status = 'queued' AND (m.urgency = 'now' OR target.parent_run_id IS NULL)))
+         AND ${notFollowUp('target')}
      ) c
      JOIN conversations chat ON chat.id = c.conversation_id AND chat.archived_at IS NULL
      WHERE NOT ${sparkPausedForChat('c.conversation_id')}
      AND NOT EXISTS (
        SELECT 1 FROM runs r WHERE r.conversation_id = c.conversation_id
-         AND r.parent_run_id IS NULL AND r.status IN ${ACTIVE}
+         AND ${chatTurn('r')} AND r.status IN ${ACTIVE}
      )
      GROUP BY c.conversation_id
      ORDER BY min(c.created_at)
@@ -236,7 +238,7 @@ export async function waitingQueues(db: Queryable, limit = 20): Promise<string[]
 
 async function lastProvider(db: Queryable, conversationId: string): Promise<string | null> {
   const { rows } = await db.query<{ provider: string }>(
-    `SELECT provider FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+    `SELECT provider FROM runs WHERE conversation_id = $1 AND ${chatTurn()}
      ORDER BY created_at DESC LIMIT 1`,
     [conversationId],
   );

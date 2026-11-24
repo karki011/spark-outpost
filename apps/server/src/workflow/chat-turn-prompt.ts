@@ -14,6 +14,7 @@ import {
   chatTurnNote,
   type ChatPromptFacts,
   type ChatPromptProject,
+  type ChatTurnFacts,
 } from './chat-prompt.ts';
 import type { RunInput } from './run-input.ts';
 
@@ -62,11 +63,30 @@ export function isTaskTurn(input: Pick<RunInput, 'chatAsk'>): boolean {
   return input.chatAsk?.kind === 'task';
 }
 
-export function chatTurnNoteFor(input: RunInput, facts: ChatPromptFacts): string | null {
+const ACTIVE = `('queued', 'running', 'awaiting_approval')`;
+
+async function roundRunning(db: Queryable, input: RunInput) {
+  if (input.parentRunId !== null || input.followUpLane) return null;
+  const { rows } = await db.query<{ number: number; round: number; doing: string }>(
+    `SELECT w.number, w.rounds AS round, COALESCE(w.doing, '') AS doing FROM pr_watches w
+     JOIN runs r ON r.id = w.round_run_id
+     WHERE w.conversation_id = $1 AND w.phase = 'fixing' AND r.status IN ${ACTIVE}
+     ORDER BY r.created_at DESC LIMIT 1`,
+    [input.identity.threadId],
+  );
+  return rows[0] ?? null;
+}
+
+export function chatTurnNoteFor(
+  input: RunInput,
+  facts: ChatPromptFacts,
+  round: ChatTurnFacts['roundRunning'] = null,
+): string | null {
   return chatTurnNote({
     project: facts.project,
     followUpRound: input.followUpRound === true,
     taskTurn: isTaskTurn(input),
+    roundRunning: round,
   });
 }
 
@@ -92,11 +112,14 @@ export async function withChatPrompt<Deps extends Pick<TurnDeps, 'db' | 'provide
 ): Promise<Deps> {
   const provider = deps.providers.get(input.provider);
   if (!provider || input.assistant) return deps;
-  const facts = await chatPromptFacts(deps.db, input, prefs);
+  const [facts, round] = await Promise.all([
+    chatPromptFacts(deps.db, input, prefs),
+    roundRunning(deps.db, input),
+  ]);
   const providers = new Map(deps.providers);
   providers.set(
     input.provider,
-    sendingChatPrompt(provider, chatPrompt(facts), chatTurnNoteFor(input, facts)),
+    sendingChatPrompt(provider, chatPrompt(facts), chatTurnNoteFor(input, facts, round)),
   );
   return { ...deps, providers };
 }

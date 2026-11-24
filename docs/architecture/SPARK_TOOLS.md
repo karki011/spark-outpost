@@ -68,7 +68,7 @@ Discovery is labelled **Finding Code Mode tools**; execution is **Combining tool
 - Git state of a project (`/projects/:id/git`, branches): only the default branch and live worktree count are exposed.
 - Ship preview (`/tasks/:id/ship`: what a commit or PR would include and why it is blocked) is not exposed; it runs git and GitHub calls.
 - Feedback comments and reasons are not shared; only counts (thumbs up and down) per group.
-- Revert and ship stay in the UI; answering cards and stopping a chat are Ask Spark's only (below). Any new action must follow `actionPath` and use the `spark_action` confirm card when it asks. `spark_pr_follow_up_round` only queues items and lets the follow-up worker start the round; the push and GitHub replies still go through their own card (or Full auto).
+- Revert and ship stay in the UI; answering cards and stopping a chat are Ask Spark's only (below). Any new action must follow `actionPath` and use the `spark_action` confirm card when it asks. `spark_pr_follow_up_round` only queues items and lets the follow-up worker start the round; the push and GitHub replies still go through their own card (or Full auto). Its `stop` and `message` actions act at once, with no card, on the chat's own running round only: they stop a local run or steer a note into it and send nothing off the computer.
 
 ## Ask Spark
 

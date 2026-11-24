@@ -140,6 +140,19 @@ describe('chatPrompt', () => {
     expect(build({ level: 'hands-off' })).not.toContain(text.PUBLISH_FOLLOW_UP);
   });
 
+  it('tells the chat agent how to stop or message a follow-up round running in its folder', () => {
+    const note = chatTurnNote({
+      project: worktree,
+      followUpRound: false,
+      taskTurn: false,
+      roundRunning: { number: 7, round: 2, doing: 'Fixing 2 items\n(round 2)' },
+    });
+    expect(note).toContain(text.TURN_NOTE_INTRO);
+    expect(note).toContain('PR #7 (round 2; Fixing 2 items (round 2))');
+    expect(note).toContain('spark_pr_follow_up_round (action "stop")');
+    expect(chatTurnNote({ project: worktree, followUpRound: false, taskTurn: false })).toBeNull();
+  });
+
   it('puts the follow-up push line in the turn note at any level where there is a remote', () => {
     const note = chatTurnNote({ project: worktree, followUpRound: true, taskTurn: false });
     expect(note).toContain(text.TURN_NOTE_INTRO);

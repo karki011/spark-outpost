@@ -155,14 +155,14 @@ describe('round prompt', () => {
     expect(roundPrompt({ ...target, reviewers: [] }, [])).not.toContain('re-request');
   });
 
-  it('asks for the round to run as sub-agent work, with or without feedback items', () => {
+  it('tells the round agent it is separate from the chat and obeys a stop from the main agent', () => {
     const target = { repo: 'acme/widgets', number: 7, branch: 'spark/x', round: 1, base: 'main' };
     for (const prompt of [
       roundPrompt(target, [item('F1', 'Fix it.')]),
       roundPrompt({ ...target, mergeState: 'behind' }, []),
     ]) {
-      expect(prompt).toContain('Run this round as sub-agent work');
-      expect(prompt).toContain('answer a message from the user at once');
+      expect(prompt).toContain("a separate session from the chat's main agent");
+      expect(prompt).toContain('when it tells you to stop or wait, make no further edits');
     }
   });
 

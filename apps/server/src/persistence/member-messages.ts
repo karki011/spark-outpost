@@ -5,6 +5,7 @@ import type {
 } from '@spark-outpost/contracts';
 import type { ShotAnchor } from './browser-screenshots.ts';
 import type { Queryable } from './db.ts';
+import { notFollowUp } from './chat-turns.ts';
 
 interface MemberMessageRow {
   id: string;
@@ -214,7 +215,7 @@ export async function urgentLeftovers(
 ): Promise<MemberMessage[]> {
   const { rows } = await db.query<MemberMessageRow>(
     `SELECT m.* FROM member_messages m JOIN runs r ON r.id = m.run_id
-     WHERE m.conversation_id = $1 AND m.message_id IS NULL
+     WHERE m.conversation_id = $1 AND m.message_id IS NULL AND ${notFollowUp('r')}
        AND (m.status = 'interrupting'
          OR (m.status = 'queued' AND (m.urgency = 'now' OR r.parent_run_id IS NULL)
            AND r.status NOT IN ('queued', 'running', 'awaiting_approval')))
