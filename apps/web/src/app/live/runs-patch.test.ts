@@ -145,6 +145,23 @@ describe('refreshChatRuns', () => {
     open.close();
   });
 
+  it('keeps a chat stale when it was closed and invalidated while the slice was read', async () => {
+    const open = await openChat(detail([run(RUN, 100)]));
+    const waiting: ((value: ConversationRuns) => void)[] = [];
+    refreshChatRuns(
+      open.client,
+      CHAT,
+      () => new Promise<ConversationRuns>((resolve) => waiting.push(resolve)),
+    );
+    open.close();
+    await open.client.invalidateQueries({ queryKey: KEY, exact: true, refetchType: 'none' });
+    waiting[0]?.(slice([run(RUN, 700)]));
+    await settle();
+    expect(cached(open.client)?.runs[0]?.usage?.contextUsed).toBe(100);
+    expect(open.client.getQueryState(KEY)?.isInvalidated).toBe(true);
+    expect(waiting).toHaveLength(1);
+  });
+
   it('only marks a cached chat stale when nothing shows it', async () => {
     const open = await openChat(detail([run(RUN, 100)]));
     open.close();

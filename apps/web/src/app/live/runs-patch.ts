@@ -58,8 +58,14 @@ export function refreshChatRuns(
       const state = client.getQueryState<ConversationDetail>(queryKey);
       if (!state) return finish(false);
       if (state.fetchStatus === 'fetching') {
+        if (!query.promise) return finish(false);
         const settled = () => finish(true);
-        void (query.promise ?? Promise.resolve()).then(settled, settled);
+        void query.promise.then(settled, settled);
+        return;
+      }
+      if (state.isInvalidated || !query.isActive()) {
+        waiting.delete(conversationId);
+        invalidateLive(client, { queryKey, exact: true });
         return;
       }
       if (state.dataUpdatedAt !== readAt) return finish(true);
