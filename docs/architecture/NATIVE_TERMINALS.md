@@ -35,7 +35,7 @@ A session with no provider session ID has nothing to resume. When its launch fai
 
 An attach token is single-use: after its socket disconnects, reattaching needs a token newly issued by the authenticated attach route. Agent sessions keep a replay buffer; ordinary dock shells end when their socket closes.
 
-Terminal output replay is bounded to 256,000 JavaScript characters in memory. It is not a durable terminal transcript; after a re-adoption it starts from what tmux still holds of the screen and scrollback. Reattachment preserves a running process; provider-native resume creates another process from provider history and does not restore an interrupted shell command exactly.
+Terminal output replay is the last 256,000 JavaScript characters; between reads the buffer may hold up to a quarter more (320,000) before it trims, so a push does not copy the whole tail. It is not a durable terminal transcript; after a re-adoption it starts from what tmux still holds of the screen and scrollback. Reattachment preserves a running process; provider-native resume creates another process from provider history and does not restore an interrupted shell command exactly.
 
 Spark manages only its own child processes, the tmux server on its own socket, and recorded session IDs. It never adopts or kills an external terminal by executable name, and never talks to the default tmux socket. PTYs start in the session's project workspace; a working directory does not provide a filesystem sandbox. Native CLI permission modes continue to govern native execution.
 

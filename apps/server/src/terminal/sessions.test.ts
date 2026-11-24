@@ -148,7 +148,7 @@ describe('terminal sessions', () => {
     expect(() => sessions.create('codex')).toThrow(TerminalLimitError);
   });
 
-  it('holds back output for a paused view and carries on from a clean line when it resumes', () => {
+  it('holds back output for a paused view and sends it when the view resumes', () => {
     sessions = new TerminalSessions(loginShellSpawner(TEST_SHELL));
     let produce: (data: string) => void = () => undefined;
     const view = sessions.createView((viewer) => {
@@ -170,10 +170,10 @@ describe('terminal sessions', () => {
     );
     produce('one ');
     attached.pause();
-    produce('dropped ');
+    produce('held ');
     attached.resume();
     attached.resume();
     produce('two');
-    expect(shown).toBe('one \x1b[0m\r\ntwo');
+    expect(shown).toBe('one held two');
   });
 });
