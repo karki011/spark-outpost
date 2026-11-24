@@ -6,7 +6,13 @@ import type { ApprovalRequest } from './decide.ts';
 import { holds } from './floor-rules.ts';
 import { gitConfigUses } from './git-commands.ts';
 import { GLOBAL_GIT_CONFIG, REPO_GIT_CONFIG, SYSTEM_GIT_CONFIG } from './git-config.ts';
-import { gitControlLabel } from './git-dirs.ts';
+import { gitControlWrites } from './git-control-writes.ts';
+import {
+  GIT_FOLDER_LABEL,
+  HOOKS_FOLDER_LABEL,
+  gitControlLabel,
+  gitFolderLabel,
+} from './git-dirs.ts';
 import { commandCwd, isSecretTarget, place, placedLabel } from './request-place.ts';
 import { withResolvedVariables } from './shell-variables.ts';
 import { writeTargets } from './write-targets.ts';
@@ -38,6 +44,25 @@ function configTargets(request: ApprovalRequest): { files: string[]; labels: str
   };
 }
 
+const FOLDER_LABELS = new Set([GIT_FOLDER_LABEL, HOOKS_FOLDER_LABEL]);
+
+function controlLabel(request: ApprovalRequest, target: string): string | null {
+  const { relative } = place(request.roots, target);
+  if (relative !== null) {
+    if (protectedPath(relative) === 'git_control') return relative;
+    const folded = process.platform === 'win32' ? relative.toLowerCase() : relative;
+    if (FOLDER_LABELS.has(folded)) return folded;
+  }
+  return gitControlLabel(request.roots, target) ?? gitFolderLabel(request.roots, target);
+}
+
+function controlWrites(request: ApprovalRequest): string[] {
+  if (!request.command) return [];
+  const writes = gitControlWrites(request.command, commandCwd(request), request.home);
+  const labels = writes.targets.flatMap((target) => controlLabel(request, target) ?? []);
+  return writes.unknown ? [...labels, GIT_FOLDER_LABEL] : labels;
+}
+
 export function guardedTargets(asked: ApprovalRequest): Guarded {
   const request = withResolvedVariables(asked);
   const config = configTargets(request);
@@ -51,7 +76,9 @@ export function guardedTargets(asked: ApprovalRequest): Guarded {
   const realGitDir = targets.flatMap((target) => gitControlLabel(request.roots, target) ?? []);
   return {
     instructions: unique.filter((relative) => protectedPath(relative) === 'instructions'),
-    gitControl: [...new Set([...control, ...realGitDir, ...config.labels])],
+    gitControl: [
+      ...new Set([...control, ...realGitDir, ...config.labels, ...controlWrites(request)]),
+    ],
   };
 }
 
