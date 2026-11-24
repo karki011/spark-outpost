@@ -3,13 +3,8 @@ import './agent-cards.css';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { SubagentRow } from '@spark-outpost/contracts';
 import { StepName } from '../WorkLog.tsx';
-import { ChatFace } from '../../brand/ChatFace.tsx';
-import {
-  runsOtherModel,
-  workerIdentity,
-  workerPresentation,
-  workerRole,
-} from '../../crew/worker-identity.ts';
+import { ChatGlyph } from '../../brand/ChatGlyph.tsx';
+import { runsOtherModel, workerPresentation, workerRole } from '../../crew/worker-identity.ts';
 import { SubagentDetail } from './SubagentDetail.tsx';
 import { agentActivity, agentMeta, agentPurpose } from './agent-cards.ts';
 import type { AgentFocus } from './agent-board.ts';
@@ -69,7 +64,7 @@ function AgentCard({
       data-nested={nested || undefined}
     >
       <div className="ac-top">
-        <ChatFace chatId={workerIdentity(row.id)} size="strip" state={presentation.face} />
+        <ChatGlyph size="strip" state={presentation.face} />
         {detailed ? (
           <button
             ref={nameButton}

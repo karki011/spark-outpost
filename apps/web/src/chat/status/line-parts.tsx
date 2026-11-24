@@ -1,6 +1,5 @@
 import { queuedCount } from '../queue/queue-model.ts';
-import { AgentBlob } from '../../brand/AgentBlob.tsx';
-import type { BlobExpression } from '../../brand/blob-expression.ts';
+import { AgentMark } from '../../brand/ProviderMark.tsx';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import type { Worker } from './status-store.ts';
 
@@ -15,30 +14,17 @@ export function Dot() {
   );
 }
 
-export function Indicator({
-  provider,
-  expression,
-  still = false,
-}: {
-  provider: string;
-  expression: BlobExpression;
-  still?: boolean;
-}) {
+export function Indicator({ provider }: { provider: string }) {
   return (
     <span className="cs-blob" aria-hidden="true">
-      <AgentBlob
-        provider={provider}
-        size={18}
-        expression={expression}
-        animate={still ? 'hover' : 'always'}
-      />
+      <AgentMark provider={provider} size={18} />
     </span>
   );
 }
 
 export function WorkerFace({ worker, idle }: { worker: Worker; idle: boolean }) {
   if (worker.kind === 'agent') {
-    return <Indicator provider={worker.provider} expression={idle ? 'thinking' : 'idle'} />;
+    return <Indicator provider={worker.provider} />;
   }
   return (
     <span className="cs-blob" aria-hidden="true">

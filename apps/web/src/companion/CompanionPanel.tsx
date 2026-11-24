@@ -1,7 +1,7 @@
 import './companion-panel.css';
 import type { KeyboardEvent, Ref } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
+import { AgentMark } from '../brand/ProviderMark.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { CheckIcon, SparkleIcon } from '../ui/icons.tsx';
@@ -98,7 +98,7 @@ interface RowProps {
 }
 
 function Row({ item, tone, onOpen }: RowProps) {
-  const { chat, provider, expression, sub, action } = item;
+  const { chat, provider, sub, action } = item;
   const line = useSessionLine(chat);
   const terminalText = terminalFacts(chat, line, TERMINAL_PARTS);
   const stated = line.step ? terminalText : `${sub} · ${terminalText}`;
@@ -106,11 +106,7 @@ function Row({ item, tone, onOpen }: RowProps) {
   return (
     <li className={`cmp-row ${tone}`}>
       <span className="cmp-ava" aria-hidden="true">
-        {provider ? (
-          <AgentBlob provider={provider} size={22} expression={expression} />
-        ) : (
-          <span className="provider-dot" />
-        )}
+        {provider ? <AgentMark provider={provider} size={22} /> : <span className="provider-dot" />}
       </span>
       <span className="cmp-txt">
         <b>{chat.title}</b>

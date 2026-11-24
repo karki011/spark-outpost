@@ -1,6 +1,6 @@
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { markedTitle } from '../conversations/sub-chat-tree.ts';
-import { AgentBlob } from '../brand/AgentBlob.tsx';
+import { AgentMark } from '../brand/ProviderMark.tsx';
 import {
   HomeCard,
   HomeRow,
@@ -28,7 +28,7 @@ function RunLabel({ item }: { item: RunItem }) {
     <span className="hrun">
       {item.provider && (
         <span className="hrun-b" aria-hidden="true">
-          <AgentBlob provider={item.provider} size={18} expression="thinking" />
+          <AgentMark provider={item.provider} size={18} />
         </span>
       )}
       <StatusLabel word="Working" tone="run" />

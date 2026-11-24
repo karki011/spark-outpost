@@ -1,9 +1,14 @@
 import './place-picker.css';
 import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { UpdateChatWorkspaceRequest } from '@spark-outpost/contracts';
-import { BranchIcon, ChevronIcon, FolderIcon, PlusIcon, TickIcon } from '../../ui/icons.tsx';
-import { Blobatar } from 'blobatar/react';
-import * as expressions from 'blobatar/expression';
+import {
+  BranchIcon,
+  ChevronIcon,
+  FolderIcon,
+  PlusIcon,
+  SpinnerIcon,
+  TickIcon,
+} from '../../ui/icons.tsx';
 import { BlobScout } from '../../brand/BlobScout.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
 import { branchRows, placeLabel, showsPlaceMenu } from './place-picker-model.ts';
@@ -103,12 +108,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
           </span>
           <span className="pp-blob" aria-hidden="true">
             <span key={placeKey} className={busy ? 'pp-swap busy' : 'pp-swap'}>
-              <Blobatar
-                name={`place:${placeKey}`}
-                size={26}
-                animate="always"
-                expression={busy ? expressions.thinking : expressions.happy}
-              />
+              {busy ? <SpinnerIcon /> : <BranchIcon />}
             </span>
           </span>
           <span className="sr-only" role="status">
@@ -195,11 +195,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
                 onClick={() => pick({ branch: row.name })}
               >
                 <span className="pp-row-blob" aria-hidden="true">
-                  {data.requestedBranch === row.name ? (
-                    <Blobatar name={`place:${row.name}`} size={20} animate="always" />
-                  ) : (
-                    <BranchIcon />
-                  )}
+                  {data.requestedBranch === row.name ? <TickIcon /> : <BranchIcon />}
                 </span>
                 <span className="pp-name" title={row.name}>
                   {row.name}

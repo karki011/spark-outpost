@@ -1,0 +1,21 @@
+.mark-tile {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  border-radius: 28%;
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.mark-tile[data-tinted] {
+  background: color-mix(in oklch, oklch(0.68 0.14 var(--mark-hue)) 24%, var(--panel));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklch, oklch(0.68 0.14 var(--mark-hue)) 38%, var(--panel));
+  color: var(--text);
+}

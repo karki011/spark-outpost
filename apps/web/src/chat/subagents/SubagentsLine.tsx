@@ -1,13 +1,8 @@
 import './subagents-line.css';
 import { createContext, use, useId, useState } from 'react';
 import type { SubagentRow } from '@spark-outpost/contracts';
-import { ChatFace } from '../../brand/ChatFace.tsx';
-import {
-  workerIdentity,
-  workerModelLabel,
-  workerPresentation,
-  workerRole,
-} from '../../crew/worker-identity.ts';
+import { ChatGlyph } from '../../brand/ChatGlyph.tsx';
+import { workerModelLabel, workerPresentation, workerRole } from '../../crew/worker-identity.ts';
 import { AgentCards } from './AgentCards.tsx';
 import type { AgentFocus } from './agent-board.ts';
 import { agentCounts, agentsLine, allDoneLine } from './agent-cards.ts';
@@ -43,7 +38,7 @@ function Workers({ rows, live, compact, onPick }: WorkersProps) {
               title={[row.name, model, row.task].filter(Boolean).join(' · ')}
               onClick={() => onPick(row.id)}
             >
-              <ChatFace chatId={workerIdentity(row.id)} size="row" state={presentation.face} />
+              <ChatGlyph size="row" state={presentation.face} />
               {!faceOnly && (
                 <>
                   <span className="sl-name">{role ?? row.name}</span>
@@ -65,7 +60,7 @@ function AllDone({ rows, text }: { rows: readonly SubagentRow[]; text: string })
       data-state="done"
       title={rows.map((row) => row.name).join(' · ')}
     >
-      <ChatFace chatId={workerIdentity(rows[0]!.id)} size="row" state="done" />
+      <ChatGlyph size="row" state="done" />
       <span className="sl-name">{text}</span>
     </p>
   );

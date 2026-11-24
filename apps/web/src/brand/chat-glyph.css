@@ -1,0 +1,24 @@
+.chat-glyph {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--faint);
+  vertical-align: middle;
+}
+
+.chat-glyph[data-state='working'] {
+  color: var(--accent-text);
+}
+
+.chat-glyph[data-state='needs_you'] {
+  color: var(--warn);
+}
+
+.chat-glyph[data-state='failed'] {
+  color: var(--danger);
+}
+
+.chat-glyph[data-size='strip'] > svg {
+  width: 18px;
+  height: 18px;
+}

@@ -1,7 +1,7 @@
 import { useId, type Ref } from 'react';
 import { motion } from 'motion/react';
 import type { AdvisorSetup, ProviderSetup } from '@spark-outpost/contracts';
-import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { ProviderMark } from '../brand/ProviderMark.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { StatusChip } from './StatusChip.tsx';
 import type { TileStatus } from './tile-status.ts';
@@ -37,11 +37,7 @@ export function ProviderTile({
       >
         <span className="ptile-top">
           <motion.span className="plogo" layoutId={`pblob-${setup.id}`}>
-            <ProviderBlob
-              providerId={setup.id}
-              size={42}
-              expression={status.tone === 'bad' || status.tone === 'warn' ? 'sad' : 'idle'}
-            />
+            <ProviderMark providerId={setup.id} size={42} />
           </motion.span>
           <span className="ptile-name">
             <b id={`${id}-name`}>
