@@ -142,6 +142,7 @@ function CopyField({ label, value, copyLabel: idle, code = false }: CopyFieldPro
 interface SharedSheetProps {
   share: ArtifactShare;
   passcode: string | null;
+  linkCopied: boolean;
   notice: string | null;
   canShareAgain: boolean;
   busy: boolean;
@@ -157,6 +158,7 @@ function endDate(iso: string): string {
 export function SharedSheet({
   share,
   passcode,
+  linkCopied,
   notice,
   canShareAgain,
   busy,
@@ -195,6 +197,11 @@ export function SharedSheet({
         </p>
       )}
       <CopyField label="Link" value={share.url} copyLabel="Copy link" />
+      {linkCopied && (
+        <p className="ashare-note" role="status">
+          Link copied to the clipboard.
+        </p>
+      )}
       {passcode ? (
         <CopyField label="Passcode" value={displayPasscode(passcode)} copyLabel="Copy code" code />
       ) : (

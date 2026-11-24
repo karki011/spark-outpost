@@ -85,6 +85,8 @@ test('the user shares a version with a passcode, copies both, and stops sharing 
   const code = await shared.getByRole('textbox', { name: 'Passcode' }).inputValue();
   expect(code).toMatch(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/);
   await expect(shared).toContainText('5 wrong codes lock the link for 15 minutes');
+  await expect(shared.getByRole('status')).toHaveText('Link copied to the clipboard.');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);
 
   await shared.getByRole('button', { name: 'Copy link' }).click();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(link);

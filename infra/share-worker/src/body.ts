@@ -42,7 +42,3 @@ export async function readForm(
   const body = await readLimitedText(request, maxBytes);
   return 'text' in body ? new URLSearchParams(body.text) : null;
 }
-
-export function clientAddress(request: Request): string {
-  return request.headers.get('cf-connecting-ip') ?? 'unknown';
-}

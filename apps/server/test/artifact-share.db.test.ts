@@ -1,9 +1,12 @@
+import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   ARTIFACT_SHARE_DELETE_TOKEN_PATTERN,
   ARTIFACT_SHARE_ID_PATTERN,
 } from '@spark-outpost/contracts';
 import { sha256Of } from '../src/artifacts/files.ts';
+import { chatWorkFolder } from '../src/chat-files/folders.ts';
 import { shareIdForToken } from '../src/artifacts/share-id.ts';
 import { shareSecret } from '../src/setup/secrets.ts';
 import { HTML, PASSCODE, ShareHarness, sharePath } from './artifact-share-support.ts';
@@ -241,6 +244,28 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     await client.send('delete', sharePath(id)).expect(204);
     expect(s.fake.deletes.at(-1)!.id).toBe(again.body.share.shareId);
     expect((await client.get(sharePath(id)).expect(200)).body.share).toBeNull();
+  });
+
+  it('refuses to share a page that holds a value now in one of the chat’s secret files', async () => {
+    const token = 'tok_live_4f9a8b7c6d5e4f3a2b1c';
+    const id = await s.publish('html', `<!doctype html><p>${token}</p>`);
+    const client = s.client();
+    const work = chatWorkFolder(s.artifacts.base, s.artifacts.chat.conversationId);
+    await mkdir(work, { recursive: true });
+    await writeFile(join(work, '.env'), `API_TOKEN=${token}\n`);
+
+    const refused = await client
+      .send('post', sharePath(id), { expiresInDays: 1, passcode: false })
+      .expect(409);
+
+    expect(refused.body.error).toContain('holds a value from a secret file');
+    expect(refused.body.error).not.toContain(token);
+    expect(s.fake.posts).toHaveLength(0);
+    expect(await s.states()).toEqual([]);
+
+    await rm(join(work, '.env'));
+    await client.send('post', sharePath(id), { expiresInDays: 1, passcode: false }).expect(201);
+    expect(s.fake.posts).toHaveLength(1);
   });
 
   it('takes the shared page down when its chat is deleted', async () => {

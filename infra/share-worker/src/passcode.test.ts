@@ -116,7 +116,11 @@ describe('passcode shares', () => {
     const openedHtml = await opened.text();
     expect(openedHtml).toContain('<iframe');
     expect(openedHtml).toContain(SECRET_TITLE);
-    expect((await call(fake, frameSrc(openedHtml))).status).toBe(200);
+    expect((await call(fake, frameSrc(openedHtml), { headers: { cookie } })).status).toBe(200);
+    expect((await call(fake, frameSrc(openedHtml))).status).toBe(404);
+    expect((await call(fake, frameSrc(openedHtml), { headers: { cookie: tampered } })).status).toBe(
+      404,
+    );
 
     expect(
       await (await call(fake, `/a/${id}`, { headers: { cookie: tampered } })).text(),
@@ -159,11 +163,11 @@ describe('passcode shares', () => {
     expect((await unlock(fake, id, CODE, START + LOCK_MS)).status).toBe(200);
   });
 
-  it('accepts a correct code as the fifth try and clears every count', async () => {
+  it('accepts a correct code as the fifth try and clears that visitor’s count', async () => {
     const { fake, id } = await lockedShare();
     await wrongTimes(fake, id, LOCK_AFTER - 1);
     expect((await unlock(fake, id, CODE)).status).toBe(200);
-    expect(fake.storages.get(`attempts:${id}`)?.values.size).toBe(0);
+    expect(fake.storages.get(`attempts:${id}`)?.values.has('attempts:203.0.113.7')).toBe(false);
     expect((await call(fake, `/a/${id}`)).status).toBe(200);
     expect((await wrongTimes(fake, id, LOCK_AFTER)).status).toBe(401);
     expect((await unlock(fake, id, WRONG)).status).toBe(429);
