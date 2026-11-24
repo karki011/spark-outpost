@@ -1,6 +1,6 @@
 import os from 'node:os';
 import type { KeptSessions } from '../kept-sessions.ts';
-import { shellEnvironment, type PtyProcess, type SpawnPty } from '../pty.ts';
+import { shellEnvironment, type SpawnPty } from '../pty.ts';
 import { withHostConnection } from './host-connection.ts';
 import { hostPty, type SessionHostConfig } from './host-pty.ts';
 import { listedSchema } from './protocol.ts';
@@ -21,33 +21,35 @@ export function hostKept(
       let reported = false;
       return (options) => {
         if (!options.sessionId || !options.command) return base(options);
-        let pty: PtyProcess;
-        try {
-          pty = start(
-            config,
-            {
-              adopt: options.adopt === true,
-              create: {
-                kind: 'create',
-                session: options.sessionId,
-                cols: Math.max(1, Math.trunc(options.cols)),
-                rows: Math.max(1, Math.trunc(options.rows)),
-                cwd: options.cwd ?? os.homedir(),
-                command: options.command,
-                args: options.args ?? [],
-                env: { ...shellEnvironment(process.env), ...options.env },
-              },
+        const created = options.adopt ? undefined : options.observer?.begin('new_session');
+        const pty = start(
+          config,
+          {
+            adopt: options.adopt === true,
+            create: {
+              kind: 'create',
+              session: options.sessionId,
+              cols: Math.max(1, Math.trunc(options.cols)),
+              rows: Math.max(1, Math.trunc(options.rows)),
+              cwd: options.cwd ?? os.homedir(),
+              command: options.command,
+              args: options.args ?? [],
+              env: { ...shellEnvironment(process.env), ...options.env },
             },
-            (session) => known.get(session) ?? null,
-          );
-        } catch (error) {
-          if (options.adopt) throw error;
-          if (!reported)
-            log(`Terminal sessions run without the session host: ${(error as Error).message}`);
-          reported = true;
-          return base(options);
-        }
-        options.observer?.tmux(true);
+          },
+          (session) => known.get(session) ?? null,
+          {
+            created: () => created?.(),
+            fallback: (error) => {
+              if (!reported)
+                log(`Terminal sessions run without the session host: ${error.message}`);
+              reported = true;
+              options.observer?.backend('direct');
+              return base(options);
+            },
+          },
+        );
+        options.observer?.backend('host');
         return pty;
       };
     },

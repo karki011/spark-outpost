@@ -4,7 +4,7 @@ import type { ProviderId, TerminalEndReason, TerminalStep } from '@spark-outpost
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
 import { createAnsweredQueryFilter } from './tmux/answered-queries.ts';
-import { killProcessTree, processTable, runningCommand } from './process-group.ts';
+import { processTable, runningCommand, stopPty } from './process-group.ts';
 import type { PtyProcess, SpawnPty } from './pty.ts';
 import type {
   AgentRequest,
@@ -237,14 +237,21 @@ export class TerminalSessions {
     spawned?.();
     session.pty = pty;
     if (kind.type === 'shell') {
-      this.watcher?.opened({
-        id: session.id,
-        conversationId: kind.conversationId,
-        label: kind.label ?? kind.cwd,
-        cwd: kind.cwd,
-        pid: pty.pid,
-        ...(kind.agent ? { agent: true } : {}),
-      });
+      const opened = () =>
+        this.watcher?.opened({
+          id: session.id,
+          conversationId: kind.conversationId,
+          label: kind.label ?? kind.cwd,
+          cwd: kind.cwd,
+          pid: pty.pid,
+          ...(kind.agent ? { agent: true } : {}),
+        });
+      if (!pty.ready) opened();
+      else
+        void pty.ready.then(() => {
+          if (this.sessions.get(session.id) === session && session.pty === pty && pty.pid > 0)
+            opened();
+        });
     }
     let prefilled = kind.type === 'shell';
     pty.onData((data) => {
@@ -323,7 +330,7 @@ export class TerminalSessions {
 
   async runningCommand(id: string): Promise<string | null> {
     const session = this.sessions.get(id);
-    if (session?.kind.type !== 'shell' || !session.pty) return null;
+    if (session?.kind.type !== 'shell' || !session.pty || session.pty.pid <= 0) return null;
     return runningCommand(session.pty.pid, await processTable());
   }
 
@@ -456,7 +463,7 @@ export class TerminalSessions {
     session.view = null;
     let stopped = Promise.resolve();
     if (keepRunning) session.pty?.detach?.();
-    else if (session.pty) stopped = this.stopPty(session.pty);
+    else if (session.pty) stopped = stopPty(session.pty);
     if (session.kind.type === 'shell' && session.kind.conversationId) {
       this.track(session.kind.conversationId, stopped);
     }
@@ -475,22 +482,6 @@ export class TerminalSessions {
       pending.delete(stopped);
       if (pending.size === 0 && this.stopping.get(conversationId) === pending) {
         this.stopping.delete(conversationId);
-      }
-    });
-  }
-
-  private stopPty(pty: PtyProcess): Promise<void> {
-    if (!pty.kill) return killProcessTree(pty.pid);
-    if (process.platform !== 'win32') {
-      pty.kill();
-      return Promise.resolve();
-    }
-    const kill = pty.kill.bind(pty);
-    return killProcessTree(pty.pid).finally(() => {
-      try {
-        kill();
-      } catch {
-        return;
       }
     });
   }

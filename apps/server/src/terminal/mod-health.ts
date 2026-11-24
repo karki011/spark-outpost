@@ -6,6 +6,7 @@ import { isRecord } from '../agent-config/records.ts';
 import type { Db } from '../persistence/db.ts';
 import { setModHealth } from '../persistence/native-terminal-mod-reports.ts';
 import type { LiveSession } from './native-runtime-types.ts';
+import { cliRun, verbatimOption } from './windows-cli.ts';
 
 export const MOD_STARTUP_MS = 15_000;
 const MANAGED_DIR = '/Library/Application Support/ClaudeCode';
@@ -45,9 +46,11 @@ export async function readManagedSettings(directory = MANAGED_DIR): Promise<unkn
 
 export async function pluginCheckFails(command: string, directory: string): Promise<boolean> {
   try {
-    const { stdout, stderr } = await exec(command, ['plugin', 'validate', directory], {
+    const run = cliRun(command, ['plugin', 'validate', directory]);
+    const { stdout, stderr } = await exec(run.file, run.args, {
       timeout: VALIDATE_MS,
       maxBuffer: 1_000_000,
+      ...verbatimOption(run),
     });
     return !`${stdout}${stderr}`.includes('Validation passed');
   } catch (error) {

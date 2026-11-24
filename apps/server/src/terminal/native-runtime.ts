@@ -5,7 +5,6 @@ import {
   type NativeTerminalLaunchRequest,
   type NativeTerminalLaunchResponse,
 } from '@spark-outpost/contracts';
-import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import {
   nativeTerminalMode,
   nativeTerminalRow,
@@ -51,6 +50,7 @@ import { launchUntracked } from './untracked-launch.ts';
 import { terminalAgents } from './terminal-agents.ts';
 import { writeAdoptRecord } from './tmux/adopt-record.ts';
 import { readoptKeptSessions } from './tmux/readopt.ts';
+import { terminalCliLocator } from './windows-cli.ts';
 import { terminalLaunchSettings } from '../persistence/native-terminal-settings.ts';
 
 export type { NativeRuntime, NativeRuntimeDeps } from './native-runtime-types.ts';
@@ -79,7 +79,7 @@ export async function createNativeRuntime(deps: NativeRuntimeDeps): Promise<Nati
     return next;
   };
   const owned = ownedTerminalChat(deps.db, deps.workspaceId);
-  const locate = deps.locateCli ?? loginShellLocator(process.env.SHELL || '/bin/zsh');
+  const locate = deps.locateCli ?? terminalCliLocator(process.env.SHELL || '/bin/zsh');
   const usage = nativeUsage(deps.db, deps.watchTranscript ?? watchTranscript, enqueue);
   const control = nativeControl(deps.db, live, tokens, usage);
   const { syncScope, finish } = control;

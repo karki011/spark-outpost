@@ -161,12 +161,12 @@ describe('tmux spawner', () => {
   });
 
   it('tells a start observer that tmux ran the session, and nothing when it fell back', () => {
-    const observer = { begin: vi.fn(() => vi.fn()), tmux: vi.fn(), ended: vi.fn() };
+    const observer = { begin: vi.fn(() => vi.fn()), backend: vi.fn(), ended: vi.fn() };
     const control = vi.fn(() => ({ pid: 2 }) as PtyProcess);
     tmuxSpawner(vi.fn(), host, vi.fn(), control)({ ...agent, observer });
     expect(control).toHaveBeenCalledWith(host, expect.objectContaining({ observer }));
-    expect(observer.tmux).toHaveBeenCalledExactlyOnceWith(true);
-    const refused = { begin: vi.fn(() => vi.fn()), tmux: vi.fn(), ended: vi.fn() };
+    expect(observer.backend).toHaveBeenCalledExactlyOnceWith('tmux');
+    const refused = { begin: vi.fn(() => vi.fn()), backend: vi.fn(), ended: vi.fn() };
     const failing = vi.fn(() => {
       throw new Error('server exited');
     });
@@ -176,7 +176,7 @@ describe('tmux spawner', () => {
       vi.fn(),
       failing,
     )({ ...agent, observer: refused });
-    expect(refused.tmux).not.toHaveBeenCalled();
+    expect(refused.backend).not.toHaveBeenCalled();
   });
 
   it('starts the session directly and says so once when tmux refuses', () => {

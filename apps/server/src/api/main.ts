@@ -62,6 +62,7 @@ import { loadInbox } from '../tickets/inbox.ts';
 import { pullRequestChanged } from '../tickets/inbox-snapshot.ts';
 import { RunEventHub } from './run-event-hub.ts';
 import { systemPortProbe } from '../terminal/chat-port-probe.ts';
+import { terminalCliLocator } from '../terminal/windows-cli.ts';
 import { chatPortWatcher, type ChatPortWatcher } from '../terminal/chat-port-watcher.ts';
 import { postgresPort } from '../terminal/chat-ports.ts';
 import { resolveRunTarget } from './run-target.ts';
@@ -302,7 +303,7 @@ const nativeTerminals = await createNativeRuntime({
   channel: config.BRANCH_PREFIX,
   mcp: nativeMcp,
   kept: terminalKept.kept,
-  locateCli: loginShellLocator(loginShell),
+  locateCli: terminalCliLocator(loginShell),
   branchPrefix: config.BRANCH_PREFIX,
   approvalWaiters: nativeApprovalWaiters,
   onStartPhase: (conversationId) =>

@@ -1,6 +1,8 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { childrenByParent, listeningPorts, panePids } from './chat-ports.ts';
+import { childrenFromRows, netstatListeners } from './chat-port-windows.ts';
+import { processTableOrNull, system32 } from './process-group.ts';
 import { tmuxArgs, type TmuxHost } from './tmux/tmux-host.ts';
 
 export interface PortProbe {
@@ -10,6 +12,7 @@ export interface PortProbe {
 }
 
 const PROBE_TIMEOUT_MS = 2_000;
+const WINDOWS_PROBE_TIMEOUT_MS = 10_000;
 const LSOF =
   ['/usr/sbin/lsof', '/usr/bin/lsof'].find((path) => existsSync(path)) ?? '/usr/sbin/lsof';
 const PROBE_MAX_BYTES = 8 * 1024 * 1024;
@@ -23,13 +26,19 @@ interface Ran {
 function run(
   bin: string,
   args: readonly string[],
-  options: { cwd?: string; env?: Record<string, string> } = {},
+  options: { cwd?: string; env?: Record<string, string>; timeout?: number } = {},
 ): Promise<Ran> {
   return new Promise((resolve) => {
     const child = execFile(
       bin,
       args,
-      { ...options, encoding: 'utf8', timeout: PROBE_TIMEOUT_MS, maxBuffer: PROBE_MAX_BYTES },
+      {
+        timeout: PROBE_TIMEOUT_MS,
+        ...options,
+        encoding: 'utf8',
+        maxBuffer: PROBE_MAX_BYTES,
+        windowsHide: true,
+      },
       (error, stdout) =>
         resolve({
           stdout: stdout ?? '',
@@ -46,7 +55,30 @@ function run(
   });
 }
 
-export function systemPortProbe(tmux: TmuxHost | null): PortProbe {
+function windowsPortProbe(): PortProbe {
+  return {
+    async children() {
+      const rows = await processTableOrNull();
+      if (!rows) throw new Error('Windows could not list processes');
+      return childrenFromRows(rows);
+    },
+    async listening(pids) {
+      if (pids.length === 0) return new Map();
+      const { stdout, failed } = await run(system32('NETSTAT.EXE'), ['-ano'], {
+        timeout: WINDOWS_PROBE_TIMEOUT_MS,
+      });
+      if (failed) throw new Error('netstat could not list listeners');
+      return netstatListeners(stdout, pids);
+    },
+    panes: () => Promise.resolve(new Map()),
+  };
+}
+
+export function systemPortProbe(
+  tmux: TmuxHost | null,
+  platform: NodeJS.Platform = process.platform,
+): PortProbe {
+  if (platform === 'win32') return windowsPortProbe();
   return {
     async children() {
       const { stdout, failed } = await run('/bin/ps', ['-A', '-o', 'pid=,ppid=']);
