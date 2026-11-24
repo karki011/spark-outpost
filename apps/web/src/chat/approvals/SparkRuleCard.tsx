@@ -15,8 +15,7 @@ import { Breakout } from '../breakout/Breakout.tsx';
 import { commandApproval } from '../status/pending-summary.ts';
 import { Pending } from '../status/Pending.tsx';
 import { Button } from '../../ui/Button.tsx';
-
-const ON_THE_MAC = 'Waiting for you on your Mac. Spark rules change there.';
+import { hostWords } from '../../desktop/host-words.ts';
 
 function answeredLine(answer: SparkRuleAnswer, rule: SparkRuleRefusal): string {
   if (answer === 'keep') return 'Kept refused.';
@@ -92,7 +91,9 @@ function Asking({
             <Refused command={approval.payload.command ?? ''} rule={rule} id={headingId} />
           </div>
           {remote ? (
-            <p className="appr-reason">{ON_THE_MAC}</p>
+            <p className="appr-reason">
+              Waiting for you on your {hostWords().computer}. Spark rules change there.
+            </p>
           ) : (
             <div className="appr-acts">
               <Button

@@ -18,13 +18,14 @@ afterEach(() => {
 });
 
 describe('companion shortcut config', () => {
-  it('keeps Alt+Space on the Mac and avoids the Windows window menu on Windows', () => {
+  it('keeps Alt+Space on the Mac and avoids the window menu and AltGr on Windows', () => {
     expect(defaultShortcuts('darwin')).toEqual({ quick: 'Alt+Space', sessions: 'Alt+Shift+Space' });
     expect(defaultShortcuts('win32')).toEqual({
-      quick: 'Control+Alt+Space',
+      quick: 'Control+Shift+Space',
       sessions: 'Alt+Shift+Space',
     });
     expect(isAccelerator(defaultShortcuts('win32').quick)).toBe(true);
+    expect(defaultShortcuts('win32').quick).not.toMatch(/Control\+Alt|Alt\+Control/);
   });
 
   it('accepts modifier + key accelerators Electron understands', () => {

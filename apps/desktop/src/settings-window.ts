@@ -11,6 +11,7 @@ import { attachContextMenu } from './context-menu.ts';
 import { hourCycleArgs } from './hour-cycle-arg.ts';
 import { systemHourCycle } from './hour-cycle.ts';
 import { IPC } from './ipc-channels.ts';
+import { handleSettingsWindowKeys } from './settings-window-keys.ts';
 import { themeArgs } from './theme-arg.ts';
 import { guardNavigation, openLink } from './window.ts';
 
@@ -103,7 +104,10 @@ function createWindow(options: SettingsWindowOptions, route: string): BrowserWin
       additionalArguments: [...themeArgs(options.theme()), ...hourCycleArgs(systemHourCycle())],
     },
   });
-  if (process.platform === 'win32') window.removeMenu();
+  if (process.platform === 'win32') {
+    window.removeMenu();
+    handleSettingsWindowKeys(window);
+  }
   guardNavigation(window, options.origin);
   attachContextMenu(window, openLink);
   window.once('ready-to-show', () => window.show());

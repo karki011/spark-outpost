@@ -14,6 +14,7 @@ import { LaptopIcon } from '../ui/icons.tsx';
 import { useAgentLine } from './SparkCard.tsx';
 import { DeleteUsedIn } from './SparkUsedIn.tsx';
 import { useSparkSave } from './use-spark-save.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 interface SparkIdentityProps {
   spark: TeammateView;
@@ -96,7 +97,8 @@ export function SparkSummary({ spark }: { spark: TeammateView }) {
         <dd>{project?.name ?? 'No project'}</dd>
       </dl>
       <p className="spk-mac-only">
-        <LaptopIcon /> Edit this Spark, its instructions, skills and files on the Mac.
+        <LaptopIcon /> Edit this Spark, its instructions, skills and files on the{' '}
+        {hostWords().computer}.
       </p>
     </div>
   );

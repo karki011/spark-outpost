@@ -1,5 +1,5 @@
 import type { PrWatch, UpdateProfileRequest } from '@spark-outpost/contracts';
-import { PHONE_SWITCH_OFF, useRemoteClient } from '../../phone/use-remote-client.ts';
+import { phoneSwitchOff, useRemoteClient } from '../../phone/use-remote-client.ts';
 import { useProfileSetting } from '../../settings/use-profile-setting.ts';
 import { XIcon } from '../../ui/icons.tsx';
 import { usePaneId } from '../split/chat-pane.ts';
@@ -40,7 +40,7 @@ function FollowUpOffer({ watches, mode, onDismiss }: FollowUpOfferProps) {
         <XIcon />
       </button>
       <span id={noteId} className="pr-offer-note">
-        {allowed ? offerNote(mode) : PHONE_SWITCH_OFF}
+        {allowed ? offerNote(mode) : phoneSwitchOff()}
       </span>
       {setting.error && (
         <span className="pr-offer-error" role="alert">

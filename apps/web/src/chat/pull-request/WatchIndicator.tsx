@@ -1,7 +1,7 @@
 import './watch-indicator.css';
 import type { Profile, UpdateProfileRequest } from '@spark-outpost/contracts';
 import { BlobToggle } from '../../brand/BlobToggle.tsx';
-import { PHONE_SWITCH_OFF, useRemoteClient } from '../../phone/use-remote-client.ts';
+import { phoneSwitchOff, useRemoteClient } from '../../phone/use-remote-client.ts';
 import { useProfileSetting } from '../../settings/use-profile-setting.ts';
 import { EyeIcon, EyeOffIcon } from '../../ui/icons.tsx';
 import { useTooltip } from '../../ui/Tooltip.tsx';
@@ -55,7 +55,7 @@ function OfferSwitch({ label, saved, toUpdate }: OfferSwitchProps) {
         onChange={setting.set}
       />
       <span aria-hidden="true">{label}</span>
-      {!allowed && <span className="prw-locked">{PHONE_SWITCH_OFF}</span>}
+      {!allowed && <span className="prw-locked">{phoneSwitchOff()}</span>}
       {setting.error && (
         <span className="prw-error" role="alert">
           {setting.error}

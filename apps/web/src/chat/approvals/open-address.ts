@@ -1,4 +1,5 @@
 import { openOutside } from '../../browser/outside-link.ts';
+import { hostWords } from '../../desktop/host-words.ts';
 
 export interface AddressParts {
   before: string;
@@ -22,7 +23,9 @@ export function addressByline(agent: string, secretFiles: readonly string[] | un
 export const ADDRESS_NOTE =
   'Open shows it in your default browser, not the Browser pane. What the site asks for goes to that site; the agent never sees it.';
 
-export const ADDRESS_ON_THE_MAC = 'Waiting for you on your Mac. Addresses open there.';
+export function addressOnTheHost(): string {
+  return `Waiting for you on your ${hostWords().computer}. Addresses open there.`;
+}
 
 export function openInBrowser(url: string): void {
   openOutside(url);

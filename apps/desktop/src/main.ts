@@ -9,8 +9,8 @@ import {
   session,
   type IpcMainInvokeEvent,
 } from 'electron';
-import { BROWSER_HOST_ENV, parseSparkChatLink } from '@spark-outpost/contracts';
-import { jumpTaskIn, launchChat, linkIn } from './deep-link.ts';
+import { BROWSER_HOST_ENV } from '@spark-outpost/contracts';
+import { createLaunchRouting } from './launch-routing.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { stableApiPort } from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
@@ -95,7 +95,6 @@ let spark: SparkWindow | null = null;
 let origin: string | null = null;
 let savedTheme: string | null = null;
 let companionHost: CompanionHost | null = null;
-let pendingLinkChat: string | null = launchChat(process.argv, config.linkScheme);
 let localApi: { origin: string; token: string } | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
@@ -169,6 +168,7 @@ function closeWindows(): void {
   privacy = null;
   companionHost?.dispose();
   companionHost = null;
+  launchRouting.stopped();
   for (const open of BrowserWindow.getAllWindows()) open.destroy();
 }
 
@@ -420,8 +420,7 @@ async function launch(): Promise<void> {
     log: mainLog,
   });
   if (app.isPackaged) app.setAsDefaultProtocolClient(config.linkScheme);
-  if (pendingLinkChat) companionHost.openChat(pendingLinkChat);
-  pendingLinkChat = null;
+  launchRouting.ready(companionHost);
   void spark?.finished.then(() => companionHost?.companion.resume());
   mainLog(`${config.appName} ${app.getVersion()} ready on ${apiUrl}; data in ${paths.userData}.`);
 }
@@ -443,18 +442,15 @@ function openSpark(): SparkWindow {
   return opened;
 }
 
-function openLink(url: string | null): void {
-  if (url && localApi && isSlackCallback(url, config.linkScheme)) {
-    void deliverSlackCallback(localApi, url);
-  }
-  const chatId = url ? parseSparkChatLink(url, config.linkScheme) : null;
-  if (!chatId) {
-    showSpark();
-    return;
-  }
-  if (companionHost) companionHost.openChat(chatId);
-  else pendingLinkChat = chatId;
-}
+const launchRouting = createLaunchRouting({
+  scheme: config.linkScheme,
+  argv: process.argv,
+  showSpark,
+  isSlackCallback: (url) => isSlackCallback(url, config.linkScheme),
+  slackCallback: (url) => {
+    if (localApi) void deliverSlackCallback(localApi, url);
+  },
+});
 
 function showSpark(): void {
   if (shutdown.failed.aborted) return;
@@ -469,14 +465,10 @@ function showSpark(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', (_event, argv) => {
-    const task = jumpTaskIn(argv);
-    if (task) companionHost?.runJumpTask(task);
-    else openLink(linkIn(argv, config.linkScheme));
-  });
+  app.on('second-instance', (_event, argv) => launchRouting.secondInstance(argv));
   app.on('open-url', (event, url) => {
     event.preventDefault();
-    openLink(url);
+    launchRouting.openLink(url);
   });
   app.on('activate', showSpark);
   app.on('window-all-closed', () => undefined);
@@ -485,6 +477,7 @@ if (!app.requestSingleInstanceLock()) {
     quitPolicy.quittingForUpdate();
     companionHost?.dispose();
     companionHost = null;
+    launchRouting.stopped();
   });
   app.on('before-quit', (event) => {
     event.preventDefault();

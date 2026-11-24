@@ -1,3 +1,4 @@
+import { hostWords } from '../../desktop/host-words.ts';
 import type { FailureKind } from './connection-failure.ts';
 
 export interface OfflineCopy {
@@ -21,26 +22,34 @@ const COPY: Record<FailureKind, OfflineCopy> = {
   },
 };
 
-const MAC_UNREACHABLE: OfflineCopy = {
-  title: "Can't reach your Mac",
-  body: 'It may be asleep, shut down or off Tailscale. Spark keeps trying and reconnects on its own.',
-  mood: 'sleep',
-};
+function hostUnreachable(): OfflineCopy {
+  return {
+    title: `Can't reach your ${hostWords().computer}`,
+    body: 'It may be asleep, shut down or off Tailscale. Spark keeps trying and reconnects on its own.',
+    mood: 'sleep',
+  };
+}
 
-const WAKE_HELP = 'Wake the Mac, or check that Tailscale is connected on this device.';
+function wakeHostHelp(): string {
+  return `Wake the ${hostWords().computer}, or check that Tailscale is connected on this device.`;
+}
 
 export function isMacUnreachable(kind: FailureKind, remote: boolean): boolean {
   return kind === 'unreachable' && remote;
 }
 
 export function offlineCopy(kind: FailureKind, remote: boolean): OfflineCopy {
-  return isMacUnreachable(kind, remote) ? MAC_UNREACHABLE : COPY[kind];
+  return isMacUnreachable(kind, remote) ? hostUnreachable() : COPY[kind];
 }
 
 export function backOnlineBody(remote: boolean): string {
-  return remote ? 'Your Mac is answering again.' : 'The server is answering again.';
+  return remote
+    ? `Your ${hostWords().computer} is answering again.`
+    : 'The server is answering again.';
 }
 
 export function wakeHelp(kind: FailureKind, remote: boolean, failedAttempts: number): string {
-  return isMacUnreachable(kind, remote) && failedAttempts >= HELP_AFTER_ATTEMPTS ? WAKE_HELP : '';
+  return isMacUnreachable(kind, remote) && failedAttempts >= HELP_AFTER_ATTEMPTS
+    ? wakeHostHelp()
+    : '';
 }

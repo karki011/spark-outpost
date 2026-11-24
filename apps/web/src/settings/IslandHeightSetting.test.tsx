@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CompanionStatus } from '../desktop/desktop-bridge.ts';
-import { IslandHeightSetting } from './IslandHeightSetting.tsx';
+import { heightHint, IslandHeightSetting } from './IslandHeightSetting.tsx';
 
 vi.mock('../ui/DocLink.tsx', async () => {
   const { createContext } = await import('react');
@@ -164,5 +164,19 @@ describe('IslandHeightSetting', () => {
     fireEvent.pointerUp(screen.getByRole('slider'));
     await screen.findByText('Could not save the height. Try again.');
     expect((screen.getByRole('slider') as HTMLInputElement).value).toBe('0');
+  });
+});
+
+describe('heightHint', () => {
+  afterEach(() => {
+    delete (window as { sparkDesktop?: unknown }).sparkDesktop;
+  });
+
+  it('mentions the notch only on the Mac', () => {
+    expect(heightHint(false, true)).toContain('notch');
+    (window as { sparkDesktop?: unknown }).sparkDesktop = { platform: 'win32' };
+    expect(heightHint(false, true)).toBe('Moves the resting blob.');
+    expect(heightHint(false, false)).toBe('Moves the resting blob. Release to apply.');
+    expect(heightHint(true, false)).toBe('Update the Windows app to adjust the height.');
   });
 });

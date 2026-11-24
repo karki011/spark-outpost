@@ -128,7 +128,7 @@ export function whatsNew(changelog: string, version: string, count: number): str
 }
 
 function shortcutTip(platform: NodeJS.Platform): string {
-  const keys = platform === 'win32' ? 'Ctrl+Alt+Space' : '⌥Space';
+  const keys = platform === 'win32' ? 'Ctrl+Shift+Space' : '⌥Space';
   return `${keys} starts a chat from anywhere`;
 }
 

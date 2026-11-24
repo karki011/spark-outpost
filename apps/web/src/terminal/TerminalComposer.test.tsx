@@ -37,7 +37,7 @@ vi.mock('../api/projects.ts', () => ({
   projectsApi: { list: async () => [] },
 }));
 vi.mock('../phone/use-remote-client.ts', () => ({
-  PHONE_SWITCH_OFF: 'Turned off for remote control on your Mac',
+  phoneSwitchOff: () => 'Turned off for remote control on your Mac',
   useRemoteClient: () => ({ remote: false, allows: () => true }),
 }));
 vi.mock('./terminal-api.ts', () => ({

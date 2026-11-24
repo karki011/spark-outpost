@@ -33,7 +33,7 @@ export function defaultShortcuts(
   platform: NodeJS.Platform,
 ): Readonly<Record<ShortcutAction, string>> {
   return {
-    quick: platform === 'win32' ? 'Control+Alt+Space' : 'Alt+Space',
+    quick: platform === 'win32' ? 'Control+Shift+Space' : 'Alt+Space',
     sessions: 'Alt+Shift+Space',
   };
 }

@@ -4,23 +4,29 @@ import type {
   RemotePasskey,
   TailscaleState,
 } from '@spark-outpost/contracts';
+import { hostWords } from '../desktop/host-words.ts';
 import { countLabel } from '../ui/count-label.ts';
 
-export const PASSKEY_PURPOSE =
-  'Lets this device sign in again in another browser without going back to your Mac.';
+export function passkeyPurpose(): string {
+  return `Lets this device sign in again in another browser without going back to your ${hostWords().computer}.`;
+}
 export const PASSKEY_SAVE = 'Save a passkey for this device';
 export const PASSKEY_SAVED = 'Passkey saved. In another browser, choose Sign in with a passkey.';
 export const PASSKEY_NOT_SAVED = 'No passkey was saved. Try again when you are ready.';
 export const PASSKEY_EXISTS = 'This device already has a passkey there.';
 export const PASSKEY_UNSUPPORTED = 'This browser cannot save passkeys.';
-export const PASSKEY_OFF = 'Passkey sign-in is turned off on your Mac.';
+export function passkeyOff(): string {
+  return `Passkey sign-in is turned off on your ${hostWords().computer}.`;
+}
 export const NOTIFY_LABEL = 'Notify this device';
 export const NOTIFY_PURPOSE =
   'Get a notification here when a chat waits for your approval or answer. It shows the chat title and what is waiting, nothing more.';
 export const NOTIFY_HOME_SCREEN =
   'On iPhone and iPad, notifications need iOS 16.4 or later and Spark Outpost on the Home Screen. Save a passkey here first, then tap Share, Add to Home Screen, open it and sign in with the passkey.';
 export const NOTIFY_UNSUPPORTED = 'This browser cannot show notifications from Spark Outpost.';
-export const NOTIFY_OFF = 'Notifications are turned off on your Mac.';
+export function notifyOff(): string {
+  return `Notifications are turned off on your ${hostWords().computer}.`;
+}
 export const NOTIFY_BLOCKED =
   'Notifications are blocked for this site. Allow them in the browser or system settings, then try again.';
 export const NOTIFY_NOT_ALLOWED = 'Notifications were not allowed on this device.';
@@ -71,13 +77,13 @@ export function statusCopy(state: TailscaleState): StatusCopy {
     case 'not_installed':
       return {
         title: 'Tailscale is not installed',
-        step: 'Install Tailscale on this Mac and on the other device, and sign in to both with the same account.',
+        step: `Install Tailscale on this ${hostWords().computer} and on the other device, and sign in to both with the same account.`,
         link: { label: 'Get Tailscale', href: 'https://tailscale.com/download' },
       };
     case 'signed_out':
       return {
         title: 'Tailscale is not signed in',
-        step: 'Open Tailscale on this Mac, sign in and connect.',
+        step: `Open Tailscale on this ${hostWords().computer}, sign in and connect.`,
       };
     case 'https_off':
       return {
@@ -102,7 +108,7 @@ export function statusCopy(state: TailscaleState): StatusCopy {
 export function reachLine(count: number | null): string | null {
   if (count === null) return null;
   if (count === 0) return 'No device is paired yet.';
-  return `${countLabel(count, 'device')} can reach this Mac.`;
+  return `${countLabel(count, 'device')} can reach this ${hostWords().computer}.`;
 }
 
 export function statusHeadline(state: TailscaleState, deviceCount: number | null): string {
@@ -112,8 +118,9 @@ export function statusHeadline(state: TailscaleState, deviceCount: number | null
   return reach ? `${title}. ${reach}` : `${title}.`;
 }
 
-export const ON_NOTE =
-  'Only devices on your own tailnet. Nothing is public, and the work stays on this Mac.';
+export function onNote(): string {
+  return `Only devices on your own tailnet. Nothing is public, and the work stays on this ${hostWords().computer}.`;
+}
 
 function named(entry: RemoteAuditEntry): string {
   const fromDetail = entry.detail.deviceName;
@@ -123,11 +130,11 @@ function named(entry: RemoteAuditEntry): string {
 function pairingPageLine(entry: RemoteAuditEntry): string {
   switch (entry.detail.reason) {
     case 'revoked':
-      return `${named(entry)} asked to pair again (it was removed on this Mac)`;
+      return `${named(entry)} asked to pair again (it was removed on this ${hostWords().computer})`;
     case 'unused':
       return `${named(entry)} asked to pair again (not used for 30 days)`;
     case 'unknown':
-      return 'A device that was paired before asked to pair again (this Mac does not know its sign-in)';
+      return `A device that was paired before asked to pair again (this ${hostWords().computer} does not know its sign-in)`;
     default:
       return 'A device with no sign-in opened the pairing page';
   }
@@ -170,7 +177,7 @@ export function activityLine(entry: RemoteAuditEntry): string {
     case 'card_step_up_failed':
       return `A passkey confirmation from ${device} was refused`;
     case 'pairing_started':
-      return 'Pairing started on this Mac';
+      return `Pairing started on this ${hostWords().computer}`;
     case 'pairing_submitted':
       return `${device} asked to pair`;
     case 'pairing_failed':

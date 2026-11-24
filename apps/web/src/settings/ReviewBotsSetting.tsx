@@ -4,6 +4,7 @@ import { PR_FOLLOW_UP_BOTS_MAX, githubLoginSchema } from '@spark-outpost/contrac
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { SettingRow } from './SettingRow.tsx';
 import { useProfileSetting } from './use-profile-setting.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 export const REVIEW_BOTS = 'Review bots to act on';
 
@@ -19,7 +20,6 @@ const INFO = {
   ],
 };
 const FULL = `Spark acts on up to ${PR_FOLLOW_UP_BOTS_MAX} review bots. Remove one first.`;
-const ON_MAC = 'Change review bots on your Mac.';
 const HOW = 'Enter the login as GitHub shows it, like coderabbitai[bot] or gitar-bot.';
 
 function problemOf(draft: string, bots: readonly string[]): string | null {
@@ -52,7 +52,10 @@ export function ReviewBotsSetting({ bots, disabled }: ReviewBotsSettingProps) {
     if (!listed.includes(login)) setting.set([...listed, login]);
     setDraft('');
   };
-  const hint = problem ?? setting.error ?? (remote ? ON_MAC : HOW);
+  const hint =
+    problem ??
+    setting.error ??
+    (remote ? `Change review bots on your ${hostWords().computer}.` : HOW);
   return (
     <SettingRow
       label={REVIEW_BOTS}

@@ -8,9 +8,9 @@ summary: What changed in recent releases and what to do next.
 
 ## Windows (alpha)
 
-| What changed                                | What to do                     |
-| ------------------------------------------- | ------------------------------ |
-| Island, jump list, Ctrl keys, Windows menus | [Keys](keyboard-shortcuts.md). |
+| What changed                                   | What to do                     |
+| ---------------------------------------------- | ------------------------------ |
+| Island, jump list, Windows keys; phones say PC | [Keys](keyboard-shortcuts.md). |
 
 ## Late November 2026
 
