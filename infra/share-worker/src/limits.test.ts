@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ALL_CREATE_BYTES_PER_DAY, ALL_CREATES_PER_HOUR, CREATE_LIMIT_PER_HOUR } from './api.ts';
 import { LOCK_AFTER, LOCK_MS, SHARE_ATTEMPTS_PER_HOUR } from './counters.ts';
 import {
@@ -137,16 +137,28 @@ describe('passcode attempt limits', () => {
     expect((await unlockFrom(fake, id, WRONG, '192.0.2.200')).status).toBe(401);
   });
 
-  it('sets an alarm that clears a share’s counts once its hour and any lock have ended', async () => {
-    const fake = fakeEnv();
-    const id = await lockedShare(fake);
-    await unlockFrom(fake, id, WRONG, '198.51.100.1');
-    const storage = fake.storages.get(`attempts:${id}`)!;
+  it('keeps a share’s counts while its hour or a lock can still run, then clears them', async () => {
+    vi.useFakeTimers();
+    try {
+      const fake = fakeEnv();
+      const id = await lockedShare(fake);
+      await unlockFrom(fake, id, WRONG, '198.51.100.1');
+      const storage = fake.storages.get(`attempts:${id}`)!;
+      const keepUntil = START + HOUR + LOCK_MS;
+      expect(storage.alarm).toBe(keepUntil);
 
-    expect(storage.alarm).toBe(START + HOUR + LOCK_MS);
-    expect(storage.values.size).toBeGreaterThan(0);
-    await fake.alarm(`attempts:${id}`);
-    expect(storage.values.size).toBe(0);
+      storage.alarm = null;
+      vi.setSystemTime(keepUntil - 1);
+      await fake.alarm(`attempts:${id}`);
+      expect(storage.alarm).toBe(keepUntil);
+      expect(storage.values.size).toBeGreaterThan(0);
+
+      vi.setSystemTime(keepUntil);
+      await fake.alarm(`attempts:${id}`);
+      expect(storage.values.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
