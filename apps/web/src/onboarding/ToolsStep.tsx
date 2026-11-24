@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObjec
 import type { ConnectorId } from '../brand/ConnectorBlob.tsx';
 import { takeCalendarCardRequest, useCalendarCardRequests } from '../calendar/calendar-open.ts';
 import { CalendarCard } from '../calendar/CalendarCard.tsx';
-import { CALENDAR_PATH, ChevronIcon } from '../ui/icons.tsx';
+import { CALENDAR_PATH, ChevronIcon, VideoIcon } from '../ui/icons.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { SLACK_DESCRIPTION, SlackCard } from '../slack/SlackCard.tsx';
 import { ATLASSIAN_DESCRIPTION, AtlassianCard } from '../tickets/AtlassianCard.tsx';
 import { SERVICENOW_DESCRIPTION, ServiceNowCard } from '../tickets/ServiceNowCard.tsx';
 import { TicketSourceCard } from '../tickets/TicketSourceCard.tsx';
+import { ZoomCard } from '../zoom/ZoomCard.tsx';
 import { GitCheck } from './GitCheck.tsx';
 
 export interface Connector {
@@ -200,6 +201,7 @@ function ConnectorList({ listRef, paged, openId, toggle }: ConnectorListProps) {
         open={openId === 'calendar'}
         onToggle={() => toggle('calendar')}
       />
+      <ZoomCard icon={<VideoIcon />} open={openId === 'zoom'} onToggle={() => toggle('zoom')} />
     </ul>
   );
 }

@@ -132,9 +132,11 @@ const { slackSignIn, slackDeps, focus, slackNotifier, slackMentions } = startSla
   secrets,
 });
 const desktopCalendar = connectDesktopCalendar(process.env, process);
-const { google: googleCalendar, microsoft: microsoftCalendar } = desktopCalendar
+const clouds = desktopCalendar
   ? await startCloudCalendars(config, { db, workspaceId, secrets, fetch })
-  : { google: null, microsoft: null };
+  : null;
+const googleCalendar = clouds?.google ?? null;
+const microsoftCalendar = clouds?.microsoft ?? null;
 let calendarTicker: CalendarTicker | null = null;
 let chatPorts: ChatPortWatcher | null = null;
 const { keys: remotePushKeys, notifier: pushNotifier } = startPushServices({
@@ -378,6 +380,7 @@ const { app, reconcileRemote } = createAppParts({
   pushTest: (deviceId) => pushNotifier.test(deviceId),
   calendarHost: desktopCalendar,
   googleCalendar,
+  zoom: clouds?.zoom ?? null,
   microsoftCalendar,
   meetings,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE

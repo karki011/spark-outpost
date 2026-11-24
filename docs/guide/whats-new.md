@@ -26,6 +26,7 @@ summary: What changed in recent releases and what to do next.
 
 | What changed                                    | What to do                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------- |
+| Zoom links on new events                        | [Connect](connect-zoom.md).                                |
 | **Week**; replies; **New event**; agents invite | [Events](calendar-events.md).                              |
 | Faster; protocol logs kept 14 days              | Older [protocol logs](guardrails.md) go at first start.    |
 | Meetings drop speaker echo; faster Voice start  | —                                                          |

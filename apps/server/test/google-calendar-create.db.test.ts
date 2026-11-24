@@ -44,7 +44,7 @@ async function request(overrides: object = {}) {
     start: noon(60),
     end: noon(90),
     guests: [],
-    meet: false,
+    video: 'none',
     location: '',
     notes: '',
     ...overrides,
@@ -91,7 +91,7 @@ describe('Creating a Google event', () => {
       '/api/calendar/events',
       await request({
         guests: ['ana@example.com', 'ivan@example.com'],
-        meet: true,
+        video: 'meet',
         location: ' Room 4 ',
         notes: 'Agenda to follow.',
       }),

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { GOOGLE_CLIENT_FILE_NAME } from './google-client.ts';
 import { MICROSOFT_CLIENT_FILE_NAME } from './microsoft-client.ts';
+import { ZOOM_CLIENT_FILE_NAME } from './zoom-client.ts';
 import { SLACK_CLIENT_ID_FILE_NAME } from './slack-sign-in.ts';
 import { WIN_HELPER_EXE } from './win-helper/protocol.ts';
 
@@ -17,6 +18,7 @@ export interface AppLayout {
   winHelperBin: string;
   googleClientFile: string | null;
   microsoftClientFile: string | null;
+  zoomClientFile: string | null;
   slackClientIdFile: string | null;
 }
 
@@ -43,6 +45,7 @@ export function appLayout(source: LayoutSource): AppLayout {
       winHelperBin: path.join(resourcesPath, 'win-helper', WIN_HELPER_EXE),
       googleClientFile: null,
       microsoftClientFile: null,
+      zoomClientFile: null,
       slackClientIdFile: null,
     };
   }
@@ -60,6 +63,7 @@ export function appLayout(source: LayoutSource): AppLayout {
     winHelperBin: path.join(repoRoot, '.local/win-helper', arch, WIN_HELPER_EXE),
     googleClientFile: path.join(repoRoot, '.local', GOOGLE_CLIENT_FILE_NAME),
     microsoftClientFile: path.join(repoRoot, '.local', MICROSOFT_CLIENT_FILE_NAME),
+    zoomClientFile: path.join(repoRoot, '.local', ZOOM_CLIENT_FILE_NAME),
     slackClientIdFile: path.join(repoRoot, '.local', SLACK_CLIENT_ID_FILE_NAME),
   };
 }

@@ -399,7 +399,9 @@ test('New event creates a Google event with a guest after allowing changes', asy
   await dialog.getByRole('textbox', { name: 'Starts' }).fill('13:00');
   await dialog.getByRole('textbox', { name: 'Ends' }).fill('13:30');
   await dialog.getByRole('textbox', { name: 'Guests' }).fill('ana@example.com');
-  await dialog.getByRole('checkbox', { name: 'Add a Google Meet link' }).check();
+  await dialog.getByRole('button', { name: 'Video call' }).click();
+  await expect(page.getByRole('menuitemradio', { name: 'Zoom' })).toHaveCount(0);
+  await page.getByRole('menuitemradio', { name: 'Google Meet' }).click();
   await expect(dialog.getByRole('button', { name: 'More about guests' })).toBeVisible();
   const results = await new AxeBuilder({ page }).include('.ne-dialog').analyze();
   expect(results.violations).toEqual([]);
@@ -407,6 +409,44 @@ test('New event creates a Google event with a guest after allowing changes', asy
   await dialog.getByRole('button', { name: 'Create and invite 1 guest' }).click();
   await expect(dialog).toBeHidden();
   await expect(today(page).getByRole('button', { name: /^Launch review, / })).toBeVisible();
+});
+
+test('connects Zoom once and adds its link to a new event', async ({ page }) => {
+  await fetch(`${STUB_URL}/zoom-test/reset`);
+  await page.request.delete('/api/zoom/account');
+  await openCard(page);
+  await addGoogle(page);
+  await page.getByRole('button', { name: 'All connectors' }).click();
+  const zoom = page.locator('[data-connector="zoom"]');
+  await zoom.getByRole('button', { name: /^Zoom/ }).click();
+  const signIn = page.waitForEvent('popup');
+  await zoom.getByRole('button', { name: 'Connect' }).click();
+  await (await signIn).close();
+  await expect(zoom).toContainText('Signed in as me@example.com');
+  await expect(zoom.getByRole('button', { name: 'Disconnect' })).toBeVisible();
+  const scan = await new AxeBuilder({ page }).include('[data-connector="zoom"]').analyze();
+  expect(scan.violations).toEqual([]);
+  if (SHOTS) await zoom.screenshot({ path: `${SHOTS}/zoom-card.png` });
+  await page.reload();
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Today/ })
+    .click();
+  await today(page).getByRole('button', { name: 'New event' }).click();
+  const dialog = page.getByRole('dialog', { name: 'New event' });
+  const allowed = page.waitForEvent('popup');
+  await dialog.getByRole('button', { name: 'Allow changes', exact: true }).click();
+  await (await allowed).close();
+  await dialog.getByRole('textbox', { name: 'Title' }).fill('Zoom sync');
+  await dialog.getByRole('button', { name: 'Video call' }).click();
+  await page.getByRole('menuitemradio', { name: 'Zoom' }).click();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/zoom-new-event.png` });
+  await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const made = (await (await fetch(`${STUB_URL}/zoom-test/meetings`)).json()) as {
+    meetings: { topic: string }[];
+  };
+  expect(made.meetings).toEqual([expect.objectContaining({ topic: 'Zoom sync' })]);
 });
 
 test('shows the Calendars access note, not a Mac account, when macOS refuses Add calendar', async ({
