@@ -20,6 +20,7 @@ import {
 import { initials } from './month-model.ts';
 import { openJoin } from './today-model.ts';
 import { useEventDetail, useJoinLeadMs } from './use-calendar.ts';
+import { replyState } from './reply-status.ts';
 
 interface WithEvent {
   event: CalendarEvent;
@@ -166,10 +167,12 @@ function Person({ person }: { person: CalendarPerson }) {
   const copy = useCopyText();
   const face = <i aria-hidden="true">{initials(person.name)}</i>;
   const email = person.email && person.email !== person.name ? person.email : null;
+  const reply = person.reply ? replyState(person.reply).word : null;
   const text = (
     <span className="cal-person-text">
       <span className="cal-person-name">{person.name}</span>
       {email && <small>{email}</small>}
+      {reply && <small className="cal-person-reply">{reply}</small>}
     </span>
   );
   if (!person.email) {
@@ -185,7 +188,7 @@ function Person({ person }: { person: CalendarPerson }) {
       type="button"
       className="cal-person"
       title={person.email}
-      aria-label={`${person.name}${email ? `, ${email}` : ''}, copy email`}
+      aria-label={`${person.name}${email ? `, ${email}` : ''}${reply ? `, ${reply}` : ''}, copy email`}
       onClick={() => copy(person.email!)}
     >
       {face}

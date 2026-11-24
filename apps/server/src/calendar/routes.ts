@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Router, type Response } from 'express';
 import {
   CALENDAR_RANGE_MAX_DAYS,
@@ -7,6 +8,9 @@ import {
   calendarChoicePatchSchema,
   calendarMarkRequestSchema,
   calendarOccurrenceSchema,
+  calendarCreateRequestSchema,
+  calendarReplyRequestSchema,
+  GOOGLE_REPLY_NEEDS_GRANT,
   calendarSettingsPatchSchema,
   type CalendarOccurrence,
   isGoogleEventId,
@@ -26,6 +30,9 @@ import { MicrosoftAuthError } from './microsoft/oauth.ts';
 import { microsoftCalendarRoutes } from './microsoft/routes.ts';
 import { MicrosoftSignInNeeded, type MicrosoftSource } from './microsoft/source.ts';
 import { CalendarHostError, type CalendarHost } from './host-client.ts';
+import { ZoomError } from '../zoom/oauth.ts';
+import { ZoomSignInNeeded, type ZoomService } from '../zoom/service.ts';
+import { withZoomMeeting } from '../zoom/event-video.ts';
 import {
   calendarDay,
   calendarNow,
@@ -53,6 +60,7 @@ export interface CalendarRouteDeps {
   workspaceId: string;
   calendarHost?: CalendarHost | null;
   googleCalendar?: GoogleSource | null;
+  zoom?: ZoomService | null;
   microsoftCalendar?: MicrosoftSource | null;
   now?: () => number;
 }
@@ -253,6 +261,75 @@ export function calendarRoutes(deps: CalendarRouteDeps): Router {
       return detail;
     }),
   );
+
+  router.post('/calendar/reply', (req, res) =>
+    guarded(res, async () => {
+      const request = parseBody(calendarReplyRequestSchema, req);
+      if (!google || !isGoogleEventId(request.eventId)) {
+        throw new BadRequestError('Replies are sent for Google calendars only.');
+      }
+      const choices = await savedChoices(deps.db, deps.workspaceId);
+      const calendarId =
+        choices.find((choice) => choice.key === request.calendarKey)?.calendarId ?? null;
+      const outcome = await cloudWrite(() =>
+        google.reply({ eventId: request.eventId, start: request.start, calendarId }, request.reply),
+      );
+      if (outcome === 'needs_grant') {
+        throw new CalendarHostError('not_authorized', GOOGLE_REPLY_NEEDS_GRANT);
+      }
+      if (outcome === 'not_found') throw new CalendarHostError('not_found', 'That event is gone.');
+      return { ok: true };
+    }),
+  );
+
+  router.post('/calendar/events', (req, res) =>
+    guarded(res, async () => {
+      const request = parseBody(calendarCreateRequestSchema, req);
+      const choices = await savedChoices(deps.db, deps.workspaceId);
+      const calendar = choices.find((choice) => choice.key === request.calendarKey);
+      if (!google || calendar?.sourceKind !== 'google' || !calendar.writable) {
+        throw new BadRequestError('Pick a Google calendar you can change.');
+      }
+      const event = {
+        summary: request.title,
+        start: new Date(request.start).toISOString(),
+        end: new Date(request.end).toISOString(),
+        guests: request.guests,
+        meetRequestId: request.video === 'meet' ? randomUUID() : null,
+        location: request.location.trim(),
+        description: request.notes.trim(),
+      };
+      const outcome = await cloudWrite(() =>
+        request.video === 'zoom'
+          ? withZoomMeeting(deps.zoom ?? null, event, (withLink) =>
+              google.create(calendar.calendarId, withLink),
+            )
+          : google.create(calendar.calendarId, event),
+      );
+      if (outcome === 'needs_grant') {
+        throw new CalendarHostError('not_authorized', GOOGLE_REPLY_NEEDS_GRANT);
+      }
+      if (outcome === 'not_found') {
+        throw new CalendarHostError('not_found', 'That calendar is gone.');
+      }
+      return { ok: true };
+    }),
+  );
+
+  const cloudWrite = async <T>(work: () => Promise<T>): Promise<T> => {
+    try {
+      return await work();
+    } catch (error) {
+      if (error instanceof GoogleSignInNeeded || error instanceof ZoomSignInNeeded) {
+        throw new CalendarHostError('not_authorized', error.message);
+      }
+      if (error instanceof ZoomError) throw new CalendarHostError('failed', error.message);
+      if (error instanceof GoogleApiError || error instanceof GoogleAuthError) {
+        throw new CalendarHostError('failed', error.message);
+      }
+      throw error;
+    }
+  };
 
   const cloudDetail = async (occurrence: CalendarOccurrence) => {
     const source = isGoogleEventId(occurrence.eventId) ? google : microsoft;

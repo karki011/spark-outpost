@@ -261,6 +261,31 @@ export interface GoogleEventWrite {
   start?: { dateTime: string } | { date: string };
   end?: { dateTime: string } | { date: string };
   reminders?: { useDefault: boolean; overrides: { method: 'popup'; minutes: number }[] };
+  attendees?: { email: string }[];
+  conferenceData?: {
+    createRequest: { requestId: string; conferenceSolutionKey: { type: 'hangoutsMeet' } };
+  };
+}
+
+export function withGuestsAndMeet(
+  body: GoogleEventWrite,
+  guests: readonly string[],
+  meetRequestId: string | null,
+): GoogleEventWrite {
+  return {
+    ...body,
+    ...(guests.length > 0 ? { attendees: guests.map((email) => ({ email })) } : {}),
+    ...(meetRequestId
+      ? {
+          conferenceData: {
+            createRequest: {
+              requestId: meetRequestId,
+              conferenceSolutionKey: { type: 'hangoutsMeet' },
+            },
+          },
+        }
+      : {}),
+  };
 }
 
 const NO_UPDATES = () => new URLSearchParams({ sendUpdates: 'none' });
@@ -281,9 +306,9 @@ export async function insertGoogleEvent(
   calendarId: string,
   body: GoogleEventWrite,
 ): Promise<GoogleEvent> {
-  return parsedEvent(
-    await getJson(deps, eventPath(calendarId), NO_UPDATES(), { method: 'POST', body }),
-  );
+  const query = new URLSearchParams({ sendUpdates: body.attendees?.length ? 'all' : 'none' });
+  if (body.conferenceData) query.set('conferenceDataVersion', '1');
+  return parsedEvent(await getJson(deps, eventPath(calendarId), query, { method: 'POST', body }));
 }
 
 export async function patchGoogleEvent(
@@ -303,4 +328,61 @@ export async function deleteGoogleEvent(
   eventId: string,
 ): Promise<void> {
   await call(deps, eventPath(calendarId, eventId), NO_UPDATES(), { method: 'DELETE' });
+}
+
+export type GoogleReply = 'accepted' | 'tentative' | 'declined';
+
+const rawAttendeesSchema = z.object({
+  attendees: z.array(z.record(z.string(), z.unknown())).max(2_000).optional(),
+});
+
+export async function replyToGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  eventId: string,
+  reply: GoogleReply,
+): Promise<GoogleEvent> {
+  const path = eventPath(calendarId, eventId);
+  const current = rawAttendeesSchema.safeParse(await getJson(deps, path, new URLSearchParams()));
+  if (!current.success) throw new GoogleApiError('bad_response', 'Google sent an odd event.');
+  const attendees = current.data.attendees ?? [];
+  if (!attendees.some((attendee) => attendee.self === true)) {
+    throw new GoogleApiError('forbidden', 'You are not on this event’s guest list.');
+  }
+  const body = {
+    attendees: attendees.map((attendee) =>
+      attendee.self === true ? { ...attendee, responseStatus: reply } : attendee,
+    ),
+  };
+  const query = new URLSearchParams({ sendUpdates: 'all' });
+  return parsedEvent(await getJson(deps, path, query, { method: 'PATCH', body }));
+}
+
+export interface GoogleEventCreate {
+  summary: string;
+  start: string;
+  end: string;
+  guests: readonly string[];
+  meetRequestId: string | null;
+  location: string;
+  description: string;
+}
+
+export async function createGoogleEvent(
+  deps: GoogleApiDeps,
+  calendarId: string,
+  create: GoogleEventCreate,
+): Promise<GoogleEvent> {
+  const body: GoogleEventWrite = {
+    summary: create.summary,
+    start: { dateTime: create.start },
+    end: { dateTime: create.end },
+    ...(create.location ? { location: create.location } : {}),
+    ...(create.description ? { description: create.description } : {}),
+  };
+  return insertGoogleEvent(
+    deps,
+    calendarId,
+    withGuestsAndMeet(body, create.guests, create.meetRequestId),
+  );
 }

@@ -18,9 +18,11 @@ import {
   getGoogleEvent,
   insertGoogleEvent,
   patchGoogleEvent,
+  replyToGoogleEvent,
   type GoogleApiDeps,
   type GoogleEvent,
   type GoogleEventWrite,
+  type GoogleReply,
 } from '../google/api.ts';
 import type { GoogleClientConfig } from '../google/config.ts';
 import { splitGoogleEventId } from '../google/map.ts';
@@ -69,6 +71,12 @@ export interface GoogleAgentClient {
     write: GoogleEventWrite,
   ): Promise<AgentEventDetail>;
   remove(workspaceId: string, calendarId: string, eventId: string): Promise<void>;
+  reply(
+    workspaceId: string,
+    calendarId: string,
+    eventId: string,
+    reply: GoogleReply,
+  ): Promise<void>;
 }
 
 export const GOOGLE_SIGN_IN_AGAIN =
@@ -251,6 +259,13 @@ export function createGoogleAgentClient(deps: GoogleAgentDeps): GoogleAgentClien
       const googleId = googleEventIdOf(target, eventId);
       await withAccount(workspaceId, target.accountId, (api) =>
         deleteGoogleEvent(api, target.calendarId, googleId),
+      );
+    },
+    async reply(workspaceId, calendarId, eventId, reply) {
+      const target = targetOf(calendarId);
+      const googleId = googleEventIdOf(target, eventId);
+      await withAccount(workspaceId, target.accountId, (api) =>
+        replyToGoogleEvent(api, target.calendarId, googleId, reply),
       );
     },
   };

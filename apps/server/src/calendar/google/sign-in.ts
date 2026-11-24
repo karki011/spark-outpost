@@ -46,6 +46,7 @@ export interface Connected {
 export interface GoogleSignInRequest {
   accountId: string | null;
   editCalendar: string | null;
+  replies?: boolean;
 }
 
 export interface GoogleSignIn {
@@ -99,7 +100,7 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
       flow = ended('failed', GOOGLE_SIGN_IN_WRONG_STATE);
       return;
     }
-    const editing = waiting.request.editCalendar !== null;
+    const editing = waiting.request.editCalendar !== null || waiting.request.replies === true;
     if (callback.error || !callback.code) {
       const denied = editing && callback.error === 'access_denied';
       flow = ended(
@@ -155,7 +156,11 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
         state: pkce.state,
         verifier: pkce.verifier,
         redirectUri: loopback.redirectUri,
-        request: { accountId: request.accountId, editCalendar: request.editCalendar },
+        request: {
+          accountId: request.accountId,
+          editCalendar: request.editCalendar,
+          replies: request.replies === true,
+        },
         loopback,
         timer,
       };
@@ -163,7 +168,8 @@ export function createGoogleSignIn(deps: GoogleSignInDeps): GoogleSignIn {
       flow = {
         status: 'waiting',
         authorizeUrl: googleAuthorizeUrl(deps.client, pkce, loopback.redirectUri, {
-          scopes: request.editCalendar ? GOOGLE_EDIT_SCOPES : GOOGLE_CALENDAR_SCOPES,
+          scopes:
+            request.editCalendar || request.replies ? GOOGLE_EDIT_SCOPES : GOOGLE_CALENDAR_SCOPES,
           loginHint: request.loginHint,
         }),
         expiresAt: new Date(expiresAt).toISOString(),

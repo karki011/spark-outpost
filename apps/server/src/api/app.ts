@@ -53,6 +53,8 @@ import { queueRoutes } from './queue-routes.ts';
 import { sparkPauseRoutes } from './spark-pause-routes.ts';
 import { browserHistoryRoutes } from './browser-history-routes.ts';
 import { calendarRoutes } from '../calendar/routes.ts';
+import { zoomRoutes } from '../zoom/routes.ts';
+import type { ZoomService } from '../zoom/service.ts';
 import type { CalendarHost } from '../calendar/host-client.ts';
 import { meetingRoutes } from '../meetings/routes.ts';
 import { createMeetingService, type MeetingService } from '../meetings/service.ts';
@@ -113,6 +115,7 @@ export interface AppOptions
   pushTest?: (deviceId: string) => Promise<PushTestResult>;
   calendarHost?: CalendarHost | null;
   googleCalendar?: GoogleSource | null;
+  zoom?: ZoomService | null;
   microsoftCalendar?: MicrosoftSource | null;
   meetings?: MeetingService;
   pairingAttemptsPerMinute?: number;
@@ -172,6 +175,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', sparkPauseRoutes(options));
   app.use('/api', browserHistoryRoutes(options));
   app.use('/api', calendarRoutes(options));
+  app.use('/api', zoomRoutes(options));
   app.use(
     '/api',
     meetingRoutes({

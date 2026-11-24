@@ -9,6 +9,7 @@ import {
   calendarStatusSchema,
   googleSignInFlowSchema,
   type CalendarChoicePatch,
+  type CalendarCreateRequest,
   type CalendarDay,
   type CalendarEventDetail,
   type CalendarMarkRequest,
@@ -16,6 +17,7 @@ import {
   type CalendarOccurrence,
   type CalendarRange,
   type CalendarRefresh,
+  type CalendarReplyRequest,
   type CalendarSettings,
   type CalendarSettingsPatch,
   type CalendarStatus,
@@ -48,6 +50,7 @@ function post<T>(schema: z.ZodType<T>, path: string, body: unknown = {}): Promis
 export interface CloudSignInStart {
   accountId: string | null;
   editCalendar: string | null;
+  replies?: boolean;
 }
 
 export const calendarApi = {
@@ -75,6 +78,9 @@ export const calendarApi = {
     request(ok, '/calendar/marks', { method: 'PUT', body: JSON.stringify(mark) }),
   open: (occurrence: CalendarOccurrence): Promise<{ opened: boolean }> =>
     post(opened, '/calendar/open', occurrence),
+  createEvent: (event: CalendarCreateRequest): Promise<{ ok: true }> =>
+    post(ok, '/calendar/events', event),
+  reply: (reply: CalendarReplyRequest): Promise<{ ok: true }> => post(ok, '/calendar/reply', reply),
   detail: (occurrence: CalendarOccurrence): Promise<CalendarEventDetail> =>
     post(calendarEventDetailSchema, '/calendar/event', occurrence),
   signIn: (provider: CloudProvider): Promise<GoogleSignInFlow> =>
@@ -83,6 +89,7 @@ export const calendarApi = {
     post(googleSignInFlowSchema, `/calendar/${provider}/sign-in`, {
       ...(request.accountId ? { accountId: request.accountId } : {}),
       ...(request.editCalendar ? { editCalendar: request.editCalendar } : {}),
+      ...(request.replies ? { replies: true } : {}),
     }),
   cancelSignIn: (provider: CloudProvider): Promise<GoogleSignInFlow> =>
     request(googleSignInFlowSchema, `/calendar/${provider}/sign-in`, { method: 'DELETE' }),
