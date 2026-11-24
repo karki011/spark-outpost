@@ -10,7 +10,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import { BROWSER_HOST_ENV, parseSparkChatLink } from '@spark-outpost/contracts';
-import { launchChat, linkIn } from './deep-link.ts';
+import { jumpTaskIn, launchChat, linkIn } from './deep-link.ts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { stableApiPort } from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
@@ -469,7 +469,11 @@ function showSpark(): void {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', (_event, argv) => openLink(linkIn(argv, config.linkScheme)));
+  app.on('second-instance', (_event, argv) => {
+    const task = jumpTaskIn(argv);
+    if (task) companionHost?.runJumpTask(task);
+    else openLink(linkIn(argv, config.linkScheme));
+  });
   app.on('open-url', (event, url) => {
     event.preventDefault();
     openLink(url);

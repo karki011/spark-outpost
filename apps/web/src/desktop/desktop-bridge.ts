@@ -303,5 +303,6 @@ export function onWindows(): boolean {
 }
 
 export function companionAvailable(): boolean {
-  return sparkDesktop()?.platform === 'darwin';
+  const platform = sparkDesktop()?.platform;
+  return platform === 'darwin' || platform === 'win32';
 }

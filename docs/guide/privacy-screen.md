@@ -24,7 +24,7 @@ You'll cover Spark Outpost's windows when you step away. About 2 minutes.
 
 ## Lock and unlock
 
-**⇧⌘L**, **Spark Outpost → Lock Spark Outpost** or a lock button locks at once. The button sits above the left bar's clock, in a narrow window's **More**, in the Settings window and on Spark Island.
+**⇧⌘L**, **Spark Outpost → Lock Spark Outpost** or a lock button locks at once. The button sits above the left bar's clock, in a narrow window's **More**, in the Settings window and on Spark Island. Windows: right-click the taskbar button.
 
 Unlock with Touch ID or your code. Five wrong codes wait a minute.
 
