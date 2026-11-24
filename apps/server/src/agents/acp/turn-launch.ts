@@ -120,7 +120,7 @@ export async function planLaunch(
   const scratch = workdir ? null : await mkdtemp(join(tmpdir(), 'spark-outpost-run-'));
   const home = workdir ?? scratch ?? tmpdir();
   const cwd = policy ? primaryRoot(policy) : home;
-  const userMcp = await resolveUserMcp(turn.userMcp ?? [], options.secrets);
+  const userMcp = await resolveUserMcp(turn.userMcp ?? [], options.secrets, options.mcpBearer);
   const own =
     definition.repoStyle === 'codex'
       ? await codexUserMcpNames(await processEnvironment(options))

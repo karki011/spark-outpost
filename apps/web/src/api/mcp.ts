@@ -1,14 +1,17 @@
 import {
   chatMcpListSchema,
+  mcpSignInFlowSchema,
   userMcpListSchema,
   type ChatMcpList,
   type McpEnableRequest,
+  type McpSignInFlow,
   type SaveUserMcpRequest,
   type UserMcpList,
 } from '@spark-outpost/contracts';
 import { request } from './client.ts';
 
 export const userMcpKey = ['mcp', 'servers'] as const;
+export const mcpSignInKey = (id: string) => ['mcp', 'sign-in', id] as const;
 export const chatMcpRoot = ['mcp', 'chat'] as const;
 export const chatMcpKey = (conversationId: string) => [...chatMcpRoot, conversationId] as const;
 
@@ -27,6 +30,13 @@ export const mcpApi = {
   enable: (id: string, body: McpEnableRequest): Promise<UserMcpList> =>
     send(`/mcp/servers/${id}/enable`, 'PUT', body),
   test: (id: string): Promise<UserMcpList> => send(`/mcp/servers/${id}/test`, 'POST'),
+  signInFlow: (id: string): Promise<McpSignInFlow> =>
+    request(mcpSignInFlowSchema, `/mcp/servers/${id}/sign-in`),
+  startSignIn: (id: string): Promise<McpSignInFlow> =>
+    request(mcpSignInFlowSchema, `/mcp/servers/${id}/sign-in`, { method: 'POST', body: '{}' }),
+  cancelSignIn: (id: string): Promise<McpSignInFlow> =>
+    request(mcpSignInFlowSchema, `/mcp/servers/${id}/sign-in`, { method: 'DELETE' }),
+  signOut: (id: string): Promise<UserMcpList> => send(`/mcp/servers/${id}/sign-out`, 'POST'),
   forChat: (conversationId: string): Promise<ChatMcpList> =>
     request(chatMcpListSchema, `/conversations/${conversationId}/mcp`),
 };

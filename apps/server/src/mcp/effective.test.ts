@@ -9,6 +9,7 @@ const server: UserMcpRow = {
   transport: 'stdio',
   fingerprint: 'fp-now',
   check: null,
+  signIn: 'none',
   config: {
     command: 'npx',
     args: ['gh-mcp'],

@@ -11,6 +11,8 @@ export type GoogleCalendarSecretId = `calendar:google:${string}`;
 export type MicrosoftCalendarSecretId = `calendar:microsoft:${string}`;
 export const microsoftCalendarSecret = (subject: string): MicrosoftCalendarSecretId =>
   `calendar:microsoft:${subject}`;
+export type McpOAuthSecretId = `mcp-oauth:${string}`;
+export const mcpOAuthSecret = (serverId: string): McpOAuthSecretId => `mcp-oauth:${serverId}`;
 export type ShareSecretId = `share:${string}`;
 export const shareSecret = (shareId: string): ShareSecretId => `share:${shareId}`;
 export const googleCalendarSecret = (subject: string): GoogleCalendarSecretId =>
@@ -24,6 +26,7 @@ export type SecretId =
   | typeof SLACK_SIGN_IN_SECRET
   | typeof PUSH_KEYS_SECRET
   | `mcp:${string}`
+  | McpOAuthSecretId
   | `signin:${string}`
   | GoogleCalendarSecretId
   | MicrosoftCalendarSecretId
@@ -41,6 +44,7 @@ export const DEFAULT_KEYCHAIN_SERVICE = 'Spark Outpost';
 
 function account(provider: SecretId): string {
   if (provider.startsWith('mcp:') || provider.startsWith('signin:')) return provider;
+  if (provider.startsWith('mcp-oauth:')) return `${provider}:sign-in`;
   if (provider.startsWith('calendar:google:') || provider.startsWith('calendar:microsoft:')) {
     return `${provider}:refresh`;
   }

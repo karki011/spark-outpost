@@ -19,6 +19,7 @@ import { locateCli } from '../setup/verify.ts';
 import { startMapScheduler } from '../map/scheduler.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
+import { createMcpOAuth } from '../mcp/oauth.ts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { scanIndexPace } from '../map/scan-index-pace.ts';
 import { flushBufferedText } from './run-appender.ts';
@@ -105,6 +106,7 @@ const worker = startWorker({
     sparkTools,
     loginShellLocator(loginShell),
     loginShellEnv(runCommand, loginShell),
+    createMcpOAuth({ db, secrets }).bearer,
   ),
   leaseSeconds: config.LEASE_SECONDS,
   pollMs: WORKER_IDLE_POLL_MS,

@@ -451,3 +451,14 @@
 .mcp-danger:focus-visible {
   outline-color: var(--danger);
 }
+
+.mcp-sign-in {
+  display: grid;
+  gap: 8px;
+}
+
+.mcp-sign-in-line {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}

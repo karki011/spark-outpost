@@ -10,6 +10,8 @@ import { conversationProjectIds, enabledProjectMcp } from '../agent-config/store
 import { effectiveFor, userServerView } from '../mcp/effective.ts';
 import { launchOf, resolveUserServer } from '../mcp/launch.ts';
 import { probeMcpServer, type ProbeResult } from '../mcp/probe.ts';
+import { createMcpOAuth, type McpOAuth } from '../mcp/oauth.ts';
+import { markSignIn } from '../mcp/oauth-store.ts';
 import { deleteMcpSecrets } from '../mcp/secrets.ts';
 import {
   GLOBAL_KEY,
@@ -34,7 +36,12 @@ export interface McpRouteDeps {
   workspaceId: string;
   secrets: SecretStore;
   probeMcp?: (server: McpServerConfig) => Promise<ProbeResult>;
+  mcpOAuth?: McpOAuth;
   scanner?: RepoScanner;
+}
+
+function remoteUrl(server: UserMcpRow): string | null {
+  return server.transport === 'stdio' ? null : server.config.url;
 }
 
 export function mcpRoutes({
@@ -42,6 +49,7 @@ export function mcpRoutes({
   workspaceId,
   secrets,
   probeMcp = probeMcpServer,
+  mcpOAuth = createMcpOAuth({ db, secrets }),
   scanner = repoScanner,
 }: McpRouteDeps): Router {
   const router = Router();
@@ -109,11 +117,14 @@ export function mcpRoutes({
     }
     const body = parseBody(saveUserMcpRequestSchema, req);
     await saveManualServer({ db, workspaceId, secrets }, server, body);
+    const url = body.transport === 'stdio' ? null : body.url;
+    if (url !== server.config.url) await mcpOAuth.signOut(server.id);
     res.json(await list());
   });
 
   router.delete('/mcp/servers/:id', async (req, res) => {
     const server = await serverOf(req);
+    await mcpOAuth.signOut(server.id);
     await deleteUserMcp(db, workspaceId, server.id);
     await deleteMcpSecrets(secrets, server.id);
     res.json(await list());
@@ -139,12 +150,41 @@ export function mcpRoutes({
 
   router.post('/mcp/servers/:id/test', async (req, res) => {
     const server = await serverOf(req);
-    const result = await probeMcp(await resolveUserServer(launchOf(server), secrets));
+    const probe = async (renew: boolean) =>
+      probeMcp(await resolveUserServer(launchOf(server), secrets, mcpOAuth.bearer, renew));
+    let outcome = await probe(false);
+    if (outcome.unauthorized && server.signIn === 'signed_in') outcome = await probe(true);
+    const { unauthorized, ...result } = outcome;
+    if (unauthorized && remoteUrl(server)) await markSignIn(db, server.id, 'needed');
     await recordCheck(db, server.id, {
       ...result,
       checkedAt: new Date().toISOString(),
       fingerprint: server.fingerprint,
     });
+    res.json(await list());
+  });
+
+  const signInTarget = async (req: Request) => {
+    const server = await serverOf(req);
+    const url = remoteUrl(server);
+    if (!url) throw new BadRequestError('Only servers reached by URL have a sign-in.');
+    return { id: server.id, url };
+  };
+
+  router.get('/mcp/servers/:id/sign-in', async (req, res) => {
+    res.json(mcpOAuth.flow((await serverOf(req)).id));
+  });
+
+  router.post('/mcp/servers/:id/sign-in', async (req, res) => {
+    res.json(await mcpOAuth.start(await signInTarget(req)));
+  });
+
+  router.delete('/mcp/servers/:id/sign-in', async (req, res) => {
+    res.json(mcpOAuth.cancel((await serverOf(req)).id));
+  });
+
+  router.post('/mcp/servers/:id/sign-out', async (req, res) => {
+    await mcpOAuth.signOut((await serverOf(req)).id);
     res.json(await list());
   });
 

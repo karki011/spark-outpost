@@ -28,6 +28,17 @@ export const mcpEnablementSchema = z.object({
 });
 export type McpEnablement = z.infer<typeof mcpEnablementSchema>;
 
+export const mcpSignInStateSchema = z.enum(['none', 'needed', 'signed_in']);
+export type McpSignInState = z.infer<typeof mcpSignInStateSchema>;
+
+export const mcpSignInFlowSchema = z.object({
+  status: z.enum(['idle', 'waiting', 'connected', 'failed']),
+  authorizeUrl: z.url().nullable(),
+  expiresAt: z.iso.datetime({ offset: true }).nullable(),
+  message: z.string().max(500).nullable(),
+});
+export type McpSignInFlow = z.infer<typeof mcpSignInFlowSchema>;
+
 export const userMcpServerSchema = z.object({
   id: z.uuid(),
   source: mcpServerSourceSchema,
@@ -43,6 +54,7 @@ export const userMcpServerSchema = z.object({
   global: mcpEnablementSchema.nullable(),
   projects: z.array(mcpEnablementSchema.extend({ projectId: z.uuid() })),
   check: mcpCheckSchema.nullable(),
+  signIn: mcpSignInStateSchema,
 });
 export type UserMcpServer = z.infer<typeof userMcpServerSchema>;
 

@@ -145,6 +145,18 @@ Plugins the user installed with `claude plugin install` (user scope) never load 
 
 Servers that belong to the user rather than a repo: added by hand or from a pasted config in Settings → Connectors → MCP servers, and turned on for all chats, per project or per chat.
 
+### Sign-in (OAuth)
+
+Built 2026-11-24 (`mcp/oauth.ts`, `mcp/oauth-store.ts`, migration 0278). A user-level server reached by URL (`http` or `sse`) that asks for a sign-in is signed in to once, with the MCP SDK's own client (`auth()` in `@modelcontextprotocol/sdk/client/auth.js`: protected-resource and authorization-server discovery, dynamic client registration, PKCE).
+
+- **Finding out.** **Test connection** that fails as unauthorized sets `mcp_servers.sign_in` to `needed`; the card then leads with **Sign in**. **Sign in** is also offered on any URL server before a test.
+- **The flow.** `POST /api/mcp/servers/:id/sign-in` starts the calendar sign-ins' one-shot loopback on `127.0.0.1` at a random port and returns the authorization address, which the web app opens in the default browser, never the Browser pane. Spark sends its own 32-byte `state` and checks it on return. The authorization address must be `https` (or `http` on `127.0.0.1`). A sign-in times out after 10 minutes. A client registered for another port is registered again, since many servers match the redirect address exactly.
+- **What is kept.** One keychain entry per server (`mcp-oauth:<server id>`): the server URL, the client registration, the tokens, the discovery state and the expiry. Nothing of it is in the database, an event, the audit or a response; the row holds only `sign_in` (`none`, `needed`, `signed_in`).
+- **Using it.** `resolveUserServer` asks `bearer()` and sets `Authorization: Bearer …` on the server's headers, replacing a typed `Authorization` header, for a turn's launch (chat worker) and for **Test connection** (API). A token is reused until 10 minutes before it expires, so a live agent session, whose key includes the headers, reopens (with resume) at most about once per token lifetime.
+- **Renewing.** Renewal runs inside `pg_advisory_xact_lock` keyed by the server, re-reads the keychain past the cache, and writes the new tokens before returning, so the API and the worker never spend the same rotating refresh token twice. A renewal that cannot reach the server keeps the saved sign-in and returns the old token. Only a refusal by the server (`invalid_grant`, an invalid client) drops the tokens and sets `needed`. A test refused with a token Spark thought was good renews once and tests again.
+- **Forgetting.** **Sign out**, removing the server, or saving it with another URL deletes the keychain entry and sets `none`. Revocation is not sent: MCP servers rarely advertise an endpoint for it.
+- **Limits.** A token that expires in the middle of a long turn is not replaced until the next turn. There is no background keep-alive, so a server whose refresh token lapses when unused asks again. Repo (`.mcp.json`) and plugin servers, stdio servers and Terminal sessions get no sign-in from Spark.
+
 ### Did agents already load the user's global MCP servers?
 
 Checked September 28, 2026 with the marker technique above: a temporary `HOME` and `CODEX_HOME`, a fake model endpoint, and MCP servers whose only job is to write a marker file when started. The real adapters were driven over ACP; the user's own config was never read.
