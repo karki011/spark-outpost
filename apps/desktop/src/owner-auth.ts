@@ -51,7 +51,9 @@ export function ownerAuth(
   addonPath: string,
   log: (line: string) => void,
   load: LoadAddon = requireAddon,
+  platform: NodeJS.Platform = process.platform,
 ): OwnerAuth {
+  if (platform === 'win32') return MISSING;
   const addon = readAddon(addonPath, load);
   if (typeof addon === 'string') {
     log(

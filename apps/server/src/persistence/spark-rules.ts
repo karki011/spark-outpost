@@ -11,8 +11,10 @@ import {
   acceptOutsideChange,
   changeSparkRules,
   loadSparkRules,
+  managedRulesFile,
   restoreAcceptedRules,
   sparkRulesFiles,
+  type LoadedRules,
   type SparkRulesFiles,
 } from '../spark-rules/rules-store.ts';
 import {
@@ -23,12 +25,31 @@ import {
   rowLocked,
   sparkRulesView,
 } from '../spark-rules/rules-view.ts';
+import { managedAclProblem } from '../spark-rules/managed-acl.ts';
+import { sameFile } from '../spark-rules/managed-writer.ts';
 import type { Queryable } from './db.ts';
 
 export class SparkRulesInputError extends Error {}
 
+export async function rulesViewWithAcl(
+  loaded: LoadedRules,
+  files: SparkRulesFiles,
+  platform: NodeJS.Platform = process.platform,
+  aclProblem: (file: string) => Promise<string | null> = managedAclProblem,
+): Promise<SparkRules> {
+  const view = sparkRulesView(loaded);
+  if (
+    platform !== 'win32' ||
+    !sameFile(files.managed, managedRulesFile(process.env, platform), platform)
+  )
+    return view;
+  const problem = await aclProblem(files.managed);
+  if (!problem) return view;
+  return { ...view, problems: [...view.problems, { file: 'managed', message: problem }] };
+}
+
 export async function sparkRules(files: SparkRulesFiles = sparkRulesFiles()): Promise<SparkRules> {
-  return sparkRulesView(await loadSparkRules(files));
+  return rulesViewWithAcl(await loadSparkRules(files), files);
 }
 
 const COMPANY_ROW = "Your company's Spark rules set this one, so it can't be changed here.";
@@ -42,7 +63,7 @@ export async function setSparkRule(
     if (rowLocked(loaded.rules, row)) throw new SparkRulesInputError(COMPANY_ROW);
     return choiceChange(row, choice);
   });
-  return sparkRulesView(saved);
+  return rulesViewWithAcl(saved, files);
 }
 
 const FULL = `Spark rules hold ${GH_ALLOWED_MAX} allowed commands. Remove one first.`;
@@ -58,13 +79,13 @@ export async function setGhAllowed(
     if (full) throw new SparkRulesInputError(FULL);
     return ghAllowedChange(prefix, allowed);
   });
-  return sparkRulesView(saved);
+  return rulesViewWithAcl(saved, files);
 }
 
 export async function useRecommendedRules(
   files: SparkRulesFiles = sparkRulesFiles(),
 ): Promise<SparkRules> {
-  return sparkRulesView(await changeSparkRules(files, () => recommendedChange()));
+  return rulesViewWithAcl(await changeSparkRules(files, () => recommendedChange()), files);
 }
 
 export async function answerOutsideChange(
@@ -75,7 +96,7 @@ export async function answerOutsideChange(
     answer.keep === 'file'
       ? await acceptOutsideChange(files, answer.fileHash)
       : await restoreAcceptedRules(files, answer.fileHash);
-  return sparkRulesView(loaded);
+  return rulesViewWithAcl(loaded, files);
 }
 
 interface RunRulesRow {
