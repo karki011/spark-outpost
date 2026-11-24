@@ -16,7 +16,7 @@ import { leaveAsGhost } from './home-motion.ts';
 import { viewWidth, type IslandView } from './island-model.ts';
 import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
-import { keyHint } from './key-hints.tsx';
+import { keyHint, useQuickKeys } from './key-hints.tsx';
 import { CalendarLineView } from './CalendarRestLine.tsx';
 import { scoutLabel, ScoutMarks } from './RestLine.tsx';
 import { DropScene } from './DropScene.tsx';
@@ -99,7 +99,8 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
   const screenWidth = window.screen.width;
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
   const width = bare ? rest.blob : Math.min(viewWidth(view, notchSpan, screenWidth), room);
-  const hint = keyHint(view);
+  const quickKeys = useQuickKeys();
+  const hint = keyHint(view, quickKeys);
   const scout = scoutSpot(view, width, top, rest, docked, out, height);
   const setTarget = useIslandShape(
     islandRef,
@@ -111,7 +112,7 @@ export function IslandShell({ islandRef, ...props }: IslandShellProps & ShellRef
   const threadTop = rest.blob * SCOUT_FEET;
   const lineTop = Math.max(restLineTop(flat, rowTop) - (pose?.y ?? 0), threadTop + THREAD);
   const hanging = peeking && props.calendarLine !== null;
-  const wings = wingsFor(props);
+  const wings = wingsFor(props, quickKeys);
   const resting = (quiet || view.kind === 'now') && !props.hover;
   const hidden = usePageHidden();
   const idle = useIdleAfter(REST_AFTER_IDLE_MS);

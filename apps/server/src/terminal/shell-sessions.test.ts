@@ -174,6 +174,44 @@ describe('chat shells', () => {
     expect(ended).toEqual([created.id]);
   });
 
+  it('tells the watcher about a shell only once its pid is known, and not after it ended', async () => {
+    const opened: OpenShell[] = [];
+    const later: Array<() => void> = [];
+    const spawn = () => {
+      let pid = 0;
+      return {
+        get pid() {
+          return pid;
+        },
+        ready: new Promise<void>((resolve) =>
+          later.push(() => {
+            pid = 4242;
+            resolve();
+          }),
+        ),
+        write: () => undefined,
+        resize: () => undefined,
+        onData: () => undefined,
+        onExit: () => undefined,
+        kill: () => undefined,
+      };
+    };
+    sessions = new TerminalSessions(spawn, defaultLimits, {
+      opened: (shell) => opened.push(shell),
+      ended: () => undefined,
+    });
+    const kept = sessions.createShell({ cwd: folder, conversationId: 'chat-a', label: 'app' });
+    const gone = sessions.createShell({ cwd: folder, conversationId: 'chat-b', label: 'web' });
+    sessions.attach(kept.id, kept.token, recorder().client, size);
+    sessions.attach(gone.id, gone.token, recorder().client, size).close();
+    expect(opened).toEqual([]);
+    for (const resolve of later) resolve();
+    await until(() => opened.length > 0);
+    expect(opened).toEqual([
+      { id: kept.id, conversationId: 'chat-a', label: 'app', cwd: folder, pid: 4242 },
+    ]);
+  });
+
   it('turns a notify sequence a shell prints into an alert for its chat', async () => {
     const alerts: ShellAlert[] = [];
     sessions = new TerminalSessions(

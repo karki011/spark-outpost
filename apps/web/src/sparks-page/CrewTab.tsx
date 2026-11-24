@@ -7,6 +7,7 @@ import { BuilderButton } from './builder-button.tsx';
 import { CrewEmpty } from './CrewEmpty.tsx';
 import { SparkCard } from './SparkCard.tsx';
 import { useSkillCounts } from './use-crew-files.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 interface CrewTabProps {
   loading: boolean;
@@ -47,7 +48,7 @@ function NoSparks({
       after={!remote && <StarterSuggestions starters={starters} />}
     >
       {remote ? (
-        <p className="spk-hint">No Sparks yet. Make one on the Mac.</p>
+        <p className="spk-hint">No Sparks yet. Make one on the {hostWords().computer}.</p>
       ) : (
         <>
           <button

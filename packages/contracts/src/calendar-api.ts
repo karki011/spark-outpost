@@ -3,6 +3,7 @@ import { calendarChoiceSchema, calendarEventSchema, dayShapeSchema } from './cal
 import { calendarHelperStateSchema } from './calendar-bridge.ts';
 import { calendarAuthorizationSchema, calendarSourceKindSchema } from './calendar-helper.ts';
 import { calendarGoogleStatusSchema } from './calendar-google.ts';
+import { calendarMicrosoftStatusSchema } from './calendar-microsoft.ts';
 
 export const CALENDAR_WRAP_UP_MINUTES = [0, 15, 30] as const;
 export const CALENDAR_REMIND_MINUTES = 5;
@@ -77,6 +78,7 @@ export const calendarStatusSchema = z.object({
   notice: z.string().max(500).nullable(),
   settings: calendarSettingsSchema,
   google: calendarGoogleStatusSchema,
+  microsoft: calendarMicrosoftStatusSchema,
 });
 export type CalendarStatus = z.infer<typeof calendarStatusSchema>;
 

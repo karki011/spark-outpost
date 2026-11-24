@@ -161,13 +161,17 @@ export const GIT_CONTROL_GLOBS: readonly string[] = ['.git/hooks/*', GIT_CONFIG]
 
 const FOLDED_INSTRUCTION_NAMES = new Set([...INSTRUCTION_NAMES].map((name) => name.toLowerCase()));
 
+export function namesFoldCase(): boolean {
+  return process.platform === 'win32' || process.platform === 'darwin';
+}
+
 export function isInsideGitFolder(relative: string): boolean {
   const first = relative.split('/')[0] ?? '';
-  return (process.platform === 'win32' ? first.toLowerCase() : first) === '.git';
+  return (namesFoldCase() ? first.toLowerCase() : first) === '.git';
 }
 
 export function protectedPath(written: string): ProtectedKind | null {
-  const folds = process.platform === 'win32';
+  const folds = namesFoldCase();
   const relative = folds ? slashed(written).toLowerCase() : written;
   if (GIT_HOOK.test(relative) || relative === GIT_CONFIG) return 'git_control';
   const name = relative.split('/').pop() ?? '';

@@ -7,19 +7,16 @@ import { GoogleApiError, listGoogleCalendars, type GoogleApiDeps } from './api.t
 import type { GoogleClientConfig } from './config.ts';
 import { mapGoogleCalendar } from './map.ts';
 import { GoogleAuthError, refreshGoogleAccess } from './oauth.ts';
-import { markGoogleSignIn, type GoogleAccountRow } from './store.ts';
+import { markCloudSignIn, type CloudAccountRow } from '../cloud/account-store.ts';
+import { fullSync, syncCalendar } from './sync.ts';
+import { syncWindow, type CalendarSync, type SyncWindow } from '../cloud/events.ts';
 import {
-  fullSync,
-  googleWindow,
-  syncCalendar,
-  type CalendarSync,
-  type GoogleWindow,
-} from './sync.ts';
-
-export const GOOGLE_POLL_MS = 3 * 60_000;
-export const GOOGLE_BACKOFF_START_MS = 30_000;
-export const GOOGLE_BACKOFF_MAX_MS = 30 * 60_000;
-const TOKEN_MARGIN_MS = 60_000;
+  CLOUD_POLL_MS,
+  TOKEN_MARGIN_MS,
+  backoffMs,
+  settleAll,
+  type PollOutcome,
+} from '../cloud/poll.ts';
 
 export const SIGN_IN_AGAIN = 'Google sign-in ran out. Sign in again to keep this account.';
 
@@ -33,7 +30,7 @@ export interface AccountDeps {
 }
 
 export interface LiveAccount {
-  row: GoogleAccountRow;
+  row: CloudAccountRow;
   accessToken: string | null;
   expiresAt: number;
   calendars: Map<string, CalendarSync>;
@@ -44,7 +41,7 @@ export interface LiveAccount {
   syncedAt: number | null;
 }
 
-export function liveAccount(row: GoogleAccountRow): LiveAccount {
+export function liveAccount(row: CloudAccountRow): LiveAccount {
   return {
     row,
     accessToken: null,
@@ -114,20 +111,6 @@ export async function withFreshToken<T>(
   }
 }
 
-const RANGE_CONCURRENCY = 4;
-
-async function settleAll<T, R>(
-  items: readonly T[],
-  limit: number,
-  work: (item: T) => Promise<R>,
-): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = [];
-  for (let index = 0; index < items.length; index += limit) {
-    results.push(...(await Promise.allSettled(items.slice(index, index + limit).map(work))));
-  }
-  return results;
-}
-
 async function pollWith(deps: AccountDeps, account: LiveAccount, api: GoogleApiDeps) {
   const entries = await listGoogleCalendars(api);
   const mapped = entries.flatMap((entry) => {
@@ -135,7 +118,7 @@ async function pollWith(deps: AccountDeps, account: LiveAccount, api: GoogleApiD
     return calendar ? [calendar] : [];
   });
   const saved = await saveCalendars(deps, account.row.id, mapped);
-  const window = googleWindow(deps.now());
+  const window = syncWindow(deps.now());
   const prefix = prefixOf(account.row.id);
   const wanted = saved.choices
     .filter((choice) => choice.include && choice.calendarId.startsWith(prefix))
@@ -166,11 +149,11 @@ async function pollWith(deps: AccountDeps, account: LiveAccount, api: GoogleApiD
 export async function accountRange(
   deps: AccountDeps,
   account: LiveAccount,
-  range: GoogleWindow,
+  range: SyncWindow,
 ): Promise<Map<string, CalendarSync>> {
   return withFreshToken(deps, account, async (api) => {
     const calendarIds = [...account.calendars.keys()];
-    const results = await settleAll(calendarIds, RANGE_CONCURRENCY, (calendarId) =>
+    const results = await settleAll(calendarIds, (calendarId) =>
       fullSync(api, { accountId: account.row.id, calendarId }, range),
     );
     const found = new Map<string, CalendarSync>();
@@ -180,17 +163,6 @@ export async function accountRange(
     });
     return found;
   });
-}
-
-export function backoffMs(failures: number, retryAfterMs: number | null, random: number): number {
-  const base = Math.min(GOOGLE_BACKOFF_MAX_MS, GOOGLE_BACKOFF_START_MS * 2 ** (failures - 1));
-  const jittered = Math.round(base * (0.8 + random * 0.4));
-  return Math.max(jittered, retryAfterMs ?? 0);
-}
-
-export interface PollOutcome {
-  changed: boolean;
-  nextInMs: number | null;
 }
 
 function failureMessage(error: unknown): string {
@@ -215,7 +187,7 @@ export async function markSignInAgain(deps: AccountDeps, account: LiveAccount): 
   account.synced = false;
   account.state = 'sign_in_again';
   account.message = SIGN_IN_AGAIN;
-  await markGoogleSignIn(deps.db, deps.workspaceId, account.row.id, true);
+  await markCloudSignIn(deps.db, 'google', deps.workspaceId, account.row.id, true);
   account.row = { ...account.row, needsSignIn: true };
 }
 
@@ -238,7 +210,7 @@ export async function pollAccount(
     account.failures = 0;
     account.synced = true;
     account.syncedAt = deps.now();
-    return { changed: changed || recovered, nextInMs: GOOGLE_POLL_MS };
+    return { changed: changed || recovered, nextInMs: CLOUD_POLL_MS };
   } catch (error) {
     if (needsSignInAgain(error)) return signInAgain(deps, account);
     account.failures += 1;

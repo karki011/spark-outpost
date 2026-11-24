@@ -9,10 +9,11 @@ import {
   type CalendarEventFacts,
   type CalendarEventFields,
 } from '@spark-outpost/contracts';
-import { agentDetail, type AgentCalendar } from '../../../calendar/agent/access.ts';
+import { agentDetail, cloudCanEdit, type AgentCalendar } from '../../../calendar/agent/access.ts';
 import {
   completeFields,
   editRefusal,
+  othersRefusal,
   factsAfter,
   factsOf,
   floorReasons,
@@ -20,7 +21,6 @@ import {
   newEventProblem,
   timesProblem,
 } from '../../../calendar/agent/edit-rules.ts';
-import { googleTarget } from '../../../calendar/agent/google-client.ts';
 import { proposeAction } from '../../actions/confirm.ts';
 import { sparkTool, type SparkToolContext } from '../../tool.ts';
 import {
@@ -71,12 +71,6 @@ function requestedFields(args: EditArgs): CalendarEventFields {
   ) as CalendarEventFields;
 }
 
-async function googleCanEdit(calendar: AgentCalendar, choice: CalendarChoice): Promise<boolean> {
-  const target = googleTarget(choice.calendarId);
-  if (!target || !calendar.google) return false;
-  return (await calendar.google.account(calendar.workspaceId, target.accountId))?.canEdit ?? false;
-}
-
 async function before(
   calendar: AgentCalendar,
   choice: CalendarChoice,
@@ -125,11 +119,13 @@ async function plan(calendar: AgentCalendar, args: EditArgs): Promise<CalendarEd
   const choice = await choiceByKey(calendar, args.calendar);
   const refusal = editRefusal({
     choice,
-    googleCanEdit: await googleCanEdit(calendar, choice),
+    cloudCanEdit: await cloudCanEdit(calendar, choice.calendarId),
     span: args.span,
   });
   if (refusal) throw new CalendarToolError('refused', refusal);
   const prior = await asToolErrors(() => before(calendar, choice, args));
+  const crowded = othersRefusal(choice, prior?.others ?? 0);
+  if (crowded) throw new CalendarToolError('refused', crowded);
   const fields = args.action === 'delete' ? {} : completeFields(requestedFields(args), prior);
   const after = checked(args.action, prior, fields);
   return {

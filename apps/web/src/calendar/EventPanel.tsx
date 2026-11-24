@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CALENDAR_SERVICE_NAMES,
   isGoogleEventId,
+  isMicrosoftEventId,
   joinOpen,
   spanOf,
   type CalendarChoice,
@@ -142,15 +143,21 @@ interface EventActionsProps {
   onStartChat: (text: string) => void;
 }
 
+function cloudOf(eventId: string): { name: string; app: string } | null {
+  if (isGoogleEventId(eventId)) return { name: 'Google', app: 'Google Calendar' };
+  if (isMicrosoftEventId(eventId)) return { name: 'Microsoft', app: 'Outlook' };
+  return null;
+}
+
 export function EventActions({ event, calendarName, now, onStartChat }: EventActionsProps) {
   const mark = useMark(event);
   const occurrence = { eventId: event.id, start: event.start, calendarKey: event.calendarKey };
-  const google = isGoogleEventId(event.id);
+  const cloud = cloudOf(event.id);
   const openInCalendar = useMutation({
     mutationFn: async () => {
-      if (!google) return calendarApi.open(occurrence);
+      if (!cloud) return calendarApi.open(occurrence);
       const { link } = await calendarApi.detail(occurrence);
-      if (!link) throw new Error('Google gave no link for this event.');
+      if (!link) throw new Error(`${cloud.name} gave no link for this event.`);
       openJoin(link);
       return { opened: true };
     },
@@ -180,8 +187,8 @@ export function EventActions({ event, calendarName, now, onStartChat }: EventAct
       )}
       <Act
         icon={<ExternalLinkIcon />}
-        label={google ? 'Open in Google Calendar' : 'Open in Calendar'}
-        note={google ? 'Your browser' : 'Calendar.app'}
+        label={cloud ? `Open in ${cloud.app}` : 'Open in Calendar'}
+        note={cloud ? 'Your browser' : 'Calendar.app'}
         onClick={() => openInCalendar.mutate()}
       />
       <Act

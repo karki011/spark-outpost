@@ -6,15 +6,14 @@ import { WarnIcon } from '../ui/icons.tsx';
 import { CodeBoxes } from './CodeBoxes.tsx';
 import { LockBlob } from './LockBlob.tsx';
 import { canRecover, useCodeRecovery } from './lock-recovery.ts';
-import { RECOVER_LINE, RECOVER_TITLE, RecoverStep } from './RecoverStep.tsx';
+import { RECOVER_TITLE, RecoverStep } from './RecoverStep.tsx';
+import { unlockCopy, type UnlockCopy } from './unlock-copy.ts';
 import {
   useCodeUnlock,
   useTouchUnlock,
   type CodeUnlock,
   type TouchUnlock,
 } from './use-lock-entry.ts';
-
-const TOUCH_FAILED = 'Touch ID didn’t unlock Spark. Try again or enter your code.';
 
 interface LockOverlayProps {
   lock: DesktopAppLock;
@@ -24,12 +23,19 @@ interface LockOverlayProps {
 }
 
 interface CodeEntryProps {
+  copy: UnlockCopy;
   entry: CodeUnlock;
   onUseTouch: (() => void) | null;
   onForgot: (() => void) | null;
 }
 
-function TouchEntry({ touch, onUseCode }: { touch: TouchUnlock; onUseCode: () => void }) {
+interface TouchEntryProps {
+  copy: UnlockCopy;
+  touch: TouchUnlock;
+  onUseCode: () => void;
+}
+
+function TouchEntry({ copy, touch, onUseCode }: TouchEntryProps) {
   const button = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     button.current?.focus();
@@ -43,10 +49,10 @@ function TouchEntry({ touch, onUseCode }: { touch: TouchUnlock; onUseCode: () =>
         disabled={touch.busy}
         onClick={() => void touch.unlock()}
       >
-        Unlock with Touch ID
+        Unlock with {copy.name}
       </button>
       <p className="lock-note" role="status">
-        {touch.failed && !touch.busy ? TOUCH_FAILED : ''}
+        {touch.failed && !touch.busy ? copy.failed : ''}
       </p>
       <button type="button" className="lock-link" onClick={onUseCode}>
         Enter code instead
@@ -55,7 +61,7 @@ function TouchEntry({ touch, onUseCode }: { touch: TouchUnlock; onUseCode: () =>
   );
 }
 
-function CodeEntry({ entry, onUseTouch, onForgot }: CodeEntryProps) {
+function CodeEntry({ copy, entry, onUseTouch, onForgot }: CodeEntryProps) {
   const ids = useId();
   const input = useRef<HTMLInputElement>(null);
   const { code, problem, misses, wait, waiting } = entry;
@@ -97,7 +103,7 @@ function CodeEntry({ entry, onUseTouch, onForgot }: CodeEntryProps) {
       </p>
       {onUseTouch && (
         <button type="button" className="lock-link" onClick={onUseTouch}>
-          Use Touch ID
+          Use {copy.name}
         </button>
       )}
       {onForgot && (
@@ -111,6 +117,7 @@ function CodeEntry({ entry, onUseTouch, onForgot }: CodeEntryProps) {
 
 export function LockOverlay({ lock, status, opened, onRecovered }: LockOverlayProps) {
   const ids = useId();
+  const copy = unlockCopy();
   const canTouch = status.touchId && status.touchIdAvailable;
   const [wantsCode, setWantsCode] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -143,19 +150,22 @@ export function LockOverlay({ lock, status, opened, onRecovered }: LockOverlayPr
         {resetting ? RECOVER_TITLE : 'Spark Outpost is locked'}
       </h1>
       <p id={`${ids}line`} className="lock-line">
-        {resetting ? RECOVER_LINE : 'Your chats keep running.'}
+        {resetting ? copy.recoverLine : 'Your chats keep running.'}
       </p>
       <div className="lock-entry-slot" inert={opened}>
-        {resetting && <RecoverStep recovery={recovery} onCancel={() => setResetting(false)} />}
+        {resetting && (
+          <RecoverStep copy={copy} recovery={recovery} onCancel={() => setResetting(false)} />
+        )}
         {!resetting && showCode && (
           <CodeEntry
+            copy={copy}
             entry={entry}
             onUseTouch={canTouch ? () => setWantsCode(false) : null}
             onForgot={canRecover(lock, status) ? () => setResetting(true) : null}
           />
         )}
         {!resetting && !showCode && (
-          <TouchEntry touch={touch} onUseCode={() => setWantsCode(true)} />
+          <TouchEntry copy={copy} touch={touch} onUseCode={() => setWantsCode(true)} />
         )}
       </div>
     </div>

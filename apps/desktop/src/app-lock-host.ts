@@ -19,10 +19,13 @@ import {
 } from './app-lock-store.ts';
 import { IPC } from './ipc-channels.ts';
 import { appLayout } from './layout.ts';
-import { ownerAuth } from './owner-auth.ts';
+import { ownerAuth, type OwnerAuthOutcome } from './owner-auth.ts';
+import { windowHandle, windowsHello, type WindowsHello } from './windows-hello.ts';
 
 const IDLE_POLL_MS = 10_000;
 const TOUCH_ID_REASON = 'unlock Spark Outpost';
+const HELLO_UNLOCK = 'Unlock Spark Outpost';
+const HELLO_RECOVERY = 'Reset the Spark Outpost privacy code';
 
 export interface AppLockHostOptions {
   userData: string;
@@ -50,6 +53,11 @@ function touchIdAvailable(): boolean {
   return process.platform === 'darwin' && systemPreferences.canPromptTouchID();
 }
 
+function askingWindow(event: IpcMainInvokeEvent): string | null {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  return window && !window.isDestroyed() ? windowHandle(window.getNativeWindowHandle()) : null;
+}
+
 function broadcast(status: AppLockStatus): void {
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) window.webContents.send(IPC.lockChanged, status);
@@ -64,6 +72,10 @@ export function startAppLock(options: AppLockHostOptions): AppLockHost {
     resourcesPath: process.resourcesPath,
   });
   const owner = ownerAuth(layout.noActivateAddon, options.log);
+  const hello =
+    process.platform === 'win32'
+      ? windowsHello({ binary: layout.winHelperBin, log: options.log })
+      : null;
   let poll: NodeJS.Timeout | null = null;
 
   const watchIdle = (on: boolean) => {
@@ -84,14 +96,42 @@ export function startAppLock(options: AppLockHostOptions): AppLockHost {
     watchIdle(watchesIdle(status));
   };
 
+  const announce = () => {
+    const status = lock.status();
+    publish(status);
+    broadcast(status);
+  };
+
+  async function refreshHello(): Promise<void> {
+    if (hello && (await hello.refresh())) announce();
+  }
+
+  async function askHello(
+    windows: WindowsHello,
+    message: string,
+    handle: string | null,
+  ): Promise<OwnerAuthOutcome> {
+    const outcome = await windows.verify(message, handle);
+    if (outcome === 'unavailable') void refreshHello();
+    return outcome;
+  }
+
   const lock = createAppLock(readAppLockRecord(file), {
     save: (record) => saveAppLockRecord(file, record),
     hash: hashCode,
     matches: codeMatches,
-    touchIdAvailable,
-    promptTouchId: () => systemPreferences.promptTouchID(TOUCH_ID_REASON),
-    ownerAuthAvailable: owner.available,
-    authenticateOwner: () => owner.authenticate(RECOVERY_REASON),
+    unlockName: hello ? 'Windows Hello' : 'Touch ID',
+    touchIdAvailable: hello ? hello.available : touchIdAvailable,
+    promptTouchId: hello
+      ? async (handle) => {
+          const outcome = await askHello(hello, HELLO_UNLOCK, handle);
+          if (outcome !== 'ok') throw new Error(`Windows Hello: ${outcome}`);
+        }
+      : () => systemPreferences.promptTouchID(TOUCH_ID_REASON),
+    ownerAuthAvailable: hello ? hello.available : owner.available,
+    authenticateOwner: hello
+      ? (handle) => askHello(hello, HELLO_RECOVERY, handle)
+      : () => owner.authenticate(RECOVERY_REASON),
     now: Date.now,
     later: (run, ms) => {
       const timer = setTimeout(run, ms);
@@ -106,19 +146,31 @@ export function startAppLock(options: AppLockHostOptions): AppLockHost {
   });
   publish(lock.status());
   appLockGate.serve(lock.lockNow);
+  void refreshHello();
 
-  const handle = <T>(channel: string, refused: T, run: (value: unknown) => T | Promise<T>) => {
+  const handle = <T>(
+    channel: string,
+    refused: T,
+    run: (value: unknown, event: IpcMainInvokeEvent) => T | Promise<T>,
+  ) => {
     ipcMain.handle(channel, (event, value: unknown) =>
-      options.trusted(event) ? run(value) : refused,
+      options.trusted(event) ? run(value, event) : refused,
     );
   };
-  handle(IPC.lockStatus, null, () => lock.status());
+  handle(IPC.lockStatus, null, () => {
+    void refreshHello();
+    return lock.status();
+  });
   handle(IPC.lockNow, undefined, () => lock.lockNow());
-  handle(IPC.lockUnlockTouchId, false, () => lock.unlockWithTouchId());
+  handle(IPC.lockUnlockTouchId, false, (_value, event) =>
+    lock.unlockWithTouchId(askingWindow(event)),
+  );
   handle(IPC.lockUnlockCode, { ok: false, retryAt: null }, (code) => lock.unlockWithCode(code));
   handle(IPC.lockSetCode, { ok: false }, (input) => lock.setCode(input));
   handle(IPC.lockSet, null, (patch) => lock.set(patch));
-  handle<Recovery>(IPC.lockRecover, { ok: false, reason: 'failed' }, () => lock.recover());
+  handle<Recovery>(IPC.lockRecover, { ok: false, reason: 'failed' }, (_value, event) =>
+    lock.recover(askingWindow(event)),
+  );
 
   const onInitiallyLocked = (event: IpcMainEvent) => {
     event.returnValue = options.trusted(event) && lock.status().locked;
@@ -136,6 +188,7 @@ export function startAppLock(options: AppLockHostOptions): AppLockHost {
       ipcMain.off(IPC.lockInitiallyLocked, onInitiallyLocked);
       watchIdle(false);
       lock.dispose();
+      hello?.dispose();
       appLockGate.serve(null);
     },
   };

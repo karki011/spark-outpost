@@ -18,13 +18,14 @@ export const START_PHASES = [
 export type StartPhase = (typeof START_PHASES)[number];
 export type StartOutcome = 'started' | 'failed' | 'ended_before_output';
 export type StartWorktree = 'created' | 'reused' | 'none';
+export type StartBackend = 'tmux' | 'host' | 'direct';
 
 export interface StartRecord {
   sessionId: string | null;
   provider: NativeTerminalProvider | null;
   outcome: StartOutcome;
   totalMs: number;
-  tmux: boolean | null;
+  backend: StartBackend | null;
   worktree: StartWorktree | null;
   phases: Partial<Record<StartPhase, number>>;
   failedIn: StartPhase | null;
@@ -33,7 +34,7 @@ export interface StartRecord {
 
 export interface StartObserver {
   begin(phase: StartPhase): () => void;
-  tmux(used: boolean): void;
+  backend(backend: StartBackend): void;
   ended(): void;
 }
 
@@ -111,13 +112,14 @@ export function startLine(record: StartRecord): string {
     `outcome=${record.outcome}`,
     `total_ms=${ms(record.totalMs)}`,
   ];
-  if (record.tmux !== null) fields.push(`tmux=${record.tmux ? 'yes' : 'no'}`);
+  if (record.backend !== null) fields.push(`backend=${record.backend}`);
   if (record.worktree) fields.push(`worktree=${record.worktree}`);
   for (const phase of START_PHASES) {
     const spent = record.phases[phase];
     if (typeof spent === 'number' && Number.isFinite(spent))
       fields.push(`${phase}_ms=${ms(spent)}`);
-    else if (phase === 'new_session' && record.tmux === false) fields.push('new_session=direct');
+    else if (phase === 'new_session' && record.backend === 'direct')
+      fields.push('new_session=direct');
   }
   if (record.outcome === 'failed') {
     if (record.failedIn && START_PHASES.includes(record.failedIn))
@@ -137,7 +139,7 @@ export function startTimer(
     provider: null,
     outcome: 'started',
     totalMs: 0,
-    tmux: null,
+    backend: null,
     worktree: null,
     phases: {},
     failedIn: null,
@@ -165,7 +167,7 @@ export function startTimer(
     return () => {
       if (!open.delete(phase)) return;
       record.phases[phase] = now() - from;
-      if (phase === 'spawn') record.tmux ??= false;
+      if (phase === 'spawn') record.backend ??= 'direct';
       if (phase === 'first_output' && returned) settle();
     };
   };
@@ -173,8 +175,8 @@ export function startTimer(
   return {
     observer: {
       begin,
-      tmux: (used) => {
-        record.tmux = used;
+      backend: (backend) => {
+        record.backend = backend;
       },
       ended: () => {
         ended = true;

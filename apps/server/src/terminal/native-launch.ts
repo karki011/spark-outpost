@@ -8,10 +8,12 @@ import type { TurnAttachment } from '../providers/provider.ts';
 import { NO_IDLE_COMPACTION } from '../agents/acp/claude-env.ts';
 import { NativeRuntimeError } from './native-control.ts';
 import { nativeHookScript } from './native-hook-script.ts';
+import { claudeGitBashEnv, nativeHookCommand } from './native-hook-command.ts';
 import { supportsMods, writeSparkMod } from './native-mod-script.ts';
 import { verifyNativeHooks, verifyNativeOption } from './native-capabilities.ts';
 import { CLAUDE_PERMISSION_HOOK_SECONDS } from './remote/approvals.ts';
 import { isNativeSessionId, nativeHookNames, type NativeProvider } from './native-hooks.ts';
+import { cliDeps, cliRun, verbatimOption } from './windows-cli.ts';
 
 export interface NativeLaunchInput {
   provider: NativeProvider;
@@ -51,10 +53,21 @@ const CHANNEL = /^[a-zA-Z0-9_-]{1,40}$/;
 const CLAUDE_THEME_FOLLOWS_TERMINAL = 'auto';
 const SPARK_RESUME_HINT = 'Resume session in Spark Outpost';
 
+async function cliVersion(command: string, env: NodeJS.ProcessEnv): Promise<string> {
+  const run = cliRun(command, ['--version'], process.platform, cliDeps(env));
+  const { stdout } = await exec(run.file, run.args, {
+    env,
+    timeout: 10_000,
+    ...verbatimOption(run),
+  });
+  return stdout.trim();
+}
+
 function claudeTerminalEnv(compactIdle: boolean): Record<string, string> {
   return {
     ...(compactIdle ? {} : NO_IDLE_COMPACTION),
     CLAUDE_CODE_RESUME_HINT_COMMAND: SPARK_RESUME_HINT,
+    ...claudeGitBashEnv(process.env),
   };
 }
 
@@ -68,10 +81,6 @@ function loopbackUrl(value: string): void {
   ) {
     throw new Error('Native session services must use an authenticated loopback URL.');
   }
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function tomlValue(value: unknown): string {
@@ -151,11 +160,7 @@ export async function prepareNativeLaunch(input: NativeLaunchInput): Promise<Nat
   loopbackUrl(input.hooks.url);
   const command = input.command ?? input.provider;
   const modeArgs = nativeModeArgs(input.provider, input.agentMode);
-  const version =
-    input.version ??
-    (
-      await exec(command, ['--version'], { env: input.env ?? process.env, timeout: 10_000 })
-    ).stdout.trim();
+  const version = input.version ?? (await cliVersion(command, input.env ?? process.env));
   const observation = (await (input.verifyHooks ?? verifyNativeHooks)(
     input.provider,
     command,
@@ -183,15 +188,13 @@ export async function prepareNativeLaunch(input: NativeLaunchInput): Promise<Nat
       sessionId: input.sessionId,
       provider: input.provider,
     });
-    const hookCommand = [
-      '/usr/bin/env',
-      'ELECTRON_RUN_AS_NODE=1',
-      process.execPath,
-      scriptPath,
-      credentialsPath,
-    ]
-      .map(shellQuote)
-      .join(' ');
+    const hookCommand = nativeHookCommand({
+      provider: input.provider,
+      platform: process.platform,
+      execPath: process.execPath,
+      script: scriptPath,
+      credentials: credentialsPath,
+    });
     const config = await providerConfiguration(input, directory, hookCommand, observation);
     const args = [...modeArgs, ...config.args];
     if (input.provider === 'claude' && observation === 'hooks' && supportsMods(version))

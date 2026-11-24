@@ -20,9 +20,9 @@ export interface HelpActions {
 
 type WindowAction = (window: BaseWindow) => void;
 
-const ZOOM_LEVEL_STEP = 0.5;
+export const ZOOM_LEVEL_STEP = 0.5;
 
-function windowContents(window: BaseWindow) {
+export function windowContents(window: BaseWindow) {
   return 'webContents' in window
     ? (window.webContents as { reload(): void; reloadIgnoringCache(): void; zoomLevel: number })
     : null;
@@ -33,7 +33,7 @@ function changeZoom(window: BaseWindow, change: (level: number) => number): void
   if (contents) contents.zoomLevel = change(contents.zoomLevel);
 }
 
-function paneFirst(
+export function paneFirst(
   actions: HelpActions,
   shortcut: MenuPaneShortcut,
   fallback: WindowAction,
@@ -74,11 +74,11 @@ function appMenu(actions: HelpActions): MenuItemConstructorOptions {
   };
 }
 
-function developerItems(actions: HelpActions): MenuItemConstructorOptions[] {
+export function developerItems(actions: HelpActions): MenuItemConstructorOptions[] {
   return actions.dev ? [{ role: 'toggleDevTools' }] : [];
 }
 
-function zoomItems(actions: HelpActions): MenuItemConstructorOptions[] {
+export function zoomItems(actions: HelpActions): MenuItemConstructorOptions[] {
   const zoomIn = paneFirst(actions, 'zoom_in', (window) =>
     changeZoom(window, (level) => level + ZOOM_LEVEL_STEP),
   );

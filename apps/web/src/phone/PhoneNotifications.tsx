@@ -5,10 +5,10 @@ import {
   NOTIFY_BLOCKED,
   NOTIFY_HOME_SCREEN,
   NOTIFY_LABEL,
-  NOTIFY_OFF,
   NOTIFY_ON,
   NOTIFY_PURPOSE,
   NOTIFY_UNSUPPORTED,
+  notifyOff,
 } from './phone-copy.ts';
 import { notificationsBlocked, pushSupport } from './push-browser.ts';
 import { useDevicePush } from './use-device-push.ts';
@@ -35,7 +35,7 @@ function NotifyToggle({ allowed }: { allowed: boolean }) {
           />
         </li>
       </ul>
-      {!allowed && <p className="ph-note">{NOTIFY_OFF}</p>}
+      {!allowed && <p className="ph-note">{notifyOff()}</p>}
       {allowed && blocked && !push.on && <p className="ph-note">{NOTIFY_BLOCKED}</p>}
       <p className="ph-note" role="status">
         {push.on && allowed ? NOTIFY_ON : ''}

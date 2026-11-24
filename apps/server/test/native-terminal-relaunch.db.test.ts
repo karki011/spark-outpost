@@ -69,7 +69,7 @@ describe('native terminal launch recovery', () => {
     await f.runtime.stop(f.conversationId);
     expect(f.startLines).toHaveLength(2);
     expect(f.startLines[1]).toMatch(
-      /^Terminal start session=[0-9a-f-]{36} provider=claude outcome=ended_before_output total_ms=\d+ tmux=no worktree=none locate_cli_ms=\d+ prepare_session_ms=\d+ worktree_ms=\d+ grant_ms=\d+ prepare_launch_ms=\d+ spawn_ms=\d+ new_session=direct$/,
+      /^Terminal start session=[0-9a-f-]{36} provider=claude outcome=ended_before_output total_ms=\d+ backend=direct worktree=none locate_cli_ms=\d+ prepare_session_ms=\d+ worktree_ms=\d+ grant_ms=\d+ prepare_launch_ms=\d+ spawn_ms=\d+ new_session=direct$/,
     );
   });
 

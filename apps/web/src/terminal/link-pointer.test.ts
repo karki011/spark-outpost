@@ -6,22 +6,28 @@ const plain = { button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altK
 
 describe('a press on a terminal link', () => {
   it('opens the pane on a plain click and the default browser with Command', () => {
-    expect(linkPress(plain, true)).toBe('pane');
-    expect(linkPress({ ...plain, metaKey: true }, true)).toBe('browser');
+    expect(linkPress(plain, true, true)).toBe('pane');
+    expect(linkPress({ ...plain, metaKey: true }, true, true)).toBe('browser');
+  });
+
+  it('opens the default browser with Ctrl on Windows and leaves the Windows key alone', () => {
+    expect(linkPress(plain, true, false)).toBe('pane');
+    expect(linkPress({ ...plain, ctrlKey: true }, true, false)).toBe('browser');
+    expect(linkPress({ ...plain, metaKey: true }, true, false)).toBe('pass');
   });
 
   it('shows the menu on a right click', () => {
-    expect(linkPress({ ...plain, button: 2 }, true)).toBe('menu');
+    expect(linkPress({ ...plain, button: 2 }, true, true)).toBe('menu');
   });
 
   it('leaves selection gestures, other buttons and presses off a link to the terminal', () => {
-    expect(linkPress({ ...plain, altKey: true }, true)).toBe('pass');
-    expect(linkPress({ ...plain, shiftKey: true }, true)).toBe('pass');
-    expect(linkPress({ ...plain, button: 2, altKey: true }, true)).toBe('pass');
-    expect(linkPress({ ...plain, button: 1 }, true)).toBe('pass');
-    expect(linkPress({ ...plain, ctrlKey: true }, true)).toBe('pass');
-    expect(linkPress(plain, false)).toBe('pass');
-    expect(linkPress({ ...plain, button: 2 }, false)).toBe('pass');
+    expect(linkPress({ ...plain, altKey: true }, true, true)).toBe('pass');
+    expect(linkPress({ ...plain, shiftKey: true }, true, true)).toBe('pass');
+    expect(linkPress({ ...plain, button: 2, altKey: true }, true, true)).toBe('pass');
+    expect(linkPress({ ...plain, button: 1 }, true, true)).toBe('pass');
+    expect(linkPress({ ...plain, ctrlKey: true }, true, true)).toBe('pass');
+    expect(linkPress(plain, false, true)).toBe('pass');
+    expect(linkPress({ ...plain, button: 2 }, false, true)).toBe('pass');
   });
 });
 
@@ -33,7 +39,7 @@ function setup(mouseTrackingMode: 'none' | 'any' = 'any') {
   document.body.append(element);
   const opener = { open: vi.fn(), menu: vi.fn(() => true) };
   const terminal = { modes: { mouseTrackingMode }, focus: vi.fn() };
-  const follower = terminalLinkFollower(opener);
+  const follower = terminalLinkFollower(opener, true);
   const stop = follower.follow(terminal as never, element);
   const reported = vi.fn();
   element.addEventListener('mousedown', reported);

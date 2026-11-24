@@ -10,16 +10,21 @@ import {
 } from '@spark-outpost/contracts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneGroup } from './PhoneSection.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
-export const CARD_STEP_UP_NOTE =
-  'Spark rules, Mac control and press-and-hold cards also ask for that device’s passkey. A device without a passkey shows Answer on your Mac.';
+function cardStepUpNote(): string {
+  return `Spark rules, Mac control and press-and-hold cards also ask for that device’s passkey. A device without a passkey shows Answer on your ${hostWords().computer}.`;
+}
+
 export const CARDS_FIXED_LINE =
   'Open-address cards, browser sign-in handoffs and changes to your company’s rules file.';
 
-const FROM_CHOICES: { value: RemoteCardAnswering['from']; label: string }[] = [
-  { value: 'mac', label: 'Mac only' },
-  { value: 'devices', label: 'Paired devices' },
-];
+function fromChoices(): { value: RemoteCardAnswering['from']; label: string }[] {
+  return [
+    { value: 'mac', label: `${hostWords().computer} only` },
+    { value: 'devices', label: 'Paired devices' },
+  ];
+}
 
 function toggled(list: readonly RemoteCardKind[], kind: RemoteCardKind, keep: boolean) {
   return keep ? [...new Set([...list, kind])] : list.filter((item) => item !== kind);
@@ -58,10 +63,10 @@ export function PhoneCardAnswering({ answering }: { answering: RemoteCardAnsweri
       as="region"
       title="Cards can be answered from"
       description="Sparks and workflows, plugins, calendar, Spark rules and Mac control cards. Other cards follow the switches above."
-      count={onMac ? 'Mac only' : 'Paired devices'}
+      count={onMac ? `${hostWords().computer} only` : 'Paired devices'}
     >
       <div className="ph-cards-from" role="radiogroup" aria-label="Cards can be answered from">
-        {FROM_CHOICES.map((choice) => (
+        {fromChoices().map((choice) => (
           <label key={choice.value} className="ph-choice">
             <input
               type="radio"
@@ -75,7 +80,7 @@ export function PhoneCardAnswering({ answering }: { answering: RemoteCardAnsweri
         ))}
       </div>
       <fieldset className="ph-cards-kinds" disabled={onMac}>
-        <legend>Keep on the Mac</legend>
+        <legend>Keep on the {hostWords().computer}</legend>
         {REMOTE_CARD_KINDS.map((kind) => (
           <label key={kind} className="ph-choice">
             <input
@@ -89,9 +94,9 @@ export function PhoneCardAnswering({ answering }: { answering: RemoteCardAnsweri
           </label>
         ))}
       </fieldset>
-      <p className="ph-note">{CARD_STEP_UP_NOTE}</p>
+      <p className="ph-note">{cardStepUpNote()}</p>
       <div className="ph-fixed">
-        <span className="ph-fixed-label">Mac only</span>
+        <span className="ph-fixed-label">{hostWords().computer} only</span>
         <span>{CARDS_FIXED_LINE}</span>
       </div>
       {change.error && (
@@ -111,7 +116,7 @@ export function PhoneCardAnsweringReadOnly({ session }: { session: RemoteSession
       <h2 id="ph-cards-title">Cards you can answer here</h2>
       <p className="ph-note">
         {labels.length === 0
-          ? 'Sparks and workflows, plugins, calendar, Spark rules and Mac control cards are answered on your Mac.'
+          ? `Sparks and workflows, plugins, calendar, Spark rules and Mac control cards are answered on your ${hostWords().computer}.`
           : `${labels.join(', ')} cards can be answered here.`}{' '}
         {session.passkey
           ? 'Spark rules, Mac control and press-and-hold cards ask for this device’s passkey.'

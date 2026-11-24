@@ -6,6 +6,7 @@ import { sparkRulesApi, sparkRulesKey } from '../api/spark-rules.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { WarnIcon } from '../ui/icons.tsx';
 import { RuleDiffList } from '../chat/approvals/RulesEditFacts.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 export const OUTSIDE_TITLE = 'Rules file changed outside Spark';
 const OUTSIDE_TEXT =
@@ -36,7 +37,7 @@ export function RulesOutsideNotice({ change }: { change: OutsideChangeView }) {
       </p>
       <p className="rules-outside-text">{OUTSIDE_TEXT}</p>
       {remote ? (
-        <p className="rules-outside-text">Review it on your Mac.</p>
+        <p className="rules-outside-text">Review it on your {hostWords().computer}.</p>
       ) : open ? (
         <>
           <ChangeList change={change} />

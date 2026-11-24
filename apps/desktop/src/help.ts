@@ -20,7 +20,8 @@ import {
   type DiagnosticsExport,
 } from '@spark-outpost/contracts';
 import { appLockGate } from './app-lock-gate.ts';
-import { appMenuTemplate, type HelpActions } from './help-menu.ts';
+import type { HelpActions } from './help-menu.ts';
+import { menuTemplateFor } from './windows-menu.ts';
 import { IPC } from './ipc-channels.ts';
 import { startSettingsWindow } from './settings-window.ts';
 import { openRulesFile, userRulesFile } from './spark-rules-file.ts';
@@ -152,7 +153,7 @@ export function startHelp(options: HelpOptions): Help {
   const buildMenu = () =>
     Menu.setApplicationMenu(
       Menu.buildFromTemplate(
-        appMenuTemplate({
+        menuTemplateFor(process.platform, {
           dev: !app.isPackaged,
           sidebarShown,
           openSettings: settingsWindow.show,

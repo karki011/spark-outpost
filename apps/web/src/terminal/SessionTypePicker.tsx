@@ -1,7 +1,6 @@
 import type { NativeTerminalProvider, TrackedTerminalProvider } from '@spark-outpost/contracts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
-import { onWindows } from '../desktop/desktop-bridge.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import './native-terminal.css';
 
@@ -24,7 +23,7 @@ export function SessionTypePicker({
   agent?: boolean;
 }) {
   const { remote } = useRemoteClient();
-  if (remote || onWindows()) return null;
+  if (remote) return null;
   return (
     <fieldset className="session-choice" disabled={disabled} aria-label="New session">
       <Segmented

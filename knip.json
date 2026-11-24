@@ -23,7 +23,11 @@
       "ignore": ["scripts/bench/fixture/**"]
     },
     "apps/server": {
-      "entry": ["test/fake-*.ts", "test/echo-mcp-server.mjs"],
+      "entry": [
+        "test/fake-*.ts",
+        "test/echo-mcp-server.mjs",
+        "src/terminal/session-host/host-entry.ts"
+      ],
       "project": ["src/**/*.ts", "test/**/*.{ts,mjs}"]
     },
     "apps/web": {

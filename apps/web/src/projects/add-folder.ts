@@ -1,6 +1,7 @@
 import type { Project } from '@spark-outpost/contracts';
-import { PHONE_SWITCH_OFF } from '../phone/use-remote-client.ts';
+import { phoneSwitchOff } from '../phone/use-remote-client.ts';
 import type { PickerAction } from '../ui/ChoicePicker.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 export const ADD_FOLDER_LABEL = 'Add folder…';
 export const CLONE_LABEL = 'Clone a repository…';
@@ -17,10 +18,11 @@ export function defaultFolderPath(projects: readonly Project[]): string | null {
   return slash > 0 ? newest.rootPath.slice(0, slash) : null;
 }
 
-const ADD_NOTES: Record<FolderPlace, string> = {
-  'this-mac': 'Pick or make a folder on this Mac',
-  remote: 'Pick or make a folder on your Mac',
-};
+function addNote(place: FolderPlace): string {
+  return place === 'remote'
+    ? `Pick or make a folder on your ${hostWords().computer}`
+    : `Pick or make a folder on this ${hostWords().computer}`;
+}
 
 export interface FolderActionHandlers {
   place: FolderPlace;
@@ -36,19 +38,21 @@ export function folderActions({
   onClone,
 }: FolderActionHandlers): PickerAction[] {
   const cloneNote =
-    place === 'remote' ? 'Spark clones it on your Mac' : 'Spark clones it on this Mac';
+    place === 'remote'
+      ? `Spark clones it on your ${hostWords().computer}`
+      : `Spark clones it on this ${hostWords().computer}`;
   return [
     {
       id: 'add-folder',
       label: ADD_FOLDER_LABEL,
-      description: allowed ? ADD_NOTES[place] : PHONE_SWITCH_OFF,
+      description: allowed ? addNote(place) : phoneSwitchOff(),
       disabled: !allowed,
       onSelect: onAddFolder,
     },
     {
       id: 'clone',
       label: CLONE_LABEL,
-      description: allowed ? cloneNote : PHONE_SWITCH_OFF,
+      description: allowed ? cloneNote : phoneSwitchOff(),
       disabled: !allowed,
       onSelect: onClone,
     },

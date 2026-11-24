@@ -32,7 +32,9 @@ describe('appLayout', () => {
           voiceBin: '/repo/.local/voice/arm64/spark-voice',
           voiceModels: '/repo/.local/voice/arm64/models',
           noActivateAddon: '/repo/.local/no-activate/arm64/no-activate.node',
+          winHelperBin: '/repo/.local/win-helper/arm64/spark-win-helper.exe',
           googleClientFile: '/repo/.local/google-oauth-client.json',
+          microsoftClientFile: '/repo/.local/microsoft-oauth-client.json',
           slackClientIdFile: '/repo/.local/slack-client-id',
         },
         path.resolve,
@@ -61,7 +63,10 @@ describe('appLayout', () => {
         voiceModels: '/Applications/Spark Outpost.app/Contents/Resources/voice/models',
         noActivateAddon:
           '/Applications/Spark Outpost.app/Contents/Resources/no-activate/no-activate.node',
+        winHelperBin:
+          '/Applications/Spark Outpost.app/Contents/Resources/win-helper/spark-win-helper.exe',
         googleClientFile: null,
+        microsoftClientFile: null,
         slackClientIdFile: null,
       }),
     );

@@ -3,7 +3,7 @@ import { GIT_CONFIG_ASK_RULE, agentDefinitions } from '../src/agents/acp/agents.
 import { CLAUDE_GATED_ASK_RULES } from '../src/agents/acp/claude-tools.ts';
 import { decide, NO_RUN_RULES, type ApprovalRequest } from '../src/approvals/decide.ts';
 import { railCrossings } from '../src/approvals/rail-crossings.ts';
-import { protectedPath } from '../src/projects/path-policy.ts';
+import { namesFoldCase, protectedPath } from '../src/projects/path-policy.ts';
 import { asksBeforeEditing, sessionAskRules } from './fake-acp-floor.ts';
 import { asksBeforeRunning } from './fake-acp-floor-commands.ts';
 
@@ -58,7 +58,7 @@ describe('the ask rules Spark gives a Claude session that can change files', () 
   it('match no ordinary file, plan file or worktree file', () => {
     const rules = doRules();
     for (const relative of ORDINARY) {
-      const folded = process.platform === 'win32' && relative === 'docs/agents.md';
+      const folded = namesFoldCase() && relative === 'docs/agents.md';
       expect([relative, protectedPath(relative)]).toEqual([
         relative,
         folded ? 'instructions' : null,

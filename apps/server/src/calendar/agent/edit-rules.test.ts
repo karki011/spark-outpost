@@ -3,6 +3,7 @@ import type { CalendarChoice, CalendarEventFacts } from '@spark-outpost/contract
 import {
   completeFields,
   editRefusal,
+  othersRefusal,
   factsAfter,
   floorReasons,
   isSynced,
@@ -45,7 +46,7 @@ const MEETING: CalendarEventFacts = {
 
 describe('who may change a calendar', () => {
   it('refuses a calendar without Agents can edit, and a read-only one', () => {
-    const facts = { googleCanEdit: true, span: 'this' as const };
+    const facts = { cloudCanEdit: true, span: 'this' as const };
     expect(editRefusal({ choice: choice({ agentsEdit: false }), ...facts })).toContain(
       'Agents can edit',
     );
@@ -55,13 +56,27 @@ describe('who may change a calendar', () => {
 
   it('needs the Google editing grant and changes one Google occurrence at a time', () => {
     const google = choice({ sourceKind: 'google', calendarId: 'google:a:me@example.com' });
-    expect(editRefusal({ choice: google, googleCanEdit: false, span: 'this' })).toContain(
+    expect(editRefusal({ choice: google, cloudCanEdit: false, span: 'this' })).toContain(
       'allow it in Google',
     );
-    expect(editRefusal({ choice: google, googleCanEdit: true, span: 'future' })).toContain(
+    expect(editRefusal({ choice: google, cloudCanEdit: true, span: 'future' })).toContain(
       'one occurrence',
     );
-    expect(editRefusal({ choice: google, googleCanEdit: true, span: 'this' })).toBeNull();
+    expect(editRefusal({ choice: google, cloudCanEdit: true, span: 'this' })).toBeNull();
+  });
+
+  it('holds Microsoft calendars to the grant, one occurrence and no meetings with others', () => {
+    const microsoft = choice({ sourceKind: 'microsoft', calendarId: 'microsoft:a:AAMk' });
+    expect(editRefusal({ choice: microsoft, cloudCanEdit: false, span: 'this' })).toContain(
+      'allow it in Microsoft',
+    );
+    expect(editRefusal({ choice: microsoft, cloudCanEdit: true, span: 'future' })).toContain(
+      'Outlook',
+    );
+    expect(editRefusal({ choice: microsoft, cloudCanEdit: true, span: 'this' })).toBeNull();
+    expect(othersRefusal(microsoft, 1)).toContain('tells attendees');
+    expect(othersRefusal(microsoft, 0)).toBeNull();
+    expect(othersRefusal(choice({ sourceKind: 'google' }), 3)).toBeNull();
   });
 });
 

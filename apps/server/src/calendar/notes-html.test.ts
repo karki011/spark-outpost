@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { htmlNotesText, looksLikeHtml } from './notes-html.ts';
-import { notesText } from './google/map.ts';
+import { notesText } from './cloud/notes.ts';
 import { splitNotes } from './notes-text.ts';
 
 const STANDUP =

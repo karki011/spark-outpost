@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { notesSnippet } from './google/map.ts';
+import { notesSnippet } from './cloud/notes.ts';
 import { linkFreeSnippet } from './snippet.ts';
 
 describe('the notes snippet', () => {

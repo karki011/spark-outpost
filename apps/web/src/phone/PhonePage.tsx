@@ -9,6 +9,7 @@ import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { MacPhonePage } from './MacPhonePage.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { RemotePhonePage } from './RemotePhonePage.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 export function PhonePage() {
   const session = useQuery({ queryKey: phoneKeys.session, queryFn: phoneApi.session });
@@ -20,7 +21,7 @@ export function PhonePage() {
             <h1 id="ph-title">Remote control</h1>
             <p>
               Use Spark Outpost from another device while the work stays on{' '}
-              {session.data?.remote ? 'your' : 'this'} Mac.
+              {session.data?.remote ? 'your' : 'this'} {hostWords().computer}.
             </p>
           </header>
           <QueryWait query={session} what="remote control">

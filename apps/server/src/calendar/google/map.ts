@@ -1,21 +1,18 @@
 import {
   CALENDAR_ATTENDEES_MAX,
-  CALENDAR_NOTE_LINKS_MAX,
   GOOGLE_EVENT_ID_PREFIX,
   type CalendarMyStatus,
   type HelperCalendar,
   type HelperEvent,
 } from '@spark-outpost/contracts';
 import type { Invitee } from '../people.ts';
-import { decodeEntities, htmlNotesText } from '../notes-html.ts';
-import { linkFreeSnippet } from '../snippet.ts';
+import { noteLinks } from '../cloud/notes.ts';
 import type { GoogleCalendarEntry, GoogleEvent } from './api.ts';
 
 const DEFAULT_COLOR = '#4285f4';
 const ID_MAX = 300;
 const EVENT_ID_MAX = 500;
 const LINK_MAX = 2_000;
-const NOTES_MAX = 20_000;
 const HTML_LINK_HOSTS = new Set(['www.google.com', 'calendar.google.com']);
 
 export const googleSourceId = (accountId: string) => `google:${accountId}`;
@@ -78,25 +75,6 @@ const RESPONSE: Record<string, CalendarMyStatus> = {
   tentative: 'tentative',
   needsAction: 'pending',
 };
-
-export function notesText(description: string | undefined): string {
-  if (!description) return '';
-  return htmlNotesText(description).slice(0, NOTES_MAX);
-}
-
-export function notesSnippet(description: string | undefined): string {
-  if (!description) return '';
-  return linkFreeSnippet(htmlNotesText(description));
-}
-
-export function noteLinks(description: string | undefined): string[] {
-  if (!description) return [];
-  const decoded = decodeEntities(description);
-  const found = decoded.match(/https:\/\/[^\s"'<>()]+/g) ?? [];
-  return [...new Set(found)]
-    .filter((link) => link.length <= LINK_MAX)
-    .slice(0, CALENDAR_NOTE_LINKS_MAX);
-}
 
 function meetingUrl(event: GoogleEvent): string | null {
   const video = event.conferenceData?.entryPoints?.find(

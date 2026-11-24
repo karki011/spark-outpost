@@ -1,7 +1,8 @@
 import './island-height-setting.css';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ISLAND_HEIGHT_RANGE } from '@spark-outpost/contracts';
-import type { CompanionStatus } from '../desktop/desktop-bridge.ts';
+import { onWindows, type CompanionStatus } from '../desktop/desktop-bridge.ts';
+import { hostWords } from '../desktop/host-words.ts';
 import { SettingRow } from './SettingRow.tsx';
 
 export const ISLAND_HEIGHT_LABEL = 'Spark Island height';
@@ -18,6 +19,15 @@ const ADJUST_KEYS = new Set([
 
 function heightLabel(value: number): string {
   return value === 0 ? 'Default' : `${Math.abs(value)} px ${value < 0 ? 'higher' : 'lower'}`;
+}
+
+export function heightHint(outdated: boolean, previews: boolean): string {
+  if (outdated) return `Update the ${hostWords().app} to adjust the height.`;
+  if (onWindows())
+    return previews ? 'Moves the resting blob.' : 'Moves the resting blob. Release to apply.';
+  return previews
+    ? 'Moves the resting blob. Open panels stay clear of the notch.'
+    : 'Moves the resting blob. Release to apply; open panels stay clear of the notch.';
 }
 
 export function IslandHeightSetting({
@@ -100,14 +110,7 @@ export function IslandHeightSetting({
       hintId={hintId}
       doc={{ page: 'desktop-companion', heading: 'turn-it-on-and-size-it' }}
       disabled={disabled}
-      hint={
-        error ??
-        (!onChange
-          ? 'Update the Mac app to adjust the height.'
-          : onPreview
-            ? 'Moves the resting blob. Open panels stay clear of the notch.'
-            : 'Moves the resting blob. Release to apply; open panels stay clear of the notch.')
-      }
+      hint={error ?? heightHint(!onChange, Boolean(onPreview))}
     >
       <div className="island-height">
         <div className="island-height-range">

@@ -50,6 +50,21 @@ describe('approvalRequestFrom', () => {
     expect(asked(`'git push --force origin main'`)).toBe('git push --force origin main');
   });
 
+  it('keeps the command exactly as the agent sent it, or none for a title', () => {
+    const sent = (rawInput: unknown) =>
+      approvalRequestFrom(
+        {
+          sessionId: 's',
+          toolCall: { toolCallId: 'a', title: 'git push', kind: 'execute', rawInput },
+          options,
+        },
+        context,
+      ).sentCommand;
+    expect(sent({ command: `"Remove-Item C:\\Users\\me"` })).toBe(`"Remove-Item C:\\Users\\me"`);
+    expect(sent({ command: ['git', 'status'] })).toBe('git status');
+    expect(sent({})).toBeNull();
+  });
+
   it('leaves every other command as the agent sent it', () => {
     for (const command of [
       'npm test',

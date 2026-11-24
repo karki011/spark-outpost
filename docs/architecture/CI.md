@@ -24,7 +24,7 @@ GitHub Actions runs `.github/workflows/ci.yml` on demand (`workflow_dispatch`, A
 
 ## Windows
 
-`.github/workflows/windows.yml` is a separate workflow for the Windows port (`docs/architecture/WINDOWS_PLAN.md`). It runs by hand, and on a pull request that changes it or its scripts. It is not part of `ci-ok`.
+`.github/workflows/windows.yml` is a separate workflow for the Windows port (`docs/architecture/WINDOWS_PLAN.md`). It runs by hand, and on a pull request that changes it, its scripts, the Terminal session host or the Windows Terminal session pieces (`windows-cli`, `native-hook-command`, `chat-port-windows`). It is not part of `ci-ok`.
 
 On `windows-2025` it runs `scripts/windows-smoke.ts`, which checks:
 
@@ -36,7 +36,7 @@ On `windows-2025` it runs `scripts/windows-smoke.ts`, which checks:
 - Git Bash is present;
 - the Claude and Codex ACP adapters answer `initialize`.
 
-It then runs the unit tests with `continue-on-error`, writes the failing files to the job summary through `scripts/vitest-summary.ts`, and uploads `vitest-windows.json` as `windows-unit-report`, kept 14 days. Run the smoke script locally with `pnpm exec tsx scripts/windows-smoke.ts`.
+It then runs the session host tests (`apps/server/src/terminal/session-host`, a real host and a real ConPTY) and the Windows Terminal session tests (an npm shim run directly and in a ConPTY, a batch file through `cmd.exe`, Claude's hook command in Git Bash and Codex's through `cmd /C`, the netstat reader) as a step that fails the job, and the unit tests with `continue-on-error`, writes the failing files to the job summary through `scripts/vitest-summary.ts`, and uploads `vitest-windows.json` as `windows-unit-report`, kept 14 days. Run the smoke script locally with `pnpm exec tsx scripts/windows-smoke.ts`.
 
 ## Minutes
 

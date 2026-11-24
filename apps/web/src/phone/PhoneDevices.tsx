@@ -5,6 +5,7 @@ import { DeviceRow } from './DeviceRow.tsx';
 import { shortDate } from './phone-copy.ts';
 import { PhoneSection } from './PhoneSection.tsx';
 import { SwitchRow } from './PhoneSwitches.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 const FRESH_SLACK_MS = 5000;
 
@@ -59,8 +60,9 @@ function PasskeySwitch({ allowed }: { allowed: boolean }) {
       </ul>
       <p className="ph-note">
         A paired device can save a passkey and use it to sign in again in another browser, without
-        coming back to this Mac. A passkey never pairs a new device. If this Mac&apos;s Tailscale
-        name changes, saved passkeys stop matching and each device pairs again.
+        coming back to this {hostWords().computer}. A passkey never pairs a new device. If this{' '}
+        {hostWords().computer}&apos;s Tailscale name changes, saved passkeys stop matching and each
+        device pairs again.
       </p>
     </div>
   );

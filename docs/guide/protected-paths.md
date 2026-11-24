@@ -15,12 +15,12 @@ With no [rules](#spark-rules), the default, the mode decides all of this but out
 | **Secret files**             | [Below](#secret-files)                                                                                                                   | Claude refuses changes, even in **Bypass permissions**; Codex and commands ask. Reads follow your mode, logged by path. |
 | **Files in `.sparkignore`**  | Anything you [list](sparkignore.md)                                                                                                      | Reading asks too.                                                                                                       |
 | **Agent instruction files**  | `AGENTS.md`, `CLAUDE.md` at any depth, `.github/copilot-instructions.md`, `.agents/`, `.claude/`, `.codex/`, `.cursor/rules/`, `.spark/` | **Allow once** or **Allow for this chat**.                                                                              |
-| **Git hooks and config**     | `.git/hooks/*`, `.git/config`, `git config` setting a value, `--global` too                                                              | Hold to confirm, in a worktree too. Other `.git` files can't change.                                                    |
+| **Git hooks and config**     | Writes into `.git/hooks`, `.git/config`, deleting `.git`, `git config` writes, `--global`                                                | Hold to confirm, in worktrees too. Other `.git` files can't change.                                                     |
 | **Outside the linked repos** | Changes or deletes outside the project                                                                                                   | Asks; **Allow for this session** covers later changes, not deletes. Reads, `/tmp`: your mode.                           |
 | **Force pushes**             | `git push --force-with-lease` to a named, non-default branch                                                                             | Hold to confirm; no "always" option. Claude can't, even in **Bypass permissions**.                                      |
 | **Sending a secret value**   | A push, `gh` upload, or site address or text holding a secret file's value                                                               | Hold to confirm, naming the file.                                                                                       |
 
-On Windows, any letter case matches.
+Windows and macOS match any case.
 
 ![The Change agent instructions card with Allow once, Allow for this chat and Deny](images/approvals-instructions-light.png)
 

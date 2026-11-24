@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client.ts';
+import { hostWords } from '../../desktop/host-words.ts';
 import { wakeHelp } from './connection-copy.ts';
 import { markConnectionRestored } from './connection-store.ts';
 import { rememberedRemoteClient } from './remote-hint.ts';
@@ -11,7 +12,7 @@ import './connection.css';
 function remoteNote(failedAttempts: number): string {
   return (
     wakeHelp('unreachable', true, failedAttempts) ||
-    "Can't reach your Mac. It may be asleep or off Tailscale."
+    `Can't reach your ${hostWords().computer}. It may be asleep or off Tailscale.`
   );
 }
 
@@ -29,7 +30,7 @@ export function ReconnectBanner() {
     <div className={remote ? 'reconnect remote' : 'reconnect'} style={anchor}>
       <span className="sr-only" role="status">
         {remote
-          ? "Can't reach your Mac. Reconnecting."
+          ? `Can't reach your ${hostWords().computer}. Reconnecting.`
           : 'Lost the connection to the server. Reconnecting.'}
       </span>
       <PanicScout fixing={retry.retrying} />

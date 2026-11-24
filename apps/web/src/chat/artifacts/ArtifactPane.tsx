@@ -10,7 +10,7 @@ import {
   type ArtifactView,
 } from '@spark-outpost/contracts';
 import { request } from '../../api/client.ts';
-import { PHONE_SWITCH_OFF, useRemoteClient } from '../../phone/use-remote-client.ts';
+import { phoneSwitchOff, useRemoteClient } from '../../phone/use-remote-client.ts';
 import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { ExportButton } from '../../ui/ExportButton.tsx';
@@ -115,7 +115,7 @@ export function ArtifactPane({ page, choice, lead, trail }: ArtifactPaneProps) {
       )}
       <div className="art-body">
         {switchedOff ? (
-          <p className="art-note">{PHONE_SWITCH_OFF}</p>
+          <p className="art-note">{phoneSwitchOff()}</p>
         ) : view.data ? (
           <ArtifactBody view={view.data} />
         ) : (

@@ -14,7 +14,7 @@ import { ToolButton } from '../browser/ToolButton.tsx';
 import { PanelLeftIcon, SIDEBAR_TOOL_KEYS } from '../conversations/sidebar-layout.tsx';
 import { CommentIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { keysText, NEW_CHAT_KEYS } from '../ui/Keys.tsx';
-import { MAC } from '../ui/shortcuts.ts';
+import { MAC, shortcutText } from '../ui/shortcuts.ts';
 import { ProfileBadge } from './ProfileSwitch.tsx';
 import { SplitButton } from './SplitButton.tsx';
 import { ViewSelect } from './ViewSelect.tsx';
@@ -135,7 +135,7 @@ export function ViewBar({
         onNewPage={onNewSplitPage}
       />
       <ToolButton
-        label="Open developer tools (⌥⌘I)"
+        label={`Open developer tools (${shortcutText(['alt', 'mod', 'I'])})`}
         disabled={blank}
         onClick={() => tab && sendViewCommand(profile, { command: 'devtools', tabId: tab.id })}
       >

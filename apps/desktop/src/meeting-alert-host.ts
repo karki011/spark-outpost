@@ -16,7 +16,7 @@ import { appLockGate } from './app-lock-gate.ts';
 import { hourCycleArgs } from './hour-cycle-arg.ts';
 import { systemHourCycle } from './hour-cycle.ts';
 import type { Point } from './island-geometry.ts';
-import { ISLAND_LEVEL } from './island-options.ts';
+import { islandLevel } from './island-platform.ts';
 import { IPC } from './ipc-channels.ts';
 import type { MeetingNotifier, NoticeChoice } from './meeting-notification.ts';
 import type { PreventActivation } from './no-activate.ts';
@@ -78,7 +78,7 @@ function overlayWindow(preload: string): BrowserWindow {
       additionalArguments: hourCycleArgs(systemHourCycle()),
     },
   });
-  window.setAlwaysOnTop(true, ISLAND_LEVEL);
+  window.setAlwaysOnTop(true, islandLevel(process.platform));
   window.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true,
     skipTransformProcessType: true,

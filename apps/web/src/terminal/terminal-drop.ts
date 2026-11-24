@@ -1,10 +1,11 @@
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 export function droppedPathText(files: File[], pathForFile: (file: File) => string | null): string {
   const paths = files.map((file) => {
     const path = pathForFile(file);
     if (!path?.startsWith('/'))
-      throw new Error('Drop files and folders in the Mac app to insert their paths.');
+      throw new Error(`Drop files and folders in the ${hostWords().app} to insert their paths.`);
     if (
       Array.from(path).some(
         (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,

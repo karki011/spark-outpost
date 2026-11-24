@@ -11,7 +11,7 @@ import {
 } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../../api/setup.ts';
 import { useStickToBottom } from '../../chat/use-stick-to-bottom.ts';
-import { PHONE_SWITCH_OFF, useRemoteClient } from '../../phone/use-remote-client.ts';
+import { phoneSwitchOff, useRemoteClient } from '../../phone/use-remote-client.ts';
 import { LiveElapsed } from '../../ui/LiveElapsed.tsx';
 import { QueryWait } from '../../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../../ui/loading/Skeleton.tsx';
@@ -20,6 +20,7 @@ import { RemoteTerminalApproval } from './RemoteTerminalApproval.tsx';
 import { RemoteTerminalComposer } from './RemoteTerminalComposer.tsx';
 import { RemoteTerminalItems } from './RemoteTerminalItems.tsx';
 import './remote-terminal.css';
+import { hostWords } from '../../desktop/host-words.ts';
 
 const LIVE_REFRESH_MS = 10_000;
 const STOPPED_REFRESH_MS = 30_000;
@@ -29,13 +30,14 @@ function failure(error: unknown): string {
 }
 
 function blockedReason(view: TerminalRemoteView): string | null {
-  if (!view.running) return 'This session isn’t running. Start it again on your Mac.';
+  if (!view.running)
+    return `This session isn’t running. Start it again on your ${hostWords().computer}.`;
   if (!isTrackedTerminalProvider(view.provider)) return untrackedTerminalRefusal(view.provider);
   if (view.approval) return 'Answer the agent first, then send your message.';
   if (view.state === 'waiting_for_permission')
-    return 'The agent is waiting for permission. Answer it on your Mac.';
+    return `The agent is waiting for permission. Answer it on your ${hostWords().computer}.`;
   if (view.state === 'waiting_for_input')
-    return 'The agent is asking a question. Answer it on your Mac.';
+    return `The agent is asking a question. Answer it on your ${hostWords().computer}.`;
   return null;
 }
 
@@ -44,9 +46,9 @@ export function RemoteTerminalView({ chat }: { chat: ConversationSummary }) {
   if (!allows('terminal'))
     return (
       <section className="native-workspace remote">
-        <p>Open this Terminal session on your Mac.</p>
+        <p>Open this Terminal session on your {hostWords().computer}.</p>
         <p className="rt-note">
-          {PHONE_SWITCH_OFF}: following, typing in and stopping Terminal sessions.
+          {phoneSwitchOff()}: following, typing in and stopping Terminal sessions.
         </p>
       </section>
     );

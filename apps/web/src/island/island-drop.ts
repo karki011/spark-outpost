@@ -1,5 +1,6 @@
 import { isSecretFileName } from '@spark-outpost/contracts';
 import { classifyFile } from '../api/attachments.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 export type DropKind = 'image' | 'file' | 'folder';
 
@@ -61,7 +62,9 @@ export function sortDrop(
   });
   const notes = [
     secrets.length > 0 ? `Skipped ${secrets.join(', ')}: Spark never reads secret files.` : null,
-    homeless.length > 0 ? 'Drop folders in the Mac app to link them as a project.' : null,
+    homeless.length > 0
+      ? `Drop folders in the ${hostWords().app} to link them as a project.`
+      : null,
   ].filter((note): note is string => note !== null);
   return {
     files: files.filter(

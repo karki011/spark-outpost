@@ -4,7 +4,7 @@ import { connect, createServer, type Socket } from 'node:net';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 import { setTimeout as delay } from 'node:timers/promises';
-import { STOP_KEEPING_TERMINALS } from '@spark-outpost/contracts';
+import { STOP_ENDING_TERMINALS, STOP_KEEPING_TERMINALS } from '@spark-outpost/contracts';
 import { startDatabase, type Database } from './postgres.ts';
 import { descendantsOf, isAlive, processTable } from '../../server/src/terminal/process-group.ts';
 import { isBundledService, serverEntry } from './runtime-entries.ts';
@@ -68,10 +68,15 @@ function unavailable(name: string, raw: unknown) {
   });
 }
 
-function askToStop(child: ChildProcess, keepTerminals: boolean) {
-  if (keepTerminals && child.connected) {
+function askToStop(child: ChildProcess, keepTerminals: boolean, endTerminals: boolean) {
+  const message = keepTerminals
+    ? STOP_KEEPING_TERMINALS
+    : endTerminals
+      ? STOP_ENDING_TERMINALS
+      : null;
+  if (message && child.connected) {
     try {
-      child.send(STOP_KEEPING_TERMINALS);
+      child.send(message);
       return;
     } catch {
       child.kill('SIGTERM');
@@ -87,7 +92,11 @@ async function stopService(name: string, keepTerminals: boolean) {
   const descendants = service.child.pid
     ? descendantsOf(service.child.pid, await processTable())
     : [];
-  askToStop(service.child, keepTerminals && service.ownsTerminals);
+  askToStop(
+    service.child,
+    keepTerminals && service.ownsTerminals,
+    process.platform === 'win32' && service.ownsTerminals,
+  );
   const finished = await Promise.race([
     service.exited.then(() => true),
     delay(10_000, undefined, { ref: false }).then(() => false),

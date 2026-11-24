@@ -37,7 +37,7 @@ It starts in the chat's worktree, checkout or home. A busy tab asks **Hold to st
 
 A shell's alert (OSC 9, 777 or 99) shows in the chat row's tooltip until opened, silently.
 
-Listening ports, like **localhost:5173**, show in the chat's [Context rail](context-rail.md#open-a-port); select one to open it in the Browser pane (Mac).
+Listening ports, like **localhost:5173**, show in the chat's [Context rail](context-rail.md#open-a-port); select one to open in the Browser pane (Mac).
 
 ![Hold to stop a busy terminal](images/terminals-stop-light.png)
 
@@ -49,8 +49,8 @@ The read-only tab stops with **Stop turn**. Claude and Z.ai output shows when it
 
 ## Close and recover
 
-Agents survive switching chats, restarts and crashes; **Quit** stops them.
+Agents survive chat switches, restarts and crashes, Windows too; **Quit** stops them.
 
-After reboot or exit, **Resume session** restores history, not running commands; **Start again** resends the first message.
+After reboot or exit, **Resume session** restores history, not commands; **Start again** resends the first message.
 
 **Next:** [Use the browser](use-the-browser.md)

@@ -4,6 +4,7 @@ import type { Profile } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { useSettingFocus } from '../settings/setting-focus.ts';
+import { hostWords } from '../desktop/host-words.ts';
 
 export const INSTRUCTIONS_LABEL = 'Custom instructions';
 
@@ -77,7 +78,9 @@ export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
           </details>
         )}
         {remote && profile.agentInstructionsFileSet && (
-          <p className="spark-instructions-remote">An instruction file is set on your Mac.</p>
+          <p className="spark-instructions-remote">
+            An instruction file is set on your {hostWords().computer}.
+          </p>
         )}
         <div className="spark-instructions-save">
           <button type="submit" className="btn line sm" disabled={!changed}>
@@ -86,7 +89,7 @@ export function AgentInstructionsSetting({ profile }: { profile: Profile }) {
           <small role={save.isError ? 'alert' : 'status'}>
             {save.isError
               ? save.error.message
-              : 'Sent to your agent when a session starts. Files are read from this Mac.'}
+              : `Sent to your agent when a session starts. Files are read from this ${hostWords().computer}.`}
           </small>
         </div>
       </fieldset>

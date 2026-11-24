@@ -296,12 +296,11 @@ export function desktopMacControl(): DesktopMacControl | null {
   return sparkDesktop()?.macControl ?? null;
 }
 
-export const COMING_TO_WINDOWS = 'Coming to Windows';
+export function companionAvailable(): boolean {
+  const platform = sparkDesktop()?.platform;
+  return platform === 'darwin' || platform === 'win32';
+}
 
 export function onWindows(): boolean {
   return sparkDesktop()?.platform === 'win32';
-}
-
-export function companionAvailable(): boolean {
-  return sparkDesktop()?.platform === 'darwin';
 }

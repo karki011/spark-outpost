@@ -1,10 +1,13 @@
 import { useId } from 'react';
 import {
   companionAvailable,
+  onWindows,
   sparkDesktop,
   type CompanionStatus,
   type IslandAction,
 } from '../desktop/desktop-bridge.ts';
+import { hostWords } from '../desktop/host-words.ts';
+import { defaultIslandShortcuts } from '../desktop/shortcut-keys.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import { ISLAND_HEIGHT_LABEL, IslandHeightSetting } from './IslandHeightSetting.tsx';
 import { ISLAND_SIZE_LABEL, IslandSizeSetting } from './IslandSizeSetting.tsx';
@@ -16,22 +19,37 @@ import { SwitchRow } from './SwitchRow.tsx';
 const CHIMES = 'Island chimes';
 const AUTO_EXPAND = 'Open requests by themselves';
 const HIDE_IN_SHARE = 'Hide in screen sharing';
-const NOTIFY = 'Dock badge and notifications';
-const MENU_BAR = 'Show in menu bar';
+function notifyLabel(): string {
+  return `${capitalize(hostWords().taskbar)} badge and notifications`;
+}
+
+function menuBarLabel(): string {
+  return `Show in ${hostWords().tray}`;
+}
+
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
 
 function notifyHint(status: CompanionStatus): string {
+  if (onWindows()) return windowsNotifyHint(status);
   if (!status.notify) return 'Off. No Dock count, and no notification while Spark Island is off.';
   if (status.notifyBlocked)
     return 'macOS blocked the last notification. Allow Spark in System Settings → Notifications.';
   return 'The Dock icon counts chats that need you. With Spark Island off, a notification names the chat.';
 }
 
+function windowsNotifyHint(status: CompanionStatus): string {
+  if (!status.notify) return 'Off. No taskbar dot, and no notification while Spark Island is off.';
+  if (status.notifyBlocked)
+    return 'Windows blocked the last notification. Allow Spark in Settings → System → Notifications.';
+  return 'A dot on the taskbar button shows chats need you. With Spark Island off, a notification names the chat.';
+}
+
 const SHORTCUTS: { action: IslandAction; label: string; hint: string }[] = [
   { action: 'quick', label: 'Quick chat shortcut', hint: 'Opens a new chat from anywhere.' },
   { action: 'sessions', label: 'Inbox shortcut', hint: 'Opens the island inbox.' },
 ];
-
-const DEFAULTS: Record<IslandAction, string> = { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' };
 
 const SHOWN_WITH_ISLAND = [
   ISLAND_SIZE_LABEL,
@@ -42,12 +60,23 @@ const SHOWN_WITH_ISLAND = [
   CHIMES,
 ];
 
+function menuBarHint(on: boolean): string {
+  if (onWindows()) {
+    return on
+      ? 'A Spark icon in the system tray opens Spark, shows or hides Spark Island, and quits.'
+      : 'Off. Right-click Spark on the taskbar to show or hide Spark Island.';
+  }
+  return on
+    ? 'A Spark icon in the menu bar opens Spark, shows or hides Spark Island, and quits.'
+    : 'Off. Open Spark from the Dock; right-click its icon to show or hide Spark Island.';
+}
+
 export function islandRows(): string[] {
   if (!companionAvailable()) return [];
   return [
     SHOW_ISLAND_LABEL,
-    NOTIFY,
-    MENU_BAR,
+    notifyLabel(),
+    menuBarLabel(),
     ISLAND_SIZE_LABEL,
     ISLAND_HEIGHT_LABEL,
     AUTO_EXPAND,
@@ -93,7 +122,7 @@ function ShortcutSetting({
       <ShortcutPicker
         label={label}
         accelerator={accelerator}
-        isDefault={accelerator === DEFAULTS[action]}
+        isDefault={accelerator === defaultIslandShortcuts()[action]}
         describedBy={hintId}
         picker={picker}
       />
@@ -130,7 +159,7 @@ export function DesktopCompanionSetting() {
       {desktop.companion.setNotify && (
         <SwitchRow
           id={notifyId}
-          label={NOTIFY}
+          label={notifyLabel()}
           doc={{ page: 'desktop-companion', heading: 'when-spark-island-is-off' }}
           hint={notifyHint(status)}
           checked={status.notify === true}
@@ -140,13 +169,9 @@ export function DesktopCompanionSetting() {
       {desktop.companion.setMenuBar && (
         <SwitchRow
           id={menuBarId}
-          label={MENU_BAR}
+          label={menuBarLabel()}
           doc={{ page: 'desktop-companion', heading: 'turn-it-on-and-size-it' }}
-          hint={
-            status.menuBar
-              ? 'A Spark icon in the menu bar opens Spark, shows or hides Spark Island, and quits.'
-              : 'Off. Open Spark from the Dock; right-click its icon to show or hide Spark Island.'
-          }
+          hint={menuBarHint(status.menuBar === true)}
           checked={status.menuBar === true}
           onChange={(on) => void desktop.companion.setMenuBar?.(on)}
         />
@@ -185,7 +210,7 @@ export function DesktopCompanionSetting() {
               doc={{ page: 'desktop-companion', heading: 'turn-it-on-and-size-it' }}
               hint={
                 status.hideInShare
-                  ? 'Screen sharing and recordings leave Spark Island out where macOS allows it.'
+                  ? `Screen sharing and recordings leave Spark Island out where ${onWindows() ? 'Windows' : 'macOS'} allows it.`
                   : 'Off. Spark Island shows in screen sharing, recordings and screenshots.'
               }
               checked={status.hideInShare === true}
