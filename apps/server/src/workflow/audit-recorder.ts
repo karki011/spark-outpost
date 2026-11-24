@@ -1,4 +1,5 @@
 import type { ProtocolDirection } from '@spark-outpost/contracts';
+import { fitsOneEntry, textChunk, withChunkAdded, type TextChunk } from '../audit/merge-chunks.ts';
 import { createProtocolRecorder, type ProtocolEntry } from '../audit/protocol-entry.ts';
 import { redactValue } from '../audit/redact.ts';
 import {
@@ -42,6 +43,7 @@ export function createAuditRecorder(options: AuditRecorderOptions): AuditRecorde
   const protocol = createProtocolRecorder();
   const review = createReviewTracker();
   let buffer: ProtocolEntry[] = [];
+  let openChunk: (TextChunk & { entry: ProtocolEntry }) | null = null;
   let chain: Promise<void> = Promise.resolve();
   let timer: NodeJS.Timeout | null = null;
   let stopped = false;
@@ -76,8 +78,21 @@ export function createAuditRecorder(options: AuditRecorderOptions): AuditRecorde
     return chain;
   };
 
+  const continuesOpenChunk = (entry: ProtocolEntry, chunk: TextChunk | null) => {
+    if (!chunk || !openChunk || openChunk.entry !== buffer.at(-1)) return false;
+    return openChunk.key === chunk.key && fitsOneEntry(openChunk.entry, entry);
+  };
+
   const enqueue = (entry: ProtocolEntry) => {
-    buffer.push(entry);
+    const chunk = textChunk(entry);
+    if (continuesOpenChunk(entry, chunk)) {
+      const merged = withChunkAdded(openChunk!.entry, entry);
+      buffer[buffer.length - 1] = merged;
+      openChunk = { key: chunk!.key, text: openChunk!.text + chunk!.text, entry: merged };
+    } else {
+      buffer.push(entry);
+      openChunk = chunk ? { ...chunk, entry } : null;
+    }
     if (buffer.length >= batchSize) void flush();
     else timer ??= setTimeout(() => void flush(), flushMs);
   };

@@ -11,6 +11,7 @@ import { ProviderError, type ProviderTurn } from '../../providers/provider.ts';
 import { sparkFloor, type SparkFloor } from '../../spark-rules/floor-flags.ts';
 import { floorRulesNow } from '../../spark-rules/rules-store.ts';
 import { resolveUserMcp } from '../../mcp/launch.ts';
+import { together } from '../../workflow/together.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { agentEnvironment, processEnvironment } from './agent-env.ts';
 import { cliEnvironment } from './agent-cli.ts';
@@ -105,6 +106,20 @@ async function turnFloor(): Promise<SparkFloor> {
   return sparkFloor(await floorRulesNow());
 }
 
+function newScratch(): Promise<string> {
+  return mkdtemp(join(tmpdir(), 'spark-outpost-run-'));
+}
+
+async function orDiscard<Value>(work: Promise<Value>, scratch: Promise<string | null>) {
+  try {
+    return await work;
+  } catch (error) {
+    const made = await scratch.catch(() => null);
+    if (made) await rm(made, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 export async function planLaunch(
   options: AcpProviderOptions,
   turn: ProviderTurn,
@@ -114,43 +129,47 @@ export async function planLaunch(
   const linked = turn.projectRoots ?? [];
   const roots = openedRoots(definition, turn, linked);
   const browsing = roots.length > 0 && definition.readsProjectFolders;
-  const policy = browsing ? await openProject(definition, roots) : null;
   const workdir = turn.session?.workdir ?? null;
-  if (workdir) await mkdir(workdir, { recursive: true });
-  const scratch = workdir ? null : await mkdtemp(join(tmpdir(), 'spark-outpost-run-'));
+  const making = workdir ? mkdir(workdir, { recursive: true }).then(() => null) : newScratch();
+  const [policy, scratch, userMcp, own, plugins, floor] = await orDiscard(
+    together([
+      browsing ? openProject(definition, roots) : null,
+      making,
+      resolveUserMcp(turn.userMcp ?? [], options.secrets),
+      definition.repoStyle === 'codex' ? processEnvironment(options).then(codexUserMcpNames) : [],
+      definition.repoStyle === 'claude' ? prepareUserPlugins(turn.userPlugins ?? []) : null,
+      turnFloor(),
+    ]),
+    making,
+  );
   const home = workdir ?? scratch ?? tmpdir();
   const cwd = policy ? primaryRoot(policy) : home;
-  const userMcp = await resolveUserMcp(turn.userMcp ?? [], options.secrets);
-  const own =
-    definition.repoStyle === 'codex'
-      ? await codexUserMcpNames(await processEnvironment(options))
-      : [];
   const spark = sparkToolsHint(options.sparkTools, turn.sparkScope, own);
   const reserved = sparkReserved(own);
-  const plugins =
-    definition.repoStyle === 'claude' ? await prepareUserPlugins(turn.userPlugins ?? []) : null;
   const pluginMcp = plugins?.mcpServers ?? [];
-  const projectRepo =
-    policy && turn.repo
-      ? await prepareRepoSession(
-          turn.repo.filter((entry) => roots.includes(entry.root)),
-          definition.repoStyle,
-          userMcp,
-          reserved,
-          pluginMcp,
-          plugins?.skillShell === true,
-        )
-      : null;
+  const [projectRepo, rules] = await orDiscard(
+    together([
+      policy && turn.repo
+        ? prepareRepoSession(
+            turn.repo.filter((entry) => roots.includes(entry.root)),
+            definition.repoStyle,
+            userMcp,
+            reserved,
+            pluginMcp,
+            plugins?.skillShell === true,
+          )
+        : null,
+      definition.repoStyle === 'claude'
+        ? loadPermissionRules(
+            policy?.roots.map((root) => root.path) ?? [],
+            claudeConfigDir(options.env ?? process.env),
+          )
+        : NO_PERMISSION_RULES,
+    ]),
+    making,
+  );
   const mcpServers = projectRepo?.mcpServers ?? namedMcpServers([], userMcp, reserved, pluginMcp);
   const repo = withPluginSession(projectRepo, plugins, mcpServers);
-  const rules =
-    definition.repoStyle === 'claude'
-      ? await loadPermissionRules(
-          policy?.roots.map((root) => root.path) ?? [],
-          claudeConfigDir(options.env ?? process.env),
-        )
-      : NO_PERMISSION_RULES;
-  const floor = await turnFloor();
   const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
   if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));
   const stepEdits = policy !== null && turn.stepEdits === true && turn.mode !== 'do';
