@@ -23,6 +23,7 @@ export function markLetters(name: string): string {
 }
 
 export function MarkTile({ letters, size, hue, logo }: MarkTileProps) {
+  const shape = logo ? LOGO_PATHS[logo] : null;
   const shown =
     !logo && size >= LETTER_MIN_SIZE
       ? Array.from(letters)
@@ -41,9 +42,9 @@ export function MarkTile({ letters, size, hue, logo }: MarkTileProps) {
       data-letters={shown || undefined}
       aria-hidden="true"
     >
-      {logo && (
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d={LOGO_PATHS[logo]} />
+      {shape && (
+        <svg viewBox={`0 0 ${shape.box} ${shape.box}`} fill="currentColor">
+          <path d={shape.d} fillRule={shape.evenOdd ? 'evenodd' : 'nonzero'} />
         </svg>
       )}
     </span>

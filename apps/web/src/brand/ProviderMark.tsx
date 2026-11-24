@@ -4,8 +4,8 @@ import { MarkTile } from './MarkTile.tsx';
 
 const PROVIDER_MARK: Record<ConnectableId, { letters: string; hue: number; logo?: LogoName }> = {
   claude: { letters: 'C', hue: 45, logo: 'claude' },
-  codex: { letters: 'X', hue: 240 },
-  zai: { letters: 'Z', hue: 145 },
+  codex: { letters: 'X', hue: 240, logo: 'codex' },
+  zai: { letters: 'Z', hue: 145, logo: 'zai' },
   custom: { letters: 'E', hue: 300 },
   jev: { letters: 'J', hue: 340 },
 };

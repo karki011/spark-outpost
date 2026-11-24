@@ -8,8 +8,8 @@ const CONNECTOR_MARK: Record<ConnectorId, { letters: string; hue: number; logo?:
   github: { letters: 'GH', hue: 160, logo: 'github' },
   atlassian: { letters: 'At', hue: 255, logo: 'atlassian' },
   linear: { letters: 'Li', hue: 290, logo: 'linear' },
-  servicenow: { letters: 'SN', hue: 170 },
-  slack: { letters: 'Sl', hue: 10 },
+  servicenow: { letters: 'SN', hue: 170, logo: 'servicenow' },
+  slack: { letters: 'Sl', hue: 10, logo: 'slack' },
 };
 
 interface ConnectorMarkProps {
