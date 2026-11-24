@@ -7,7 +7,7 @@ import {
   type SlackConnection,
   type SlackNotifyEvent,
 } from '@spark-outpost/contracts';
-import { Switch } from '../ui/Switch.tsx';
+import { SwitchSettingRow } from '../settings/SwitchSettingRow.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { slackApi } from './slack-api.ts';
 import type { SlackSave } from './use-slack-save.ts';
@@ -109,39 +109,22 @@ export function SlackNotifySettings({
           </div>
         </>
       )}
-      <div className="tk-sync">
+      <div>
         {slackNotifyEventSchema.options.map((event) => (
-          <div key={event}>
-            <label className="tk-switch">
-              <Switch
-                size="sm"
-                label={slackNotifyLabels[event].label}
-                checked={settings.notify[event]}
-                describedBy={`${id}-${event}`}
-                onChange={(next) => save.settings.mutate({ notify: { [event]: next } })}
-              />
-              <span>{slackNotifyLabels[event].label}</span>
-            </label>
-            <p id={`${id}-${event}`} className="tk-field-help">
-              {slackNotifyLabels[event].hint}
-            </p>
-          </div>
+          <SwitchSettingRow
+            key={event}
+            label={slackNotifyLabels[event].label}
+            hint={slackNotifyLabels[event].hint}
+            checked={settings.notify[event]}
+            onChange={(next) => save.settings.mutate({ notify: { [event]: next } })}
+          />
         ))}
-        <div>
-          <label className="tk-switch">
-            <Switch
-              size="sm"
-              label="Stay quiet while I'm using Spark"
-              checked={settings.quietWhenFocused}
-              describedBy={`${id}-quiet`}
-              onChange={(next) => save.settings.mutate({ quietWhenFocused: next })}
-            />
-            <span>Stay quiet while I&rsquo;m using Spark</span>
-          </label>
-          <p id={`${id}-quiet`} className="tk-field-help">
-            Nothing is sent while the Spark window is in front.
-          </p>
-        </div>
+        <SwitchSettingRow
+          label="Stay quiet while I'm using Spark"
+          hint="Nothing is sent while the Spark window is in front."
+          checked={settings.quietWhenFocused}
+          onChange={(next) => save.settings.mutate({ quietWhenFocused: next })}
+        />
       </div>
       <figure className="sl-preview" aria-label="Notification preview">
         <figcaption>Preview</figcaption>

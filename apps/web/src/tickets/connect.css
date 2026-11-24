@@ -295,51 +295,17 @@
 }
 .tk-sync {
   display: grid;
-  gap: 10px;
+  gap: 0;
   padding: 4px 0 2px;
-}
-.tk-switch {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text);
-}
-
-.tk-switch + .tk-field-help {
-  margin: 2px 0 0 42px;
 }
 .tk-empty .tk-cform p {
   margin: 0;
 }
-.tk-set {
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-}
 .tk-set-row {
-  display: grid;
-  gap: 10px;
-  padding: 12px 14px;
+  padding-bottom: 12px;
 }
 .tk-set-row + .tk-set-row {
   border-top: 1px solid var(--line);
-}
-.tk-set-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.tk-set-text {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.tk-set-label {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
 }
 .tk-move {
   display: grid;
