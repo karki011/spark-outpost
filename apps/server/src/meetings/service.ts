@@ -163,6 +163,7 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
   }
 
   async function startSource(active: MeetingSource, meetingId: string): Promise<void> {
+    words.begin(meetingId);
     try {
       await active.start(
         meetingId,
@@ -173,6 +174,7 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
         (heard) => words.push(meetingId, heard),
       );
     } catch (error) {
+      words.end(meetingId);
       await deleteMeeting(db, workspaceId, meetingId);
       announce(meetingId);
       if (error instanceof MeetingSourceError) throw new MeetingError(503, error.message);

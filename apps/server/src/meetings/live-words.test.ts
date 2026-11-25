@@ -3,6 +3,13 @@ import type { MeetingLiveWords } from '@spark-outpost/contracts';
 import { createLiveWords } from './live-words.ts';
 
 const MEETING = 'meeting-1';
+function recording(now?: () => number) {
+  const live = createLiveWords(now);
+  live.begin(MEETING);
+  live.begin('meeting-2');
+  return live;
+}
+
 const others = (text: string, startMs = 0): MeetingLiveWords => ({
   speaker: 'others',
   text,
@@ -11,7 +18,7 @@ const others = (text: string, startMs = 0): MeetingLiveWords => ({
 
 describe('live words', () => {
   it('sends words to everyone watching that meeting and nobody else', () => {
-    const live = createLiveWords();
+    const live = recording();
     const mine = vi.fn();
     const elsewhere = vi.fn();
     live.watch(MEETING, mine, () => undefined);
@@ -23,7 +30,7 @@ describe('live words', () => {
 
   it('gives a late watcher the newest words of each speaker while they are fresh', () => {
     let now = 1_000;
-    const live = createLiveWords(() => now);
+    const live = recording(() => now);
     live.push(MEETING, others('we'));
     live.push(MEETING, others('we ship'));
     live.push(MEETING, { speaker: 'you', text: 'ok', startMs: 500 });
@@ -38,7 +45,7 @@ describe('live words', () => {
   });
 
   it('stops sending after a watcher leaves', () => {
-    const live = createLiveWords();
+    const live = recording();
     const listener = vi.fn();
     const leave = live.watch(MEETING, listener, () => undefined);
     expect(live.watchers(MEETING)).toBe(1);
@@ -48,20 +55,31 @@ describe('live words', () => {
     expect(live.watchers(MEETING)).toBe(0);
   });
 
-  it('tells watchers when the meeting ends and forgets its words', () => {
-    const live = createLiveWords();
+  it('tells watchers when the meeting ends', () => {
+    const live = recording();
     const ended = vi.fn();
-    live.push(MEETING, others('we ship'));
     live.watch(MEETING, () => undefined, ended);
     live.end(MEETING);
     expect(ended).toHaveBeenCalledOnce();
-    const late = vi.fn();
-    live.watch(MEETING, late, () => undefined);
-    expect(late).not.toHaveBeenCalled();
+  });
+
+  it('keeps nothing for a meeting that has ended or never began', () => {
+    const live = recording();
+    live.end(MEETING);
+    live.push(MEETING, others('late words'));
+    live.push('never-began', others('stray'));
+    for (const meetingId of [MEETING, 'never-began']) {
+      const listener = vi.fn();
+      const ended = vi.fn();
+      live.watch(meetingId, listener, ended);
+      expect(listener).not.toHaveBeenCalled();
+      expect(ended).toHaveBeenCalledOnce();
+      expect(live.watchers(meetingId)).toBe(0);
+    }
   });
 
   it('drops words that do not fit the contract', () => {
-    const live = createLiveWords();
+    const live = recording();
     const listener = vi.fn();
     live.watch(MEETING, listener, () => undefined);
     live.push(MEETING, { speaker: 'others', text: 'x'.repeat(5_000), startMs: 0 });

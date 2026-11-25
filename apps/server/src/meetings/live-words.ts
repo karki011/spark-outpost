@@ -8,6 +8,7 @@ import {
 export type WordsListener = (words: MeetingLiveWords) => void;
 
 export interface LiveWords {
+  begin(meetingId: string): void;
   push(meetingId: string, words: MeetingLiveWords): void;
   watch(meetingId: string, listener: WordsListener, onEnd: () => void): () => void;
   watchers(meetingId: string): number;
@@ -32,25 +33,27 @@ interface Live {
 export function createLiveWords(now: () => number = Date.now): LiveWords {
   const meetings = new Map<string, Live>();
 
-  const liveFor = (meetingId: string): Live => {
-    const known = meetings.get(meetingId);
-    if (known) return known;
-    const created: Live = { latest: new Map(), watchers: new Set() };
-    meetings.set(meetingId, created);
-    return created;
-  };
-
   return {
+    begin(meetingId) {
+      if (!meetings.has(meetingId)) {
+        meetings.set(meetingId, { latest: new Map(), watchers: new Set() });
+      }
+    },
+
     push(meetingId, words) {
+      const live = meetings.get(meetingId);
       const parsed = meetingLiveWordsSchema.safeParse(words);
-      if (!parsed.success) return;
-      const live = liveFor(meetingId);
+      if (!live || !parsed.success) return;
       live.latest.set(parsed.data.speaker, { words: parsed.data, at: now() });
       for (const watcher of live.watchers) watcher.listener(parsed.data);
     },
 
     watch(meetingId, listener, onEnd) {
-      const live = liveFor(meetingId);
+      const live = meetings.get(meetingId);
+      if (!live) {
+        onEnd();
+        return () => undefined;
+      }
       const watcher: Watcher = { listener, onEnd };
       live.watchers.add(watcher);
       for (const heard of live.latest.values()) {
