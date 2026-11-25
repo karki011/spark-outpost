@@ -1,6 +1,7 @@
 export const meetingKeys = {
   all: ['meetings'] as const,
   status: ['meetings', 'status'] as const,
+  model: ['meetings', 'model'] as const,
   lists: ['meetings', 'list'] as const,
   list: (query: string) => ['meetings', 'list', query] as const,
   detail: (id: string) => ['meetings', 'detail', id] as const,

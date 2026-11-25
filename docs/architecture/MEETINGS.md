@@ -26,7 +26,7 @@ Sources read for this design: [Kura](https://github.com/karki011/Kura) (the owne
 | Host      | `apps/desktop/src/meetings/`                  | Starts and stops a recording, forwards lines, watches for the call ending, the indicator |
 | Contracts | `packages/contracts/src/meetings.ts`          | Helper messages, `Meeting`, `MeetingLine`, `MeetingNotes`, API schemas                   |
 | Store     | `apps/server/src/meetings/`                   | Tables, routes, the notes job, the meeting tool                                          |
-| Notes job | `apps/server/src/meetings/notes.ts`           | A child run on the default provider, as the digest does                                  |
+| Notes job | `apps/server/src/meetings/notes.ts`           | A child run on the meeting model (the default provider's digest model unless set)        |
 | Tool      | `apps/server/src/spark-mcp/tools/meetings.ts` | `spark_meetings`: list, read, search. Ask Spark only at first                            |
 | UI        | `apps/web/src/meetings/`, island              | The Meetings tab, the island's Meeting tab, the start points in Calendar                 |
 
@@ -117,7 +117,7 @@ All of it is the user's own material, but none of it is the user's message: in e
 
 ## Notes
 
-At the end Spark starts a notes job: a child run on the default provider with the model the digest uses (`digestModelFor`), no tools. With no provider connected the meeting is kept and the notes card says **Connect a provider to write notes**.
+At the end Spark starts a notes job: a child run with no tools on the meeting model (`meetings/model-settings.ts`): the provider, model and effort from Settings → Notifications → **Meeting notes and questions** (`profiles.meeting_provider`, `meeting_model`, `meeting_effort`; `GET`/`PUT /api/meetings/model`, Mac only). Unset means the default provider (the first connected one when the default is disconnected) with the model and effort the digest uses (`digestModelFor`). A picked provider that was disconnected falls back to exactly that. A picked provider that is still connected stays the provider, and only a model or effort it no longer offers falls back to the digest's choice for it. A meeting's question chat is set to the picked parts once, while it has no message or run and before its question box is enabled (`use-meeting-chat-start.ts`; a per-meeting mark in local storage is written only after that succeeded, so a failed try is repeated); the composer changes it after that. Saving refuses a model or effort the provider does not offer. With no provider connected the meeting is kept and the notes card says **Connect a provider to write notes**.
 
 The transcript is cut into sections on line boundaries. Each section revises one running Markdown document (Kura's approach), so a long meeting yields one coherent page and not a stack of partial summaries:
 
@@ -243,7 +243,7 @@ Browser specs check each screen at 1280, 900 and 400 px, light and dark, with th
 | Data                           | Goes to              | When                               |
 | ------------------------------ | -------------------- | ---------------------------------- |
 | Audio                          | Nowhere              | Never                              |
-| Transcript, goal, notes, title | The default provider | When notes are written             |
+| Transcript, goal, notes, title | The meeting provider | When notes are written             |
 | Transcript, goal, notes, title | That chat's provider | When the user asks under a meeting |
 | A meeting attached to a chat   | That chat's provider | When the user sends the message    |
 

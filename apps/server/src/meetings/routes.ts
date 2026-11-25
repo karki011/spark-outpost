@@ -5,6 +5,7 @@ import {
   MEETING_LINES_PAGE,
   MEETING_LIST_PAGE,
   meetingAttachRequestSchema,
+  meetingModelSettingsSchema,
   type MeetingJoinNotes,
   meetingNotesEditSchema,
   meetingNotesVersion,
@@ -18,6 +19,7 @@ import {
 import { paramId, parseBody, parseQuery } from '../api/validation.ts';
 import { calendarConnection } from '../calendar/store.ts';
 import type { Db } from '../persistence/db.ts';
+import { meetingModelView, saveMeetingModel } from './model-settings.ts';
 import { MeetingError, type MeetingService } from './service.ts';
 import {
   attachToMeeting,
@@ -73,6 +75,15 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
 
   router.get('/meetings/status', async (_req, res) => {
     res.json(await meetings.status());
+  });
+
+  router.get('/meetings/model', async (_req, res) => {
+    res.json(await meetingModelView(db, workspaceId));
+  });
+
+  router.put('/meetings/model', async (req, res) => {
+    const settings = parseBody(meetingModelSettingsSchema, req);
+    res.json(await saveMeetingModel(db, workspaceId, settings));
   });
 
   router.get('/meetings', async (req, res) => {

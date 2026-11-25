@@ -18,6 +18,7 @@ import { useStop } from '../chat/use-stop.ts';
 import { SparkleIcon } from '../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
 import { askPresets, meetingAttachment, meetingChatId } from './meeting-ask.ts';
+import { useMeetingChatStart } from './use-meeting-chat-start.ts';
 
 interface MeetingAskProps {
   meeting: Meeting;
@@ -72,6 +73,7 @@ export function MeetingAsk({ meeting, onOpenChat }: MeetingAskProps) {
   );
   const attachments = useAttachments();
   const refresh = () => invalidateChatDetail(queryClient, chatId);
+  const chatStart = useMeetingChatStart(meeting.id, chatId, detail.data);
   const stop = useStop(chatId, detail.data, refresh);
   const running = activeRuns(detail.data).length > 0;
   const messages = detail.data?.messages ?? [];
@@ -79,6 +81,7 @@ export function MeetingAsk({ meeting, onOpenChat }: MeetingAskProps) {
 
   const send = useMutation({
     mutationFn: async ({ content, files }: Outgoing) => {
+      await chatStart.ensure();
       const note = await meetingAttachment(meeting.id);
       await api.sendMessage(chatId, crypto.randomUUID(), content, [
         note.id,
@@ -152,7 +155,7 @@ export function MeetingAsk({ meeting, onOpenChat }: MeetingAskProps) {
             key={preset.id}
             type="button"
             className="btn line sm"
-            disabled={live || !detail.data}
+            disabled={live || !detail.data || !chatStart.ready}
             onClick={() => send.mutate({ content: preset.question, files: [] })}
           >
             {preset.label}
@@ -170,7 +173,7 @@ export function MeetingAsk({ meeting, onOpenChat }: MeetingAskProps) {
         busy={running}
         stopping={stop.stopping}
         sending={send.isPending}
-        ready={Boolean(detail.data)}
+        ready={Boolean(detail.data) && chatStart.ready}
         error={send.error?.message ?? stop.error}
         attachments={attachments}
         onSend={async (content, files) => {

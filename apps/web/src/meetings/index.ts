@@ -1,3 +1,4 @@
+export { MEETING_MODEL_ROWS, MeetingModelSetting } from './MeetingModelSetting.tsx';
 export { MeetingsTab } from './MeetingsTab.tsx';
 export { RecordingBar } from './RecordingBar.tsx';
 export { TakeNotesButton } from './TakeNotesButton.tsx';
