@@ -27,6 +27,7 @@ export interface FakeShareService {
   shares: Map<string, StoredShare>;
   retired: Set<string>;
   retires: boolean;
+  uploadMs: number;
   posts: ReceivedShare[];
   answered: { method: string; id: string; status: number }[];
   deletes: { id: string; authorization: string | undefined }[];
@@ -73,6 +74,7 @@ export function fakeShareService(): FakeShareService {
     shares: new Map(),
     retired: new Set(),
     retires: true,
+    uploadMs: 0,
     posts: [],
     answered: [],
     deletes: [],
@@ -90,6 +92,9 @@ export function fakeShareService(): FakeShareService {
           send(res, status, answer, headers);
           return true;
         };
+        if (service.uploadMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, service.uploadMs));
+        }
         const custom = service.answer?.(share, origin);
         if (custom) return reply(custom.status, custom.body, custom.headers);
         if (
