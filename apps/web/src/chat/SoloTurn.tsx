@@ -359,7 +359,7 @@ export function SoloTurn({
         asks={(ids) =>
           onOpenChat && (
             <SteeredAskLines
-              steered={steered.filter((ask) => ids.includes(ask.id))}
+              steered={ids.flatMap((id) => steered.filter((ask) => ask.id === id))}
               asks={asks}
               onOpenChat={onOpenChat}
             />
