@@ -17,7 +17,7 @@ import {
   type BranchChat,
 } from './publish-step-support.ts';
 import { git, write } from './ship-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, eventually, type TestDb } from './support.ts';
 import { changesOf, driveToEnd, openChat, repliesOf } from './turn-support.ts';
 import { connectAgents, startTurnWorker } from './turn-worker.ts';
 
@@ -70,13 +70,16 @@ async function triggered(conversationId: string, edits: boolean) {
 }
 
 async function reportTurn(conversationId: string, workflowRunId: string): Promise<string> {
-  const { rows } = await t.db.query<{ id: string }>(
-    `SELECT r.id FROM workflow_runs w JOIN runs r ON r.user_message_id = w.report_message_id
-     WHERE w.id = $1 AND r.parent_run_id IS NULL`,
-    [workflowRunId],
-  );
-  await driveToEnd(t, conversationId, rows[0]!.id);
-  return rows[0]!.id;
+  const report = await eventually(async () => {
+    const { rows } = await t.db.query<{ id: string }>(
+      `SELECT r.id FROM workflow_runs w JOIN runs r ON r.user_message_id = w.report_message_id
+       WHERE w.id = $1 AND r.parent_run_id IS NULL`,
+      [workflowRunId],
+    );
+    return rows[0];
+  }, 30_000);
+  await driveToEnd(t, conversationId, report.id);
+  return report.id;
 }
 
 async function stepSaid(runId: string): Promise<string> {

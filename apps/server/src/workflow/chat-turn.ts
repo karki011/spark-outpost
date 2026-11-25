@@ -79,6 +79,7 @@ async function runWorkflowLane(start: Start, input: RunInput): Promise<void> {
   const placed = await placeChatOrStop(deps, input, append, false);
   if (!placed) return;
   const ended = await workflowTurn({ deps, lease, input: placed.input, append, control }, false);
+  await keepChatFiles(deps.db, deps.chatFolders, placed.input, lease);
   if (ended !== 'finished') await failSafely(append, new Error(NO_LANE_RUN));
 }
 
