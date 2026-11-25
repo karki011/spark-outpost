@@ -1,3 +1,4 @@
+import { workflowRunningInLane } from '../crew-flows/run-records.ts';
 import { basename } from 'node:path';
 import { builderChatScope } from '../crew-flows/builder-chat.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
@@ -77,16 +78,23 @@ async function roundRunning(db: Queryable, input: RunInput) {
   return rows[0] ?? null;
 }
 
+async function workflowRunning(db: Queryable, input: RunInput): Promise<string | null> {
+  if (input.parentRunId !== null || input.followUpLane) return null;
+  return (await workflowRunningInLane(db, input.identity.threadId))?.name ?? null;
+}
+
 export function chatTurnNoteFor(
   input: RunInput,
   facts: ChatPromptFacts,
   round: ChatTurnFacts['roundRunning'] = null,
+  workflowRunning: string | null = null,
 ): string | null {
   return chatTurnNote({
     project: facts.project,
     followUpRound: input.followUpRound === true,
     taskTurn: isTaskTurn(input),
     roundRunning: round,
+    workflowRunning,
   });
 }
 
@@ -112,14 +120,15 @@ export async function withChatPrompt<Deps extends Pick<TurnDeps, 'db' | 'provide
 ): Promise<Deps> {
   const provider = deps.providers.get(input.provider);
   if (!provider || input.assistant) return deps;
-  const [facts, round] = await Promise.all([
+  const [facts, round, workflow] = await Promise.all([
     chatPromptFacts(deps.db, input, prefs),
     roundRunning(deps.db, input),
+    workflowRunning(deps.db, input),
   ]);
   const providers = new Map(deps.providers);
   providers.set(
     input.provider,
-    sendingChatPrompt(provider, chatPrompt(facts), chatTurnNoteFor(input, facts, round)),
+    sendingChatPrompt(provider, chatPrompt(facts), chatTurnNoteFor(input, facts, round, workflow)),
   );
   return { ...deps, providers };
 }

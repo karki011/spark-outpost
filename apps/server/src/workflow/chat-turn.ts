@@ -2,6 +2,7 @@ import type { RunChanges } from '@spark-outpost/contracts';
 import { prepareTurn } from '../compaction/prepare-turn.ts';
 import { placeChatOrStop } from '../orchestration/chat-place.ts';
 import { handToSparks } from '../orchestration/spark-handoff.ts';
+import { withWorkflowReport, workflowTurn } from '../crew-flows/workflow-turn.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
 import { isWrapUp } from '../sub-chats/user-asked.ts';
 import { replyToWrapUp } from '../sub-chats/wrap-up-turn.ts';
@@ -71,6 +72,16 @@ async function runAgentCycle(
   await finishRun(append, input.identity, result, true);
 }
 
+const NO_LANE_RUN = 'This workflow run could not be found, so it did not start.';
+
+async function runWorkflowLane(start: Start, input: RunInput): Promise<void> {
+  const { deps, lease, append, control } = start;
+  const placed = await placeChatOrStop(deps, input, append, false);
+  if (!placed) return;
+  const ended = await workflowTurn({ deps, lease, input: placed.input, append, control }, false);
+  if (ended !== 'finished') await failSafely(append, new Error(NO_LANE_RUN));
+}
+
 async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): Promise<void> {
   const append = runAppender(deps.db, lease);
   const control = startControl(deps, lease);
@@ -81,6 +92,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
     input = await withChatFolder(deps.chatFolders, input);
     if (input.agentCycle) return await runAgentCycle(start, input, seen);
+    if (input.workflowLane) return await runWorkflowLane(start, input);
     input = await noteProjectMove(deps.db, input, append, deps.chatFolders);
     const placed = await placeChatOrStop(deps, input, append, false);
     if (!placed) return;
@@ -92,6 +104,7 @@ async function runTurn(deps: ChatTurnDeps, lease: Lease, hooks: ChatTurnHooks): 
       const prompted = await withChatPrompt(deps, input);
       return await replyToWrapUp(prompted, lease, input, append, control);
     }
+    input = await withWorkflowReport({ deps, lease, input, append, control });
     const handed = await handToSparks({ deps, lease, input, append, control });
     if (handed === 'finished') return;
     const ready = await readyToWork(start, handed);

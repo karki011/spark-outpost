@@ -52,7 +52,7 @@ function isActive(run: Run | undefined): run is Run {
 }
 
 function ownTurns(detail: Pick<ConversationDetail, 'runs'>): Run[] {
-  return topLevelRuns(detail).filter((run) => run.prFollowUp !== true);
+  return topLevelRuns(detail).filter((run) => run.prFollowUp !== true && run.workflowLane !== true);
 }
 
 export function activeRun(detail: ConversationDetail | undefined): Run | null {

@@ -69,6 +69,16 @@ async function triggered(conversationId: string, edits: boolean) {
   return run;
 }
 
+async function reportTurn(conversationId: string, workflowRunId: string): Promise<string> {
+  const { rows } = await t.db.query<{ id: string }>(
+    `SELECT r.id FROM workflow_runs w JOIN runs r ON r.user_message_id = w.report_message_id
+     WHERE w.id = $1 AND r.parent_run_id IS NULL`,
+    [workflowRunId],
+  );
+  await driveToEnd(t, conversationId, rows[0]!.id);
+  return rows[0]!.id;
+}
+
 async function stepSaid(runId: string): Promise<string> {
   const { rows } = await t.db.query<{ id: string }>(
     'SELECT id FROM runs WHERE parent_run_id = $1',
@@ -95,7 +105,7 @@ describe('a triggered run that may change files', { timeout: 120_000 }, () => {
     expect((await changesOf(t, run.runId!)).files).toEqual([
       { path: 'notes.txt', change: 'modified' },
     ]);
-    const [report] = await repliesOf(t, run.runId!);
+    const [report] = await repliesOf(t, await reportTurn(chat.conversationId, run.id));
     expect(report).toContain('handed to you, the chat’s main agent');
     expect(report).toContain('fix (Pip');
     expect(report).not.toContain('If the user’s message asks');
@@ -111,8 +121,9 @@ describe('a triggered run that may change files', { timeout: 120_000 }, () => {
 
     expect(await notes(chat)).toBe('x');
     expect(git(chat.repo.root, 'rev-parse', 'HEAD')).toBe(head);
-    expect(await promptsOf(t, run.runId!)).toBe(1);
-    const [report] = await repliesOf(t, run.runId!);
+    const reported = await reportTurn(chat.conversationId, run.id);
+    expect(await promptsOf(t, reported)).toBe(1);
+    const [report] = await repliesOf(t, reported);
     expect(report).toContain('This turn does not push or open a pull request');
   });
 

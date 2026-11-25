@@ -184,6 +184,7 @@ export const workflowRunSchema = z.object({
   conversationId: z.uuid().nullable(),
   pull: z.string().nullable().default(null),
   runId: z.uuid().nullable(),
+  reportMessageId: z.uuid().nullable().optional(),
   stoppedBy: runStepIdSchema.nullable(),
   steps: z.array(workflowRunStepSchema),
   spend: workflowRunSpendSchema,

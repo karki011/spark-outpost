@@ -129,6 +129,7 @@ interface RunRow {
   continues: boolean;
   stopped_by: string | null;
   pull_id: string | null;
+  report_message_id: string | null;
   started_at: Date;
   finished_at: Date | null;
 }
@@ -189,6 +190,7 @@ function toRun(row: RunRow, steps: readonly StepRow[], spend: readonly SpendRow[
     conversationId: row.conversation_id,
     pull: row.pull_id,
     runId: row.run_id ?? row.gates_run_id,
+    reportMessageId: row.report_message_id,
     stoppedBy: row.stopped_by,
     steps: steps.filter((step) => step.workflow_run_id === row.id).map(toStep),
     spend: spend.filter((entry) => entry.owner === row.id).reduce(addSpend, NO_SPEND),
@@ -400,4 +402,43 @@ export async function settleStrandedRuns(db: Queryable): Promise<number> {
     await finishWorkflowRun(db, id, settled, null);
   }
   return rows.length;
+}
+
+export async function recordReport(
+  db: Queryable,
+  id: string,
+  report: { messageId: string; note: string },
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE workflow_runs SET report_message_id = $2, report_note = $3
+     WHERE id = $1 AND report_message_id IS NULL`,
+    [id, report.messageId, report.note],
+  );
+  if (rowCount === 1) await announce(db, id);
+  return rowCount === 1;
+}
+
+export async function reportNoteOfTurn(db: Queryable, turnRunId: string): Promise<string | null> {
+  const { rows } = await db.query<{ report_note: string | null }>(
+    `SELECT w.report_note FROM workflow_runs w
+     JOIN runs r ON r.user_message_id = w.report_message_id
+     WHERE r.id = $1 AND r.parent_run_id IS NULL`,
+    [turnRunId],
+  );
+  return rows[0]?.report_note ?? null;
+}
+
+export async function workflowRunningInLane(
+  db: Queryable,
+  conversationId: string,
+): Promise<{ id: string; name: string } | null> {
+  const { rows } = await db.query<{ id: string; name: string }>(
+    `SELECT w.id, w.workflow_name AS name FROM workflow_runs w
+     JOIN runs r ON r.id = w.run_id
+     WHERE w.conversation_id = $1 AND w.status = 'running' AND r.route ? 'workflowLane'
+       AND r.status IN ('queued', 'running', 'awaiting_approval')
+     ORDER BY w.started_at DESC LIMIT 1`,
+    [conversationId],
+  );
+  return rows[0] ?? null;
 }

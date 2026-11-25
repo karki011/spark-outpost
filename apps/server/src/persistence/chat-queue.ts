@@ -158,6 +158,9 @@ function uneditableReason(row: KeptRow): string {
   if (row.origin === 'chat') {
     return 'A message from another chat can’t be edited. Remove it instead.';
   }
+  if (row.origin === 'workflow') {
+    return 'A workflow’s report can’t be edited. Remove it instead.';
+  }
   if (row.spark_rule_card_id) {
     return 'A retry from a Spark rules card can’t be edited. Remove it instead.';
   }
@@ -175,6 +178,7 @@ export async function editQueued(
      WHERE conversation_id = $1 AND id = $2
        AND spark_rule_card_id IS NULL
        AND origin IS DISTINCT FROM 'chat'
+       AND origin IS DISTINCT FROM 'workflow'
        AND (length($3) > 0 OR cardinality(attachment_ids) > 0)`,
     [conversationId, id, content],
   );
