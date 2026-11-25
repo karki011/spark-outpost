@@ -314,5 +314,10 @@ export async function runWorkflow(
   const status = h.control.signal.aborted ? 'cancelled' : workflowOutcome(steps, run.states);
   const stoppedBy = status === 'failed' ? planWorkflow(steps, run.states).stoppedBy : null;
   await finishWorkflowRun(h.deps.db, turn.run.id, status, stoppedBy);
-  return { status, stoppedBy, steps: steps.map((step) => noteOf(run, step)) };
+  const needed = new Set(steps.flatMap((step) => step.dependsOn));
+  return {
+    status,
+    stoppedBy,
+    steps: steps.map((step) => ({ ...noteOf(run, step), last: !needed.has(step.id) })),
+  };
 }

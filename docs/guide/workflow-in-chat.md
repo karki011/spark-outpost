@@ -10,7 +10,7 @@ A workflow run in a chat shows as one line and a card above the message box. Abo
 
 ## Read the card
 
-1. Select **Show** on the line, or the card's row, to open it.
+1. Select **Show** on the line, or the card's row.
 2. Read the findings, Critical and High first; **Show N more** lists the rest.
 3. Select **Fix** on a finding to quote it in the message box. Edit and send; nothing sends by itself.
 4. When the row says **Needs you**, select **Go to the card** and answer under the line.
@@ -29,7 +29,7 @@ The card names what each running step is doing; **Show in chat** opens it. **Vie
 
 ## The chat's agent gets the report
 
-When a run ends, the chat's agent reads each step's reply (up to 4,000 characters) and answers under the line. It isn't your message: the agent follows the chat's mode, and a run not started with `@` never pushes.
+When a run ends, the chat's agent reads the last steps' replies (4,000 characters each) and answers under the line. It isn't your message: the agent follows the chat's mode, and a run not started with `@` never pushes.
 
 ## Pick the pull request
 
