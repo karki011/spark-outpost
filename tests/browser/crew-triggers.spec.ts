@@ -55,7 +55,7 @@ test('a new workflow gets a trigger and a schedule before its first save, and on
   await page.getByRole('textbox', { name: 'Name' }).fill('Risk review');
   await page.getByRole('button', { name: 'Open in editor' }).click();
   const open = editor(page, 'Risk review');
-  await pickSpark(page, 'Add the first Spark', 'Security');
+  await pickSpark(page, 'Add the first step', 'Security');
 
   await tab(page, /^When it runs/).click();
   const triggers = page.getByRole('group', { name: 'When something happens' });
@@ -340,7 +340,7 @@ test('a workflow is created, rearranged, previewed and saved with the keyboard a
 
   const open = editor(page, 'Keys only');
   await expect(open).toBeVisible();
-  const first = open.getByRole('button', { name: 'Add the first Spark' });
+  const first = open.getByRole('button', { name: 'Add the first step' });
   await first.focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('menuitemradio', { name: /^Security/ })).toBeFocused();

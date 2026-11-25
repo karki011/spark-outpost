@@ -86,7 +86,7 @@ test('a Spark with a skill and a two-step workflow are built on the page and run
   await form.getByRole('textbox', { name: 'Name' }).fill(WORKFLOW_NAME);
   await form.getByRole('button', { name: 'Open in editor' }).click();
   const open = page.getByRole('region', { name: `Workflow ${WORKFLOW_NAME}` });
-  await pickSpark(page, 'Add the first Spark', 'Security');
+  await pickSpark(page, 'Add the first step', 'Security');
   await pickSpark(page, 'Add a stage', 'Comment');
   await open.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();

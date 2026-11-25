@@ -1,9 +1,9 @@
 import {
   TEST_RUN_CHAT_KIND,
   TRY_IT_WORKFLOW_ID,
-  workflowSchema,
+  expandedWorkflowSchema,
+  type ExpandedWorkflow,
   type TestRunUsage,
-  type Workflow,
   type WorkflowRun,
   type WorkflowTestRun,
 } from '@spark-outpost/contracts';
@@ -51,15 +51,15 @@ export interface TestRunDeps {
 }
 
 export interface NewTestRun {
-  workflow: Workflow;
+  workflow: ExpandedWorkflow;
   message: string;
   projectId: string | null;
   messageId: string;
   oneSpark: boolean;
 }
 
-export function oneSparkWorkflow(spark: { id: string; name: string }): Workflow {
-  return workflowSchema.parse({
+export function oneSparkWorkflow(spark: { id: string; name: string }): ExpandedWorkflow {
+  return expandedWorkflowSchema.parse({
     id: TRY_IT_WORKFLOW_ID,
     name: spark.name,
     steps: [{ id: TRY_IT_WORKFLOW_ID, sparkId: spark.id }],

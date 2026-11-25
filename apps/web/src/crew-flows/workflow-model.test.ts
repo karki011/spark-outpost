@@ -7,7 +7,9 @@ import {
   canMove,
   dependencyChanges,
   moveStep,
+  namesInside,
   removeStep,
+  retargetStep,
   stagePreview,
   stepLabels,
   toggleParent,
@@ -28,6 +30,7 @@ const LINT = spark('Lint');
 const COMMENT = spark('Comment');
 const TICKETING = spark('Ticketing');
 const SPARKS = [SECURITY, LINT, COMMENT, TICKETING];
+const NIGHTLY = { id: 'nightly', name: 'Nightly review', workflow: true };
 
 function review(): WorkflowStep[] {
   let steps = addStep([], 0, SECURITY);
@@ -160,11 +163,18 @@ describe('the stage preview', () => {
   it('lists each stage with the Spark of every step, side-by-side steps together', () => {
     expect(stagePreview(review())).toEqual([
       [
-        { stepId: 'security', sparkId: SECURITY.id },
-        { stepId: 'lint', sparkId: LINT.id },
+        { stepId: 'security', sparkId: SECURITY.id, workflowId: null },
+        { stepId: 'lint', sparkId: LINT.id, workflowId: null },
       ],
-      [{ stepId: 'comment', sparkId: COMMENT.id }],
-      [{ stepId: 'ticketing', sparkId: TICKETING.id }],
+      [{ stepId: 'comment', sparkId: COMMENT.id, workflowId: null }],
+      [{ stepId: 'ticketing', sparkId: TICKETING.id, workflowId: null }],
+    ]);
+  });
+
+  it('marks a step that runs a workflow', () => {
+    const steps = addStage(addStep([], 0, SECURITY), NIGHTLY);
+    expect(stagePreview(steps)[1]).toEqual([
+      { stepId: 'nightly-review', sparkId: null, workflowId: 'nightly' },
     ]);
   });
 
@@ -207,5 +217,59 @@ describe('dependencyChanges', () => {
       'Comment: Starts first · was After all of Stage 1',
     ]);
     expect(dependencyChanges(steps, steps, labels)).toEqual([]);
+  });
+});
+
+describe('a step that runs a workflow', () => {
+  it('is added with the workflow’s id and labelled with its name', () => {
+    const steps = addStage(addStep([], 0, SECURITY), NIGHTLY);
+    expect(steps[1]).toMatchObject({ id: 'nightly-review', workflowId: 'nightly' });
+    expect(steps[1]).not.toHaveProperty('sparkId');
+    expect(stepLabels(steps, SPARKS, [NIGHTLY]).get('nightly-review')).toBe('Nightly review');
+    expect(stepLabels(steps, SPARKS).get('nightly-review')).toBe('Missing workflow');
+    expect(workflowProblems(steps, new Set(SPARKS.map((spark) => spark.id)))).toEqual([]);
+  });
+
+  it('swaps between a Spark and a workflow without keeping both', () => {
+    const steps = addStep([], 0, SECURITY);
+    const nested = retargetStep(steps, 'security', NIGHTLY);
+    expect(nested[0]).toMatchObject({ id: 'security', workflowId: 'nightly' });
+    expect(nested[0]).not.toHaveProperty('sparkId');
+    const back = retargetStep(nested, 'security', LINT);
+    expect(back[0]).toMatchObject({ sparkId: LINT.id });
+    expect(back[0]).not.toHaveProperty('workflowId');
+  });
+
+  it('labels the steps of a run by the step they are inside', () => {
+    const labels = stepLabels(
+      [
+        { id: 'check.security', sparkId: SECURITY.id },
+        { id: 'check.lint', sparkId: LINT.id },
+        { id: 'again.security', sparkId: SECURITY.id },
+        { id: 'comment', sparkId: COMMENT.id },
+      ],
+      SPARKS,
+    );
+    expect([...labels.values()]).toEqual([
+      'check › Security',
+      'check › Lint',
+      'again › Security',
+      'Comment',
+    ]);
+  });
+
+  it('names the workflow an inner step is in, and falls back to the step id', () => {
+    const review = { name: 'Review', steps: [{ id: 'security', sparkId: SECURITY.id }] };
+    const ship = { name: 'Ship', steps: [{ id: 'check', workflowId: 'review' }] };
+    const release = { name: 'Release', steps: [{ id: 'gate', workflowId: 'ship' }] };
+    const find = (id: string) => ({ review, ship })[id] ?? null;
+    const steps = [{ id: 'gate.check.security', sparkId: SECURITY.id }];
+
+    expect(stepLabels(steps, SPARKS, [], namesInside(release, find)).get(steps[0]!.id)).toBe(
+      'Ship › Review › Security',
+    );
+    expect(stepLabels(steps, SPARKS, [], namesInside(null, find)).get(steps[0]!.id)).toBe(
+      'gate › check › Security',
+    );
   });
 });

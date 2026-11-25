@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { workflowSchema, type WorkflowRunStatus } from '@spark-outpost/contracts';
+import { expandedWorkflowSchema, type WorkflowRunStatus } from '@spark-outpost/contracts';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   checkoutChanges,
@@ -65,7 +65,7 @@ async function newRun(pull = PULL_ID): Promise<string> {
   await insertWorkflowRun(t.db, {
     id,
     workspaceId: t.workspaceId,
-    workflow: workflowSchema.parse({
+    workflow: expandedWorkflowSchema.parse({
       id: 'check',
       name: 'Check',
       steps: [{ id: 'look', sparkId }],

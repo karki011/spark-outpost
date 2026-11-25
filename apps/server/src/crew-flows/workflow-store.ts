@@ -3,7 +3,8 @@ import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/p
 import { join } from 'node:path';
 import {
   CREW_SLUG_PATTERN,
-  workflowProblems,
+  nestedWorkflowProblems,
+  usedWorkflowIds,
   workflowSchema,
   workflowStages,
   type Workflow,
@@ -12,6 +13,7 @@ import {
   type WorkflowSummary,
 } from '@spark-outpost/contracts';
 import { crewWorkflowsDir } from '../crew/folders.ts';
+import { workflowFinder } from './runnable.ts';
 
 export class WorkflowNotFoundError extends Error {
   constructor(id: string) {
@@ -34,6 +36,12 @@ export class WorkflowExistsError extends Error {
 export class WorkflowBusyError extends Error {
   constructor() {
     super('Another change to this workflow is being saved. Try again in a moment.');
+  }
+}
+
+export class WorkflowInUseError extends Error {
+  constructor(name: string, users: readonly string[]) {
+    super(`${name} is a step in ${users.join(', ')}. Change or delete those workflows first.`);
   }
 }
 
@@ -122,6 +130,7 @@ export interface WorkflowStore {
     sparkIds: ReadonlySet<string>,
   ): Promise<WorkflowFile>;
   remove(id: string): Promise<void>;
+  usedBy(id: string): Promise<{ id: string; name: string }[]>;
 }
 
 export function workflowStore(dir: string = crewWorkflowsDir()): WorkflowStore {
@@ -144,29 +153,44 @@ export function workflowStore(dir: string = crewWorkflowsDir()): WorkflowStore {
     return workflow ? { workflow, hash: hashOf(text) } : null;
   };
 
+  const all = async (): Promise<Workflow[]> => {
+    const files = await Promise.all((await ids()).map((id) => read(id)));
+    return files.flatMap((file) => (file ? [file.workflow] : []));
+  };
+
+  const usedBy = async (id: string) =>
+    (await all())
+      .filter((workflow) => workflow.id !== id && usedWorkflowIds(workflow).includes(id))
+      .map((workflow) => ({ id: workflow.id, name: workflow.name }));
+
   return {
     ids,
     read,
+    usedBy,
     async list(sparkIds) {
-      const files = await Promise.all((await ids()).map((id) => read(id)));
-      return files.flatMap((file): WorkflowSummary[] => {
-        if (!file) return [];
-        const { id, name, steps } = file.workflow;
-        const sparkOf = new Map(steps.map((step) => [step.id, step.sparkId]));
-        return [
-          {
-            id,
-            name,
-            stages: workflowStages(steps).map((stage) =>
-              stage.map((stepId) => ({ stepId, sparkId: sparkOf.get(stepId)! })),
-            ),
-            problems: workflowProblems(steps, sparkIds).length,
-          },
-        ];
+      const workflows = await all();
+      const byId = new Map(workflows.map((workflow) => [workflow.id, workflow]));
+      return workflows.map((workflow): WorkflowSummary => {
+        const { id, name, steps } = workflow;
+        const stepOf = new Map(steps.map((step) => [step.id, step]));
+        return {
+          id,
+          name,
+          stages: workflowStages(steps).map((stage) =>
+            stage.map((stepId) => ({
+              stepId,
+              sparkId: stepOf.get(stepId)?.sparkId ?? null,
+              workflowId: stepOf.get(stepId)?.workflowId ?? null,
+            })),
+          ),
+          problems: nestedWorkflowProblems(workflow, sparkIds, (used) => byId.get(used) ?? null)
+            .length,
+        };
       });
     },
     async save(workflow, baseHash, sparkIds) {
-      const problems = workflowProblems(workflow.steps, sparkIds);
+      const find = await workflowFinder({ read }, workflow);
+      const problems = nestedWorkflowProblems(workflow, sparkIds, find);
       if (problems.length > 0) throw new WorkflowProblemsError(problems);
       const file = fileOf(dir, workflow.id);
       return withLock(dir, workflow.id, async () => {
@@ -185,7 +209,16 @@ export function workflowStore(dir: string = crewWorkflowsDir()): WorkflowStore {
     async remove(id) {
       const file = fileOf(dir, id);
       await withLock(dir, id, async () => {
-        if ((await readText(file)) === null) throw new WorkflowNotFoundError(id);
+        const text = await readText(file);
+        if (text === null) throw new WorkflowNotFoundError(id);
+        const users = await usedBy(id);
+        if (users.length > 0) {
+          const name = parseWorkflow(id, text)?.name ?? id;
+          throw new WorkflowInUseError(
+            name,
+            users.map((user) => user.name),
+          );
+        }
         await rm(file, { force: true });
       });
     },

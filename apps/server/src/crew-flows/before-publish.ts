@@ -1,8 +1,4 @@
-import {
-  blockingFindings,
-  workflowProblems,
-  type WorkflowTriggers,
-} from '@spark-outpost/contracts';
+import { blockingFindings, type WorkflowTriggers } from '@spark-outpost/contracts';
 import type { Handoff } from '../orchestration/spark-child.ts';
 import type { GateVerdict } from '../workflow/publish-step.ts';
 import { newId } from '../persistence/ids.ts';
@@ -13,6 +9,7 @@ import { chatCode, diffHash } from './chat-code.ts';
 import { clearHolds, holdPublish, lastGateHash, openHold } from './publish-holds.ts';
 import { insertWorkflowRun, recordBlocking, workflowRunById } from './run-records.ts';
 import { runWorkflow, type WorkflowEnd } from './run-workflow.ts';
+import { runnableWorkflow } from './runnable.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
 import { triggersWith } from './trigger-records.ts';
 import { workflowStore, type WorkflowStore } from './workflow-store.ts';
@@ -57,12 +54,13 @@ async function runGate(gate: Gate, workflowId: string): Promise<GateEnd | 'stopp
   const { db } = h.deps;
   const file = await gate.store.read(workflowId);
   if (!file) return null;
-  const [problem] = workflowProblems(
-    file.workflow.steps,
+  const { workflow, problems } = await runnableWorkflow(
+    gate.store,
+    file.workflow,
     await workspaceSparkIds(db, h.input.workspaceId),
   );
-  if (problem) {
-    await planNote(h.append, `Workflow ${file.workflow.name} did not run: ${problem.text}`);
+  if (!workflow) {
+    await planNote(h.append, `Workflow ${file.workflow.name} did not run: ${problems[0].text}`);
     return null;
   }
   await insertOrchestration(db, {
@@ -75,7 +73,7 @@ async function runGate(gate: Gate, workflowId: string): Promise<GateEnd | 'stopp
   await insertWorkflowRun(db, {
     id,
     workspaceId: h.input.workspaceId,
-    workflow: file.workflow,
+    workflow,
     kind: 'run',
     source: 'trigger',
     conversationId,
