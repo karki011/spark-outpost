@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
@@ -63,6 +64,81 @@ test('a follow-up round is one folded row that opens to what it did', async ({ p
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(turn.locator('.auto-turn-body')).toBeHidden();
+});
+
+async function addSettledRounds(count: number) {
+  const db = openTestDb();
+  try {
+    const { rows } = await db.query<{ id: string; conversation_id: string }>(
+      "SELECT id, conversation_id FROM runs WHERE source = 'pr_follow_up'",
+    );
+    const first = rows[0]!;
+    const outcomes = [];
+    for (let round = 2; round <= count + 1; round += 1) {
+      const runId = randomUUID();
+      const messageId = randomUUID();
+      await db.query(
+        "INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', $3)",
+        [messageId, first.conversation_id, `PR follow-up, round ${round}: acme/widgets#7`],
+      );
+      await db.query(
+        `INSERT INTO runs SELECT (jsonb_populate_record(r, jsonb_build_object(
+           'id', $2::text, 'user_message_id', $3::text,
+           'created_at', now() + make_interval(mins => $4)))).*
+         FROM runs r WHERE r.id = $1`,
+        [first.id, runId, messageId, round],
+      );
+      outcomes.push({
+        runId,
+        round,
+        ended: 'settled',
+        pushed: true,
+        merged: round === 3,
+        replied: round === 3 ? 0 : 1,
+        rerequested: false,
+        needs: 0,
+        unpushed: false,
+      });
+    }
+    await db.query(
+      `UPDATE pr_watches SET round_outcomes = round_outcomes || $2::jsonb
+       WHERE conversation_id = $1`,
+      [first.conversation_id, JSON.stringify(outcomes)],
+    );
+  } finally {
+    await db.end();
+  }
+}
+
+test('rounds in a row for one pull request fold into one card that opens to each round', async ({
+  page,
+}) => {
+  await seedSettledRound();
+  await addSettledRounds(2);
+  await openChats(page);
+  await expect(page.locator('.chat-title')).toHaveText('Fix the cents parser');
+  const group = page.getByRole('button', { name: /PR #7 · 3 rounds/ });
+  await expect(group).toHaveAttribute('aria-expanded', 'false');
+  await expect(group).toContainText(
+    'Replied to 4 comments, pushed 3 times · last: merged the base and pushed',
+  );
+  await expect(page.getByRole('button', { name: /PR #7 · round 1/ })).toBeHidden();
+
+  await group.focus();
+  await page.keyboard.press('Enter');
+  await expect(group).toHaveAttribute('aria-expanded', 'true');
+  for (const round of [1, 2, 3]) {
+    await expect(
+      page.getByRole('button', { name: new RegExp(`PR #7 · round ${round}`) }),
+    ).toBeVisible();
+  }
+  const second = page.getByRole('button', { name: /PR #7 · round 2/ });
+  await second.click();
+  await expect(second).toHaveAttribute('aria-expanded', 'true');
+  await page.screenshot({ path: 'test-results/pr-rounds-one-card.png' });
+
+  await group.click();
+  await expect(page.getByRole('button', { name: /PR #7 · round 2/ })).toBeHidden();
 });
 
 test('a round in progress is an open card with its items and Stop turn', async ({ page }) => {
