@@ -178,6 +178,7 @@ final class MeetingRecorder {
             guard let self, current.generation == self.generation, self.recording === current,
                   !current.stopping, lane.stream.turn == turn
             else { return }
+            if lane.source == .you, self.othersAreSpeaking(in: current) { return }
             let words = self.ownWords(
                 HeardLine(text: cleanTranscript(text), startMs: startMs, endMs: heardMs),
                 from: lane.source, in: current)

@@ -1,9 +1,4 @@
-import {
-  MEETING_LIVE_WORDS_STALE_MS,
-  meetingLiveWordsSchema,
-  type MeetingLiveWords,
-  type MeetingSpeaker,
-} from '@spark-outpost/contracts';
+import { meetingLiveWordsSchema, type MeetingLiveWords } from '@spark-outpost/contracts';
 
 export type WordsListener = (words: MeetingLiveWords) => void;
 
@@ -20,57 +15,41 @@ interface Watcher {
   onEnd: () => void;
 }
 
-interface Heard {
-  words: MeetingLiveWords;
-  at: number;
-}
-
-interface Live {
-  latest: Map<MeetingSpeaker, Heard>;
-  watchers: Set<Watcher>;
-}
-
-export function createLiveWords(now: () => number = Date.now): LiveWords {
-  const meetings = new Map<string, Live>();
+export function createLiveWords(): LiveWords {
+  const meetings = new Map<string, Set<Watcher>>();
 
   return {
     begin(meetingId) {
-      if (!meetings.has(meetingId)) {
-        meetings.set(meetingId, { latest: new Map(), watchers: new Set() });
-      }
+      if (!meetings.has(meetingId)) meetings.set(meetingId, new Set());
     },
 
     push(meetingId, words) {
-      const live = meetings.get(meetingId);
+      const watchers = meetings.get(meetingId);
       const parsed = meetingLiveWordsSchema.safeParse(words);
-      if (!live || !parsed.success) return;
-      live.latest.set(parsed.data.speaker, { words: parsed.data, at: now() });
-      for (const watcher of live.watchers) watcher.listener(parsed.data);
+      if (!watchers || !parsed.success) return;
+      for (const watcher of watchers) watcher.listener(parsed.data);
     },
 
     watch(meetingId, listener, onEnd) {
-      const live = meetings.get(meetingId);
-      if (!live) {
+      const watchers = meetings.get(meetingId);
+      if (!watchers) {
         onEnd();
         return () => undefined;
       }
       const watcher: Watcher = { listener, onEnd };
-      live.watchers.add(watcher);
-      for (const heard of live.latest.values()) {
-        if (now() - heard.at < MEETING_LIVE_WORDS_STALE_MS) listener(heard.words);
-      }
+      watchers.add(watcher);
       return () => {
-        live.watchers.delete(watcher);
+        watchers.delete(watcher);
       };
     },
 
-    watchers: (meetingId) => meetings.get(meetingId)?.watchers.size ?? 0,
+    watchers: (meetingId) => meetings.get(meetingId)?.size ?? 0,
 
     end(meetingId) {
-      const live = meetings.get(meetingId);
-      if (!live) return;
+      const watchers = meetings.get(meetingId);
+      if (!watchers) return;
       meetings.delete(meetingId);
-      for (const watcher of live.watchers) watcher.onEnd();
+      for (const watcher of watchers) watcher.onEnd();
     },
   };
 }

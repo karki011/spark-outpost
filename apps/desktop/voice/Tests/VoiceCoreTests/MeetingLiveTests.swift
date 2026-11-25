@@ -85,6 +85,17 @@ private let start = #"{"id":"m","op":"meeting.start","language":"en"}"#
         #expect(scene.partials.count == before)
     }
 
+    @Test func myDraftIsDroppedWhenTheMacStartedPlayingSpeechWhileItWasDecoded() {
+        let scene = Scene().loaded()
+        scene.platform.model.holdTranscripts = true
+        scene.send(start)
+        scene.play(frames(seconds: 1, speech: true))
+        #expect(scene.platform.model.deferred.count == 1)
+        scene.playOthers(frames(seconds: 0.3, speech: true))
+        for done in scene.platform.model.deferred { done() }
+        #expect(scene.partials.isEmpty)
+    }
+
     @Test func stoppingSendsNoMoreWords() {
         let scene = Scene().loaded()
         scene.platform.model.holdTranscripts = true

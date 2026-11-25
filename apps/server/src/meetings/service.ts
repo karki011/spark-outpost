@@ -79,7 +79,7 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
     );
 
   const now = options.now ?? Date.now;
-  const words = createLiveWords(now);
+  const words = createLiveWords();
   const pendingLines = new Map<string, ReturnType<typeof setTimeout>>();
   const linesAnnouncedAt = new Map<string, number>();
 

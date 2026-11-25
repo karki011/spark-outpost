@@ -3,8 +3,8 @@ import type { MeetingLiveWords } from '@spark-outpost/contracts';
 import { createLiveWords } from './live-words.ts';
 
 const MEETING = 'meeting-1';
-function recording(now?: () => number) {
-  const live = createLiveWords(now);
+function recording() {
+  const live = createLiveWords();
   live.begin(MEETING);
   live.begin('meeting-2');
   return live;
@@ -28,20 +28,14 @@ describe('live words', () => {
     expect(elsewhere).not.toHaveBeenCalled();
   });
 
-  it('gives a late watcher the newest words of each speaker while they are fresh', () => {
-    let now = 1_000;
-    const live = recording(() => now);
+  it('sends a late watcher only the words heard after it joined', () => {
+    const live = recording();
     live.push(MEETING, others('we'));
-    live.push(MEETING, others('we ship'));
-    live.push(MEETING, { speaker: 'you', text: 'ok', startMs: 500 });
-    now += 2_000;
     const late = vi.fn();
     live.watch(MEETING, late, () => undefined);
-    expect(late.mock.calls.map(([words]) => words.text)).toEqual(['we ship', 'ok']);
-    now += 2_000;
-    const later = vi.fn();
-    live.watch(MEETING, later, () => undefined);
-    expect(later).not.toHaveBeenCalled();
+    expect(late).not.toHaveBeenCalled();
+    live.push(MEETING, others('we ship'));
+    expect(late.mock.calls).toEqual([[others('we ship')]]);
   });
 
   it('stops sending after a watcher leaves', () => {

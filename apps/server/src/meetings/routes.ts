@@ -164,7 +164,12 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
 
   router.get('/meetings/:id/live', async (req, res) => {
     const id = paramId(req);
+    const stops: (() => void)[] = [];
+    res.on('close', () => {
+      for (const stop of stops) stop();
+    });
     const meeting = await getMeeting(db, workspaceId, id);
+    if (res.destroyed) return;
     if (!meeting) throw new MeetingError(404, 'Meeting not found.');
     if (meeting.state !== 'recording') {
       res.status(204).end();
@@ -181,15 +186,14 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
     res.flushHeaders();
     res.write(`retry: ${LIVE_WORDS_RETRY_MS}\n\n`);
     const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), LIVE_WORDS_HEARTBEAT_MS);
-    const leave = meetings.watchWords(
-      id,
-      (words) => res.write(`data: ${JSON.stringify(words)}\n\n`),
-      () => res.end(),
+    stops.push(() => clearInterval(heartbeat));
+    stops.push(
+      meetings.watchWords(
+        id,
+        (words) => res.write(`data: ${JSON.stringify(words)}\n\n`),
+        () => res.end(),
+      ),
     );
-    res.on('close', () => {
-      clearInterval(heartbeat);
-      leave();
-    });
   });
 
   router.put('/meetings/:id/notes', async (req, res) => {
