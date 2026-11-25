@@ -7,6 +7,7 @@ Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 ## 0.1.0-beta.20
 
 - **Agents can prepare a connection.** Ask an agent to set up an AI provider or connector: it fills in everything that isn't secret, and you type the key or sign in yourself.
+- **Choose the meeting model.** Settings → Notifications → **Meeting notes and questions** picks the provider, model and effort that write a meeting's notes; a new meeting's questions start on the same choice.
 - **Live words in meetings.** A meeting's transcript shows the words in grey while someone is still speaking, then replaces them with the finished sentence.
 - **PR follow-up on its own agent.** A follow-up round no longer holds the chat: a message you send during a round starts a normal turn, and the chat's agent can stop the round or send it a note.
 - **Workflows read any pull request.** A workflow run on a pull request link gets the pull request from GitHub even when the chat has no project or the repository isn't linked.
