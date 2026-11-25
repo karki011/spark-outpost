@@ -40,7 +40,7 @@ export function fakeMeetingSource(env: NodeJS.ProcessEnv): MeetingSource | null 
 
   return {
     state: () => ({ available: true, reason: null }),
-    async start(meetingId, deliver) {
+    async start(meetingId, deliver, _lost, words) {
       await stop(meetingId);
       let next = 0;
       const timer = setInterval(() => {
@@ -51,6 +51,14 @@ export function fakeMeetingSource(env: NodeJS.ProcessEnv): MeetingSource | null 
         }
         const startMs = next * LINE_SPAN_MS;
         next += 1;
+        const coming = SCRIPT[next];
+        if (coming) {
+          words?.({
+            speaker: coming.speaker,
+            text: coming.text.split(' ').slice(0, 4).join(' '),
+            startMs: next * LINE_SPAN_MS,
+          });
+        }
         if (next >= SCRIPT.length) clearInterval(timer);
         void deliver([{ ...line, startMs, endMs: startMs + LINE_SPAN_MS - 500 }]).catch(
           () => undefined,

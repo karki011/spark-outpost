@@ -140,5 +140,16 @@ final class Scene {
 
     func playOthers(_ samples: [Float]) { platform.onSystemFrames?(samples) }
 
-    var events: [Message] { sent.map(\.1).filter { if case .level = $0 { return false } else { return true } } }
+    var events: [Message] {
+        sent.map(\.1).filter {
+            switch $0 {
+            case .level, .meetingPartial: return false
+            default: return true
+            }
+        }
+    }
+
+    var partials: [Message] {
+        sent.map(\.1).filter { if case .meetingPartial = $0 { return true } else { return false } }
+    }
 }

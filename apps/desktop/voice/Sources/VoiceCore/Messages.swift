@@ -84,6 +84,7 @@ public enum Message: Equatable, Sendable {
     case meetingStarted
     case meetingSystem(Bool)
     case meetingLine(source: MeetingSource, text: String, startMs: Int, endMs: Int)
+    case meetingPartial(source: MeetingSource, text: String, startMs: Int)
     case meetingEnded
     case error(ErrorCode, String)
 }
@@ -182,6 +183,11 @@ public func encode(id: String?, _ message: Message) -> String {
         object["text"] = text
         object["startMs"] = startMs
         object["endMs"] = endMs
+    case .meetingPartial(let source, let text, let startMs):
+        object["event"] = "meeting_partial"
+        object["source"] = source.rawValue
+        object["text"] = text
+        object["startMs"] = startMs
     case .meetingEnded: object["event"] = "meeting_ended"
     case .error(let code, let detail):
         object["event"] = "error"

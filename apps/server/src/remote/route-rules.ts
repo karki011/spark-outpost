@@ -193,6 +193,7 @@ PATCH /api/meetings/:id
 DELETE /api/meetings/:id
 POST /api/meetings/:id/stop
 GET /api/meetings/:id/lines
+GET /api/meetings/:id/live
 PUT /api/meetings/:id/notes
 POST /api/meetings/:id/notes/write
 POST /api/meetings/:id/attachments
