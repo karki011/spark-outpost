@@ -185,6 +185,8 @@ GET /api/github/reviews
 POST /api/github/reviews
 POST /api/github/reviews/:id/stop
 GET /api/meetings/status
+GET /api/meetings/model
+PUT /api/meetings/model
 GET /api/meetings
 POST /api/meetings
 POST /api/meetings/join-notes

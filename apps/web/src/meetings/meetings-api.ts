@@ -4,6 +4,7 @@ import {
   meetingJoinNotesSchema,
   meetingLinesPageSchema,
   meetingListSchema,
+  meetingModelViewSchema,
   meetingNotesSchema,
   meetingStatusSchema,
   MEETING_LIST_PAGE,
@@ -11,6 +12,8 @@ import {
   type MeetingJoinNotes,
   type MeetingLinesPage,
   type MeetingList,
+  type MeetingModelSettings,
+  type MeetingModelView,
   type MeetingNotes,
   type MeetingPatch,
   type MeetingStatus,
@@ -40,6 +43,9 @@ export function listPath(query: string, before: string | undefined): string {
 
 export const meetingsApi = {
   status: (): Promise<MeetingStatus> => request(meetingStatusSchema, '/meetings/status'),
+  model: (): Promise<MeetingModelView> => request(meetingModelViewSchema, '/meetings/model'),
+  saveModel: (settings: MeetingModelSettings): Promise<MeetingModelView> =>
+    send(meetingModelViewSchema, 'PUT', '/meetings/model', settings),
   list: (query: string, before?: string): Promise<MeetingList> =>
     request(meetingListSchema, listPath(query, before)),
   detail: (id: string): Promise<MeetingDetail> => request(meetingDetailSchema, path(id)),

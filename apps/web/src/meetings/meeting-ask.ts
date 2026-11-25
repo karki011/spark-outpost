@@ -4,6 +4,8 @@ import {
   type Attachment,
   type MeetingDetail,
   type MeetingLine,
+  type MeetingModelView,
+  type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
 import { uploadAttachment } from '../api/attachments.ts';
 import { newDraftId } from '../api/client.ts';
@@ -143,4 +145,38 @@ export function meetingChatId(meetingId: string): string {
     return id;
   }
   return id;
+}
+
+const STARTED_KEY = 'spark-outpost.meetings.chat-started.';
+
+export function meetingChatStarted(meetingId: string): boolean {
+  try {
+    return localStorage.getItem(STARTED_KEY + meetingId) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export function markMeetingChatStarted(meetingId: string): void {
+  try {
+    localStorage.setItem(STARTED_KEY + meetingId, '1');
+  } catch {
+    return;
+  }
+}
+
+export function meetingChatStart(view: MeetingModelView): UpdateChatSettingsRequest | null {
+  const { settings, runsOn } = view;
+  if (!runsOn) return null;
+  const model = settings.model !== null && settings.model === runsOn.model ? runsOn.model : null;
+  const effort =
+    settings.effort !== null && settings.effort === runsOn.effort ? runsOn.effort : null;
+  const picked = {
+    ...(settings.provider === runsOn.provider || model || effort
+      ? { provider: runsOn.provider }
+      : {}),
+    ...(model ? { model } : {}),
+    ...(effort ? { effort } : {}),
+  };
+  return Object.keys(picked).length > 0 ? picked : null;
 }

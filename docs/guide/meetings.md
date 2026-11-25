@@ -6,7 +6,7 @@ order: 422
 summary: Alpha. Record a meeting on your Mac, get a transcript labelled You and Others, and notes written when it ends.
 ---
 
-About 3 minutes. **Alpha:** expect rough edges, listed at the end.
+About 3 minutes. **Alpha:** rough edges are listed last.
 
 Needs the Mac app with [Voice](voice.md) on, and [Calendar](calendar.md) connected.
 
@@ -17,17 +17,21 @@ Needs the Mac app with [Voice](voice.md) on, and [Calendar](calendar.md) connect
 3. **Transcript** shows the words live, labelled **You** (your microphone) or **Others** (what your Mac plays).
 4. Choose **Stop** in the recording bar or island.
 
-**Join** records nothing. To do both, turn on **Take notes when I join a meeting** (Settings → Notifications). Every join then records too, automatic ones included, except Ask Spark's, or says why not.
+**Join** records nothing. With **Take notes when I join a meeting** on (Settings → Notifications), every join records too, except Ask Spark's, or says why not.
 
 ## After it ends
 
-Your default AI provider writes **Notes** and names an **Untitled meeting**. **Edit** the notes, **Write again**, **Copy**, or **Start a chat** with them.
+Your AI provider writes **Notes** and names an **Untitled meeting**. **Edit** the notes, **Write again**, **Copy**, or **Start a chat** with them.
 
-**Transcript** has every line. **Context** takes a goal, your own notes and files to shape the notes. **Search** finds words in titles, notes and transcripts. **Delete…** asks first, then removes the meeting for good.
+**Transcript** has every line. **Context** takes a goal, your own notes and files to shape the notes. **Search** covers titles, notes and transcripts.
 
 ## Ask about it
 
 Under a meeting, type a question or choose **Catch me up**, **Suggest a reply** or **Action items**. Pick the model and mode as in any chat; **Open chat** shows the whole conversation.
+
+## Choose the model
+
+Settings → Notifications: **Meeting provider**, **Meeting model** and **Meeting effort** write the notes. New meetings' questions start there too.
 
 ## What stays on your Mac
 
