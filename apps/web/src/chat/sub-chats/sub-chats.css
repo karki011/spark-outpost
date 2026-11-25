@@ -110,6 +110,40 @@
   overflow-wrap: anywhere;
 }
 
+.sc-report-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border-radius: var(--r-sm);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sc-report-toggle:hover {
+  background: var(--raise);
+}
+
+.sc-report-toggle .chev {
+  width: 12px;
+  height: 12px;
+  transition: transform 120ms ease;
+}
+
+.sc-report[data-open='true'] .sc-report-toggle .chev {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-report-toggle .chev {
+    transition: none;
+  }
+}
+
 .sc-report-b {
   margin: 0;
   padding: 2px 14px 10px;
@@ -182,6 +216,7 @@
 
 @media (pointer: coarse) {
   .sc-link,
+  .sc-report-toggle,
   .sc-exchanges > summary {
     min-height: 44px;
   }

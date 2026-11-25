@@ -41,6 +41,18 @@ describe('turn fold', () => {
     expect(shown.map((part) => part.key)).toEqual(['s1', 't1', 's2', 't2', 't3']);
   });
 
+  it('keeps every reply after a message from another chat out of the fold', () => {
+    const joined: TurnRowPart[] = [
+      text('t1', 'Started the sub-chat.'),
+      { kind: 'asks', key: 'a1', ids: ['report'] },
+      text('t2', 'The report is in.'),
+      rows('r1', [done('Read `a.ts`')]),
+      text('t3', 'Done.'),
+    ];
+    const shown = joined.filter((_, index) => !foldedPart(joined, index));
+    expect(shown.map((part) => part.key)).toEqual(['a1', 't2', 't3']);
+  });
+
   it('folds in-between notes in a turn nobody steered', () => {
     const plain = parts.filter((part) => part.kind !== 'steers');
     const folded = plain.map((_, index) => foldedPart(plain, index));

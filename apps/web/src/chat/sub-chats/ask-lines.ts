@@ -64,7 +64,7 @@ function sentLine(ask: ChatAsk): AskLine {
   };
 }
 
-function receivedLine(ask: ChatAsk, asks: readonly ChatAsk[]): AskLine {
+export function receivedLine(ask: ChatAsk, asks: readonly ChatAsk[]): AskLine {
   return {
     id: ask.id,
     side: 'received',
@@ -92,8 +92,7 @@ function placedIn(
   if (sent && ask.fromRunId !== null && runIds.has(ask.fromRunId)) {
     return { key: ask.to.id, chat: ask.to.title, round: true, line: sentLine(ask) };
   }
-  const steered = ask.to.id === chatId && ask.deliveredAs === 'steer';
-  if (steered && ask.runId !== null && runIds.has(ask.runId)) {
+  if (steeredInto(ask, chatId, runIds)) {
     return {
       key: ask.from.id ?? `gone:${ask.from.title}`,
       chat: ask.from.title,
@@ -104,15 +103,35 @@ function placedIn(
   return null;
 }
 
+function steeredInto(ask: ChatAsk, chatId: string, runIds: ReadonlySet<string>): boolean {
+  return (
+    ask.to.id === chatId &&
+    ask.deliveredAs === 'steer' &&
+    ask.runId !== null &&
+    runIds.has(ask.runId)
+  );
+}
+
+export function steeredAsks(
+  asks: readonly ChatAsk[] | undefined,
+  chatId: string,
+  runIds: readonly string[],
+): ChatAsk[] {
+  const inTurn = new Set(runIds);
+  return (asks ?? []).filter((ask) => steeredInto(ask, chatId, inTurn));
+}
+
 export function turnAskLines(
   asks: readonly ChatAsk[] | undefined,
   chatId: string,
   runIds: readonly string[],
+  steeredShown = true,
 ): AskLineGroup[] {
   if (!asks || asks.length === 0) return [];
   const inTurn = new Set(runIds);
   const groups = new Map<string, { chat: string; rounds: number; lines: AskLine[] }>();
   for (const ask of asks) {
+    if (!steeredShown && steeredInto(ask, chatId, inTurn)) continue;
     const placed = placedIn(ask, asks, chatId, inTurn);
     if (!placed) continue;
     const group = groups.get(placed.key) ?? { chat: placed.chat, rounds: 0, lines: [] };

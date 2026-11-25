@@ -7,7 +7,7 @@ function answerIndex(parts: readonly TurnRowPart[]): number {
 }
 
 function answersSteer(parts: readonly TurnRowPart[], index: number): boolean {
-  const firstSteer = parts.findIndex((part) => part.kind === 'steers');
+  const firstSteer = parts.findIndex((part) => part.kind === 'steers' || part.kind === 'asks');
   return firstSteer >= 0 && index > firstSteer;
 }
 

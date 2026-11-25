@@ -72,6 +72,7 @@ export type TurnRowPart =
   | { kind: 'terminal'; key: string; terminals: AgentTerminalView[] }
   | { kind: 'rows'; key: string; rows: Row[] }
   | { kind: 'steers'; key: string; ids: string[]; wroteAfter: boolean }
+  | { kind: 'asks'; key: string; ids: string[] }
   | { kind: 'cards'; key: string; ids: string[] };
 
 export interface SteerMark {
@@ -87,6 +88,7 @@ export interface TurnRowInput {
   shots?: readonly BrowserShot[];
   terminals?: readonly AgentTerminalView[];
   steers?: readonly SteerMark[];
+  asks?: readonly SteerMark[];
   cards?: readonly CardMark[];
   todo?: boolean;
 }
@@ -96,6 +98,7 @@ type Placed =
   | { kind: 'shot'; at: number; time: number | null; shot: BrowserShot }
   | { kind: 'terminal'; at: number; time: number | null; terminal: AgentTerminalView }
   | { kind: 'steer'; at: number; time: number | null; id: string; wroteAfter: boolean }
+  | { kind: 'ask'; at: number; time: number | null; id: string }
   | { kind: 'card'; at: number; time: number | null; id: string };
 
 const DONE_VERBS: Record<'read' | 'search' | 'edit', [done: string, open: string]> = {
@@ -252,9 +255,20 @@ function sentenceSafe(text: string, at: number): number {
   return SENTENCE_END.test(text.slice(0, at)) ? at : paragraphEnd(text, at);
 }
 
+function atParagraphEnd(text: string, at: number): boolean {
+  return at > 0 && (at >= text.length || text.startsWith('\n\n', at));
+}
+
+function shownAt(text: string, anchor: TextAnchor): number {
+  const held = anchor.textHeld ?? 0;
+  if (held === 0 || anchor.textOffset === null) return placeAt(text, anchor);
+  const shown = placeAt(text, { ...anchor, textOffset: anchor.textOffset - held, textHeld: 0 });
+  return atParagraphEnd(text, shown) ? shown : placeAt(text, anchor);
+}
+
 function steerPlace(text: string, steer: SteerMark): { at: number; wroteAfter: boolean } {
   if (!steer.anchor) return { at: text.length, wroteAfter: false };
-  const anchor = placeAt(text, steer.anchor);
+  const anchor = shownAt(text, steer.anchor);
   const at = paragraphEnd(text, anchor);
   return { at, wroteAfter: text.slice(anchor, at).trim() !== '' };
 }
@@ -279,6 +293,7 @@ function placedUntil(placed: Placed): number | null {
 
 function placedItems(input: TurnRowInput): Placed[] {
   const { text, steps, commands, shots = [], terminals = [], steers = [], cards = [] } = input;
+  const asks = input.asks ?? [];
   const items = stepItems(steps, commands.length > 0);
   const stepsByKey = new Map(steps.map((step, index) => [`step-${index}`, step]));
   const placed: Placed[] = [
@@ -309,6 +324,12 @@ function placedItems(input: TurnRowInput): Placed[] {
       ...steerPlace(text, steer),
       time: steer.time,
       id: steer.id,
+    })),
+    ...asks.map((ask): Placed => ({
+      kind: 'ask',
+      at: steerPlace(text, ask).at,
+      time: ask.time,
+      id: ask.id,
     })),
   ];
   const offsetAt = (textOffset: number) =>
@@ -421,6 +442,12 @@ export function turnRowParts(input: TurnRowInput): TurnRowPart[] {
       const last = parts.at(-1);
       if (last?.kind === 'cards') last.ids.push(placed.id);
       else parts.push({ kind: 'cards', key: `cards-${placed.id}`, ids: [placed.id] });
+      continue;
+    }
+    if (placed.kind === 'ask') {
+      const last = parts.at(-1);
+      if (last?.kind === 'asks') last.ids.push(placed.id);
+      else parts.push({ kind: 'asks', key: `asks-${placed.id}`, ids: [placed.id] });
       continue;
     }
     if (placed.kind === 'steer') {

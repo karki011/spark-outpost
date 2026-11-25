@@ -76,6 +76,11 @@ async function steeredAsk(question: string, replySoFar: string) {
   await expect.poll(async () => (await askNow(t, id)).deliveredAs).toBe('steer');
   await inbox.dispose();
   expect((await getMemberMessage(t.db, id))?.textOffset).toBe(replySoFar.length);
+  expect((await askNow(t, id)).steeredAt).toMatchObject({
+    textOffset: replySoFar.length,
+    textBefore: replySoFar,
+    textHeld: 0,
+  });
   return { id, runId };
 }
 

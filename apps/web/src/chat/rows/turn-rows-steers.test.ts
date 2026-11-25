@@ -20,6 +20,7 @@ const unread = (id: string): SteerMark => ({ id, anchor: null, time: Number.MAX_
 function shape(parts: readonly TurnRowPart[]): string[] {
   return parts.map((part) => {
     if (part.kind === 'steers') return `steers:${part.ids.join(',')}`;
+    if (part.kind === 'asks') return `asks:${part.ids.join(',')}`;
     if (part.kind === 'text') return `text:${part.text.trim()}`;
     return part.kind;
   });
@@ -128,5 +129,68 @@ describe('messages sent during a turn', () => {
       steers: [anchored('a', OPENING, 2_000)],
     });
     expect(shape(parts)).toEqual(['text:Checking CI.', 'rows', 'steers:a', 'rows']);
+  });
+
+  it('sits before the answer when text that was held back never showed', () => {
+    const before = 'Still waiting on the build.';
+    const text = `${before}\n\n2 + 2 = 4.\n\nThe build is still running.`;
+    const late: SteerMark = {
+      id: 'sum',
+      anchor: { textOffset: before.length + 20, textBefore: before, textHeld: 20 },
+      time: 2_000,
+    };
+    const parts = turnRowParts({ text, steps: [], commands: [], steers: [late] });
+    expect(shape(parts)).toEqual([
+      'text:Still waiting on the build.',
+      'steers:sum',
+      'text:2 + 2 = 4.\n\nThe build is still running.',
+    ]);
+  });
+
+  it('keeps a message after a sentence whose end was held back', () => {
+    const text = 'Still waiting on the build to finish.\n\nDone.';
+    const midSentence: SteerMark = {
+      id: 'sum',
+      anchor: { textOffset: 37, textBefore: 'Still waiting on the', textHeld: 17 },
+      time: 2_000,
+    };
+    const parts = turnRowParts({ text, steps: [], commands: [], steers: [midSentence] });
+    expect(shape(parts)).toEqual([
+      'text:Still waiting on the build to finish.',
+      'steers:sum',
+      'text:Done.',
+    ]);
+  });
+});
+
+describe('a message from another chat that joined the turn', () => {
+  it('sits where it arrived, before what the agent wrote and the user sent afterwards', () => {
+    const before = 'Started the sub-chat and the long wait.';
+    const answer = 'The report is in.';
+    const text = `${before}\n\n${answer}\n\nFour.`;
+    const parts = turnRowParts({
+      text,
+      steps: [],
+      commands: [],
+      asks: [anchored('report', before, 2_000)],
+      steers: [anchored('sum', `${before}\n\n${answer}`, 3_000)],
+    });
+    expect(shape(parts)).toEqual([
+      `text:${before}`,
+      'asks:report',
+      `text:${answer}`,
+      'steers:sum',
+      'text:Four.',
+    ]);
+  });
+
+  it('sits at the end of the turn when nothing says where the reply stood', () => {
+    const parts = turnRowParts({
+      text: 'Working.',
+      steps: [],
+      commands: [],
+      asks: [{ id: 'report', anchor: null, time: 2_000 }],
+    });
+    expect(shape(parts)).toEqual(['text:Working.', 'asks:report']);
   });
 });

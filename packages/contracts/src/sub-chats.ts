@@ -59,6 +59,7 @@ export type SubChatReport = z.infer<typeof subChatReportSchema>;
 
 export const NONE_STATED = 'None stated';
 export const ALSO_SAID = 'Also said';
+export const REPORT_FOR = "For this chat's agent · not your message";
 export const REPORT_FOOTER =
   "Written by the sub-chat's agent, not checked by Spark. The branch and pull request line is Spark's own record.";
 
@@ -102,6 +103,14 @@ export type ChatAskState = z.infer<typeof chatAskStateSchema>;
 export const chatAskDeliverySchema = z.enum(['turn', 'steer']);
 export type ChatAskDelivery = z.infer<typeof chatAskDeliverySchema>;
 
+export const chatAskSteerSchema = z.object({
+  time: z.string(),
+  textOffset: z.number().int().nonnegative().nullable(),
+  textBefore: z.string().nullable(),
+  textHeld: z.number().int().nonnegative().nullable(),
+});
+export type ChatAskSteer = z.infer<typeof chatAskSteerSchema>;
+
 export const chatAskSchema = z.object({
   id: z.uuid(),
   kind: chatAskKindSchema,
@@ -115,6 +124,7 @@ export const chatAskSchema = z.object({
   runId: z.uuid().nullable(),
   noReplyReason: z.string().nullable(),
   report: subChatReportSchema.nullable(),
+  steeredAt: chatAskSteerSchema.nullable().optional(),
   createdAt: z.string(),
   settledAt: z.string().nullable(),
 });

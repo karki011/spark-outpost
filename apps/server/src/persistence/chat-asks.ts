@@ -43,15 +43,22 @@ interface ChatAskRow {
   report: unknown;
   created_at: Date;
   settled_at: Date | null;
+  steered_at: Date | null;
+  steer_text_offset: number | null;
+  steer_text_before: string | null;
+  steer_text_held: number | null;
 }
 
 const SELECT_ASK = `SELECT a.id, a.kind, a.from_conversation_id, a.from_run_id,
     COALESCE(sender.title, a.from_title) AS from_title, a.to_conversation_id,
     receiver.title AS to_title, a.body, a.reply_to, a.state, a.delivered_as, a.run_id,
-    a.no_reply_reason, a.report, a.created_at, a.settled_at
+    a.no_reply_reason, a.report, a.created_at, a.settled_at,
+    steer.delivered_at AS steered_at, steer.delivered_text_offset AS steer_text_offset,
+    steer.delivered_text_before AS steer_text_before, steer.delivered_text_held AS steer_text_held
   FROM chat_asks a
   JOIN conversations receiver ON receiver.id = a.to_conversation_id
-  LEFT JOIN conversations sender ON sender.id = a.from_conversation_id`;
+  LEFT JOIN conversations sender ON sender.id = a.from_conversation_id
+  LEFT JOIN member_messages steer ON steer.id = a.id AND steer.delivered_run_id = a.run_id`;
 
 function toChatAsk(row: ChatAskRow): ChatAsk {
   return {
@@ -67,6 +74,14 @@ function toChatAsk(row: ChatAskRow): ChatAsk {
     runId: row.run_id,
     noReplyReason: row.no_reply_reason,
     report: subChatReportSchema.safeParse(row.report).data ?? null,
+    steeredAt: row.steered_at
+      ? {
+          time: row.steered_at.toISOString(),
+          textOffset: row.steer_text_offset,
+          textBefore: row.steer_text_before,
+          textHeld: row.steer_text_held,
+        }
+      : null,
     createdAt: row.created_at.toISOString(),
     settledAt: row.settled_at ? row.settled_at.toISOString() : null,
   };

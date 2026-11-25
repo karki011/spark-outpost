@@ -18,9 +18,9 @@ When a [sub-chat](sub-chats.md) finishes its task, Spark sends its parent a repo
 | **Risks**, **Blockers**     | The sub-chat's reply; **None stated** when it named none     |
 | **Also said**               | The rest of its reply                                        |
 
-The parent shows a **Report** block. The reply's parts are the agent's words, not checked by Spark.
+The parent shows a folded **Report** block; **Needs you** starts unfolded. The agent's words are unchecked.
 
-A report is [never your message](chat-messages.md) in the parent: it starts a turn there, or joins the running one, and allows no push or pull request. In that turn the parent's agent may message and stop only its own sub-chats.
+A report is for the parent's agent and [never your message](chat-messages.md): it starts a turn there, or joins the running one, and allows no push or pull request. There the agent may message and stop only its own sub-chats.
 
 Typing in a sub-chat later updates its row without waking the parent.
 

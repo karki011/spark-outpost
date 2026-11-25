@@ -3,6 +3,7 @@ import type { QueuedMessage } from '@spark-outpost/contracts';
 import {
   authorTag,
   canEdit,
+  canSendNow,
   inOrder,
   movedIds,
   queueMode,
@@ -57,6 +58,8 @@ describe('queue model', () => {
   it('lets the user edit their own queued message and not a message from another chat', () => {
     expect(canEdit(item('a', 1))).toBe(true);
     expect(canEdit({ ...item('a', 1), origin: 'chat' })).toBe(false);
+    expect(canSendNow(item('a', 1))).toBe(true);
+    expect(canSendNow({ ...item('a', 1), origin: 'chat' })).toBe(false);
   });
 
   it('adds a new message after the last one', () => {

@@ -64,6 +64,7 @@ describe('storing an ask', () => {
       runId: null,
       noReplyReason: null,
       report: null,
+      steeredAt: null,
       createdAt: expect.any(String),
       settledAt: null,
     });

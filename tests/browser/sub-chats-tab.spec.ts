@@ -285,6 +285,9 @@ test('a report shows as a block with fixed fields and the message lines sit unde
   await openParent(page);
   const report = thread(page).getByRole('region', { name: 'Report from Payments API v2' });
   await expect(report.locator('.sub-status')).toHaveText('Ready for review');
+  await expect(report).toContainText("For this chat's agent · not your message");
+  await expect(report.locator('dt').first()).toBeHidden();
+  await report.getByRole('button', { name: 'Report', exact: true }).click();
   await expect(report.locator('dt')).toHaveText([
     'Changed',
     'Branch and pull request',
@@ -295,15 +298,17 @@ test('a report shows as a block with fixed fields and the message lines sit unde
   await expect(report).toContainText('spark/payments-api-v2 · committed · pushed · #412');
   await expect(report.locator('dd').last()).toHaveText('None stated');
   await expect(report).toContainText('not checked by Spark');
-  await expect(report).toContainText('not your message');
 
   const asks = thread(page).locator('.sc-asks');
-  await expect(asks).toContainText(
+  await expect(asks.last()).toContainText(
     'Asked Cart totals service: Is the tax table shared with invoices? · Replied',
   );
-  await expect(asks).toContainText(
-    'Reply from Cart totals service: Yes, invoices read the same table. · not your message',
-  );
+  await expect(
+    asks.filter({
+      hasText:
+        'Reply from Cart totals service: Yes, invoices read the same table. · not your message',
+    }),
+  ).toHaveCount(1);
   const exchanges = asks.locator('details.sc-exchanges');
   await expect(exchanges.locator('> summary')).toHaveText('2 exchanges with Checkout UI');
   await expect(exchanges.getByText('Sent to Checkout UI: Keep the old form too.')).toBeHidden();
