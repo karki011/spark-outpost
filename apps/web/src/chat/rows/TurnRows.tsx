@@ -20,6 +20,7 @@ interface TurnRowsProps {
   children: (text: string, last: boolean, lastText: boolean) => ReactNode;
   steers?: (ids: readonly string[], index: number) => ReactNode;
   cards?: (ids: readonly string[]) => ReactNode;
+  asks?: (ids: readonly string[]) => ReactNode;
   fold?: TurnFoldState | null;
 }
 
@@ -27,7 +28,8 @@ interface PartsProps extends Omit<TurnRowsProps, 'fold'> {
   shown?: (index: number) => boolean;
 }
 
-export function TurnRows({ parts, context, children, steers, cards, fold = null }: TurnRowsProps) {
+export function TurnRows(props: TurnRowsProps) {
+  const { parts, context, children, steers, cards, asks, fold = null } = props;
   const [commands] = useState<CommandUiStore>(() => new Map());
   const shared = {
     parts,
@@ -35,6 +37,7 @@ export function TurnRows({ parts, context, children, steers, cards, fold = null 
     children,
     ...(steers ? { steers } : {}),
     ...(cards ? { cards } : {}),
+    ...(asks ? { asks } : {}),
   };
   return (
     <CommandUiContext value={commands}>
@@ -73,8 +76,11 @@ function FoldedWork({ fold, ...shared }: PartsProps & { fold: TurnFoldState }) {
   );
 }
 
-function Parts({ parts, context, children, steers, cards, shown = () => true }: PartsProps) {
-  const lastShown = parts.findLastIndex((part) => part.kind !== 'steers' && part.kind !== 'cards');
+const BETWEEN = new Set<TurnRowPart['kind']>(['steers', 'cards', 'asks']);
+
+function Parts(props: PartsProps) {
+  const { parts, context, children, steers, cards, asks, shown = () => true } = props;
+  const lastShown = parts.findLastIndex((part) => !BETWEEN.has(part.kind));
   const lastText = parts.findLastIndex((part) => part.kind === 'text');
   return parts.map((part, index) => {
     if (!shown(index)) return null;
@@ -82,6 +88,7 @@ function Parts({ parts, context, children, steers, cards, shown = () => true }: 
       return <Fragment key={part.key}>{steers?.(part.ids, index)}</Fragment>;
     }
     if (part.kind === 'cards') return <Fragment key={part.key}>{cards?.(part.ids)}</Fragment>;
+    if (part.kind === 'asks') return <Fragment key={part.key}>{asks?.(part.ids)}</Fragment>;
     if (part.kind === 'shots') return <BrowserShots key={part.key} shots={part.shots} />;
     if (part.kind === 'terminal') {
       const [only] = part.terminals;

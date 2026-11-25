@@ -3,7 +3,14 @@ import { useId, useState, type KeyboardEvent } from 'react';
 import type { QueuedMessage } from '@spark-outpost/contracts';
 import { ApiError } from '../../api/client.ts';
 import { ArrowDownIcon, ArrowUpIcon, PenIcon, XIcon } from '../../ui/icons.tsx';
-import { authorTag, canEdit, queuedCount, stripNote, type QueueMode } from './queue-model.ts';
+import {
+  authorTag,
+  canEdit,
+  canSendNow,
+  queuedCount,
+  stripNote,
+  type QueueMode,
+} from './queue-model.ts';
 import type { ChatQueue } from './use-chat-queue.ts';
 
 interface QueueStripProps {
@@ -179,16 +186,18 @@ function QueueItem({ item, index, count, queue, editing, onEdit, onSave }: ItemP
             >
               <ArrowDownIcon />
             </button>
-            <button
-              type="button"
-              className="qs-btn now"
-              aria-label="Send now"
-              title="Send now: steer the running turn, or stop it and send this first"
-              onClick={() => queue.sendNow(item.id)}
-            >
-              <SendNowIcon />
-              <span className="qs-now">Send now</span>
-            </button>
+            {canSendNow(item) && (
+              <button
+                type="button"
+                className="qs-btn now"
+                aria-label="Send now"
+                title="Send now: steer the running turn, or stop it and send this first"
+                onClick={() => queue.sendNow(item.id)}
+              >
+                <SendNowIcon />
+                <span className="qs-now">Send now</span>
+              </button>
+            )}
             <button
               type="button"
               className="qs-btn"

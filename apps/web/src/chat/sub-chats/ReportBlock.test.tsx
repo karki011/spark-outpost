@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NONE_STATED, REPORT_FOOTER, type SubChatReport } from '@spark-outpost/contracts';
+import {
+  NONE_STATED,
+  REPORT_FOOTER,
+  REPORT_FOR,
+  type SubChatReport,
+} from '@spark-outpost/contracts';
 import { ReportBlock } from './ReportBlock.tsx';
 
 afterEach(cleanup);
@@ -31,6 +36,7 @@ const from = { id: SUB_CHAT, title: 'Payments API v2' };
 describe('a sub-chat’s report', () => {
   it('shows the fixed fields, Spark’s own branch record and who wrote it', () => {
     render(<ReportBlock from={from} report={REPORT} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Report' }));
     const block = screen.getByRole('region', { name: 'Report from Payments API v2' });
     const terms = [...block.querySelectorAll('dt')].map((term) => term.textContent);
     expect(terms).toEqual(['Changed', 'Branch and pull request', 'Risks', 'Blockers']);
@@ -43,7 +49,28 @@ describe('a sub-chat’s report', () => {
     );
     expect(block.textContent).toContain('Ready for review');
     expect(block.textContent).toContain(REPORT_FOOTER);
-    expect(block.textContent).toContain('not your message');
+    expect(block.textContent).toContain(REPORT_FOR);
+  });
+
+  it('starts folded to its header and unfolds from the Report button', () => {
+    render(<ReportBlock from={from} report={REPORT} />);
+    const toggle = screen.getByRole('button', { name: 'Report' });
+    const body = document.getElementById(toggle.getAttribute('aria-controls')!)!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(body.hidden).toBe(true);
+    expect(screen.getByText('Ready for review')).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(body.hidden).toBe(false);
+    fireEvent.click(toggle);
+    expect(body.hidden).toBe(true);
+  });
+
+  it('starts unfolded when the sub-chat needs you', () => {
+    render(<ReportBlock from={from} report={{ ...REPORT, status: 'needs_you' }} />);
+    expect(screen.getByRole('button', { name: 'Report' }).getAttribute('aria-expanded')).toBe(
+      'true',
+    );
   });
 
   it('shows what else the agent said under the three sections', () => {
@@ -96,6 +123,6 @@ describe('a sub-chat’s report', () => {
         onOpenChat={onOpenChat}
       />,
     );
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Payments API v2' })).toBeNull();
   });
 });

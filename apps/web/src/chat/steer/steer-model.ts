@@ -2,6 +2,7 @@ import {
   isTerminalRunStatus,
   type ConversationDetail,
   type AnnotationInput,
+  type ChatAsk,
   type MemberMessage,
   type Run,
 } from '@spark-outpost/contracts';
@@ -261,10 +262,27 @@ export function steerMarks(messages: readonly MemberMessage[]): SteerMark[] {
   }));
 }
 
+export function askMarks(asks: readonly ChatAsk[]): SteerMark[] {
+  return asks.map((ask) => {
+    const steered = ask.steeredAt;
+    const anchor =
+      steered && steered.textOffset !== null
+        ? {
+            textOffset: steered.textOffset,
+            textBefore: steered.textBefore,
+            textHeld: steered.textHeld,
+          }
+        : null;
+    return { id: ask.id, anchor, time: Date.parse(steered?.time ?? ask.createdAt) };
+  });
+}
+
 export function seenAfter(parts: readonly TurnRowPart[], index: number): SteerSeen {
   const own = parts[index];
   const wrote = own?.kind === 'steers' && own.wroteAfter;
-  const later = parts.slice(index + 1).filter((part) => part.kind !== 'steers');
+  const later = parts
+    .slice(index + 1)
+    .filter((part) => part.kind !== 'steers' && part.kind !== 'asks');
   return {
     taken: wrote || later.length > 0,
     answered: wrote || later.some((part) => part.kind === 'text'),

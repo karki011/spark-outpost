@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatAsk } from '@spark-outpost/contracts';
-import { receivedLabel, turnAskLines, turnStartAsk } from './ask-lines.ts';
+import { receivedLabel, steeredAsks, turnAskLines, turnStartAsk } from './ask-lines.ts';
 
 const PARENT = '11111111-1111-4111-8111-111111111111';
 const WEB = '22222222-2222-4222-8222-222222222222';
@@ -64,6 +64,18 @@ describe('lines for messages between chats', () => {
       'From Checkout rewrite: Which port does the API use? · not your message',
     ]);
     expect(texts([steered], WEB, [RUN])).toEqual([]);
+  });
+
+  it('leaves a steered message out of the end-of-turn lines when the turn places it', () => {
+    const steered = ask({ deliveredAs: 'steer', runId: OTHER_RUN });
+    const sent = ask({
+      from: { id: WEB, title: 'Web' },
+      fromRunId: OTHER_RUN,
+      to: { id: API, title: 'API' },
+    });
+    expect(steeredAsks([steered, sent], WEB, [OTHER_RUN])).toEqual([steered]);
+    const lines = turnAskLines([steered, sent], WEB, [OTHER_RUN], false);
+    expect(lines.flatMap((group) => group.lines.map((line) => line.side))).toEqual(['sent']);
   });
 
   it('leaves the ask that started the turn to the turn’s own header', () => {

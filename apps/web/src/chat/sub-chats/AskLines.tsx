@@ -1,7 +1,7 @@
 import './sub-chats.css';
 import type { ChatAsk } from '@spark-outpost/contracts';
 import { SentBySpark } from '../automated/AutomatedTurn.tsx';
-import { turnAskLines, type AskLine } from './ask-lines.ts';
+import { receivedLine, turnAskLines, type AskLine } from './ask-lines.ts';
 import { ReportBlock } from './ReportBlock.tsx';
 
 interface LineProps {
@@ -22,15 +22,32 @@ function Line({ line, from, onOpenChat }: LineProps) {
   );
 }
 
+interface SteeredAskLinesProps {
+  steered: readonly ChatAsk[];
+  asks: readonly ChatAsk[];
+  onOpenChat: (conversationId: string) => void;
+}
+
+export function SteeredAskLines({ steered, asks, onOpenChat }: SteeredAskLinesProps) {
+  return (
+    <div className="sc-asks">
+      {steered.map((ask) => (
+        <Line key={ask.id} line={receivedLine(ask, asks)} from={ask.from} onOpenChat={onOpenChat} />
+      ))}
+    </div>
+  );
+}
+
 interface AskLinesProps {
   asks: readonly ChatAsk[] | undefined;
   chatId: string;
   runIds: readonly string[];
+  steeredShown?: boolean;
   onOpenChat: (conversationId: string) => void;
 }
 
-export function AskLines({ asks, chatId, runIds, onOpenChat }: AskLinesProps) {
-  const groups = turnAskLines(asks, chatId, runIds);
+export function AskLines({ asks, chatId, runIds, steeredShown, onOpenChat }: AskLinesProps) {
+  const groups = turnAskLines(asks, chatId, runIds, steeredShown);
   if (groups.length === 0) return null;
   const fromOf = (id: string) => asks?.find((ask) => ask.id === id)?.from;
   return (

@@ -42,6 +42,10 @@ export function canEdit(item: Authored): boolean {
   return !item.sparkRuleCardId && item.origin !== 'chat';
 }
 
+export function canSendNow(item: Authored): boolean {
+  return item.origin !== 'chat';
+}
+
 const ORIGIN_TAGS: Record<NonNullable<QueuedMessage['origin']>, string> = {
   assistant: 'Ask Spark',
   voice: 'Spoken',

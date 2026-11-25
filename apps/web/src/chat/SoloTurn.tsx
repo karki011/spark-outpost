@@ -70,7 +70,15 @@ import { AgentMark, TurnMeta, agentChanged } from './turn/TurnParts.tsx';
 import { TurnChangesLine } from './turn/TurnChangesLine.tsx';
 import { STARTING, turnMood } from './turn/turn-mood.ts';
 import { SteerGroup } from './steer/SteeredMessage.tsx';
-import { seenAfter, steerMarks, steersReadByNone, turnSteers } from './steer/steer-model.ts';
+import {
+  askMarks,
+  seenAfter,
+  steerMarks,
+  steersReadByNone,
+  turnSteers,
+} from './steer/steer-model.ts';
+import { SteeredAskLines } from './sub-chats/AskLines.tsx';
+import { steeredAsks } from './sub-chats/ask-lines.ts';
 
 interface SoloTurnProps {
   run: Run;
@@ -80,6 +88,7 @@ interface SoloTurnProps {
   previous?: Run | null;
   repo: Project | null;
   steersPlacedIn?: readonly string[];
+  onOpenChat?: ((conversationId: string) => void) | undefined;
 }
 
 const NO_RUNS: readonly string[] = [];
@@ -127,6 +136,7 @@ export function SoloTurn({
   previous = null,
   repo,
   steersPlacedIn = NO_RUNS,
+  onOpenChat,
 }: SoloTurnProps) {
   const { member, child } = soloChild(run, detail);
   const provider = member?.provider ?? run.provider;
@@ -248,6 +258,8 @@ export function SoloTurn({
     ),
   );
   const steers = steersReadByNone(turnSteers(detail, run.id), steersPlacedIn);
+  const asks = detail.asks ?? [];
+  const steered = onOpenChat ? steeredAsks(asks, conversationId, turnRunIds(detail, run.id)) : [];
   const rowInput = {
     text,
     steps: viewSteps(steps),
@@ -255,6 +267,7 @@ export function SoloTurn({
     shots: turnShots(detail, run.id),
     terminals: terminalParts.reply,
     steers: steerMarks(steers),
+    asks: askMarks(steered),
     todo: todoEntries.length > 0,
   };
   const collapse = useCollapseFinishedTurns();
@@ -343,6 +356,15 @@ export function SoloTurn({
         }}
         steers={steersAt}
         cards={cardsAt}
+        asks={(ids) =>
+          onOpenChat && (
+            <SteeredAskLines
+              steered={steered.filter((ask) => ids.includes(ask.id))}
+              asks={asks}
+              onOpenChat={onOpenChat}
+            />
+          )
+        }
         fold={fold}
       >
         {(part, last, lastText) =>
