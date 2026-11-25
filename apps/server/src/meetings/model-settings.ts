@@ -57,13 +57,15 @@ async function runsOn(
   if (!provider) return null;
   const fast = await digestModelFor(db, workspaceId, provider);
   const capabilities = await getCapabilities(db, workspaceId, provider);
-  const offered = (capabilities?.models ?? []).filter((model) => model.availability !== 'unusable');
-  const picked = row.provider === null || chosen ? row.model : null;
-  const option = offered.find((model) => model.id === picked);
-  const usesPick = picked !== null && (option !== undefined || offered.length === 0);
+  const reported = capabilities?.models ?? [];
+  const mine = row.provider === null || chosen !== null;
+  const picked = mine ? row.model : null;
+  const option = reported.find((model) => model.id === picked && model.availability !== 'unusable');
+  const usesPick = picked !== null && (option !== undefined || reported.length === 0);
   const efforts = reportedEfforts(provider, capabilities?.efforts ?? null).map(
     (effort) => effort.id,
   );
+  const effort = mine && row.effort && efforts.includes(row.effort) ? row.effort : fast.effort;
   return {
     provider,
     model: usesPick ? picked : fast.model,
@@ -72,7 +74,7 @@ async function runsOn(
         ? (cardFor(option, provider)?.label ?? option.label)
         : picked
       : fast.label,
-    effort: row.effort && efforts.includes(row.effort) ? row.effort : fast.effort,
+    effort,
   };
 }
 
@@ -102,11 +104,11 @@ async function assertOffered(
   settings: MeetingModelSettings,
 ): Promise<void> {
   const capabilities = await getCapabilities(db, workspaceId, provider);
-  const models = (capabilities?.models ?? []).filter((model) => model.availability !== 'unusable');
+  const models = capabilities?.models ?? [];
   const modelKnown =
     settings.model === null ||
     models.length === 0 ||
-    models.some((model) => model.id === settings.model);
+    models.some((model) => model.id === settings.model && model.availability !== 'unusable');
   const efforts = reportedEfforts(provider, capabilities?.efforts ?? null);
   const effortKnown =
     settings.effort === null || efforts.some((effort) => effort.id === settings.effort);

@@ -114,6 +114,29 @@ describe('the meeting model setting', () => {
     expect(runsOn?.model).not.toBe('beta');
   });
 
+  it('drops the picked effort with a disconnected provider', async () => {
+    await connect('claude');
+    await connect('codex');
+    await offer('codex', ['beta']);
+    await saveMeetingModel(t.db, t.workspaceId, {
+      provider: 'codex',
+      model: 'beta',
+      effort: 'high',
+    });
+    await t.db.query(
+      `UPDATE provider_connections SET disconnected_at = now()
+       WHERE workspace_id = $1 AND provider = 'codex'`,
+      [t.workspaceId],
+    );
+    await saveMeetingModel(t.db, t.workspaceId, { provider: null, model: null, effort: null });
+    const fast = await meetingRunsOn(t.db, t.workspaceId);
+    await t.db.query(
+      `UPDATE profiles SET meeting_provider = 'codex', meeting_effort = 'high' WHERE workspace_id = $1`,
+      [t.workspaceId],
+    );
+    expect(await meetingRunsOn(t.db, t.workspaceId)).toEqual(fast);
+  });
+
   it('starts the notes run on the picked model', async () => {
     await connect('claude');
     await offer('claude', ['alpha', 'beta']);
