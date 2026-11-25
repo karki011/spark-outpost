@@ -11,14 +11,22 @@ export type WorkflowJoin = z.infer<typeof workflowJoinSchema>;
 export const workflowFailureSchema = z.enum(['stop', 'continue']);
 export type WorkflowFailure = z.infer<typeof workflowFailureSchema>;
 
-export const workflowStepSchema = z.object({
-  id: crewSlugSchema,
-  sparkId: z.uuid(),
-  prompt: z.string().max(WORKFLOW_PROMPT_MAX).default(''),
-  dependsOn: z.array(crewSlugSchema).max(WORKFLOW_STEPS_MAX).default([]),
-  join: workflowJoinSchema.default('all'),
-  onFailure: workflowFailureSchema.default('stop'),
-});
+export const STEP_NEEDS_ONE = 'A step names one Spark or one workflow, not both.';
+
+export const workflowStepSchema = z
+  .object({
+    id: crewSlugSchema,
+    sparkId: z.uuid().optional(),
+    workflowId: crewSlugSchema.optional(),
+    prompt: z.string().max(WORKFLOW_PROMPT_MAX).default(''),
+    dependsOn: z.array(crewSlugSchema).max(WORKFLOW_STEPS_MAX).default([]),
+    join: workflowJoinSchema.default('all'),
+    onFailure: workflowFailureSchema.default('stop'),
+  })
+  .refine((step) => (step.sparkId === undefined) !== (step.workflowId === undefined), {
+    message: STEP_NEEDS_ONE,
+    path: ['sparkId'],
+  });
 export type WorkflowStep = z.infer<typeof workflowStepSchema>;
 
 export const workflowSchema = z.object({
@@ -29,7 +37,15 @@ export const workflowSchema = z.object({
 export type Workflow = z.infer<typeof workflowSchema>;
 
 export type WorkflowProblemKind =
-  'duplicate_step' | 'unknown_step' | 'self' | 'cycle' | 'unknown_spark';
+  | 'duplicate_step'
+  | 'unknown_step'
+  | 'self'
+  | 'cycle'
+  | 'unknown_spark'
+  | 'unknown_workflow'
+  | 'workflow_cycle'
+  | 'inner_problem'
+  | 'too_many_steps';
 
 export interface WorkflowProblem {
   kind: WorkflowProblemKind;
@@ -131,7 +147,7 @@ function cycleProblems(known: ReadonlyMap<string, StepShape>): WorkflowProblem[]
 export const workflowProblems: WorkflowProblems = (steps, sparkIds) => {
   const known = firstById(steps);
   const sparks = steps
-    .filter((step) => !sparkIds.has(step.sparkId))
+    .filter((step) => step.sparkId !== undefined && !sparkIds.has(step.sparkId))
     .map((step): WorkflowProblem => ({
       kind: 'unknown_spark',
       stepId: step.id,
@@ -172,7 +188,15 @@ export const workflowStages: WorkflowStages = (steps) => {
 export const workflowSummarySchema = z.object({
   id: crewSlugSchema,
   name: z.string(),
-  stages: z.array(z.array(z.object({ stepId: crewSlugSchema, sparkId: z.uuid() }))),
+  stages: z.array(
+    z.array(
+      z.object({
+        stepId: crewSlugSchema,
+        sparkId: z.uuid().nullable(),
+        workflowId: crewSlugSchema.nullable().default(null),
+      }),
+    ),
+  ),
   problems: z.number().int().nonnegative(),
 });
 export type WorkflowSummary = z.infer<typeof workflowSummarySchema>;

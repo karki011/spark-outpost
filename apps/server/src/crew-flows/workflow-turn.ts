@@ -1,4 +1,4 @@
-import { findSparkMentions, workflowProblems } from '@spark-outpost/contracts';
+import { findSparkMentions } from '@spark-outpost/contracts';
 import { hasProject, publishOrchestration, type Handoff } from '../orchestration/spark-child.ts';
 import { typedOnTheMac } from '../orchestration/typed-on-mac.ts';
 import { userText } from '../sub-chats/user-asked.ts';
@@ -11,6 +11,7 @@ import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { insertWorkflowRun, workflowRunForTurn, type TurnWorkflowRun } from './run-records.ts';
 import { runWorkflow, type WorkflowEnd } from './run-workflow.ts';
+import { runnableWorkflow } from './runnable.ts';
 import {
   checkoutChanges,
   checkoutNote,
@@ -47,15 +48,15 @@ async function startByMention(h: Handoff): Promise<TurnWorkflowRun | null> {
   const file = await store.read(mention.spark.name);
   if (!file) return null;
   const sparkIds = await workspaceSparkIds(deps.db, input.workspaceId);
-  const [problem] = workflowProblems(file.workflow.steps, sparkIds);
-  if (problem) {
-    await planNote(h.append, `Workflow ${file.workflow.name} did not start: ${problem.text}`);
+  const { workflow, problems } = await runnableWorkflow(store, file.workflow, sparkIds);
+  if (!workflow) {
+    await planNote(h.append, `Workflow ${file.workflow.name} did not start: ${problems[0].text}`);
     return null;
   }
   await insertWorkflowRun(deps.db, {
     id: newId(),
     workspaceId: input.workspaceId,
-    workflow: file.workflow,
+    workflow,
     kind: 'run',
     source: 'mention',
     conversationId: input.identity.threadId,

@@ -9,6 +9,7 @@ import {
   moveStep,
   removeStep,
   type MoveDirection,
+  type SparkName,
 } from './workflow-model.ts';
 
 const FlowGraph = lazy(() => import('./FlowGraph.tsx'));
@@ -18,6 +19,7 @@ interface StepsTabProps {
   labels: ReadonlyMap<string, string>;
   sparks: readonly CrewSpark[];
   sparkById: ReadonlyMap<string, CrewSpark>;
+  workflows: readonly SparkName[];
   problems: readonly WorkflowProblem[];
   selected: string | null;
   onSelect: (stepId: string | null) => void;
@@ -30,7 +32,8 @@ function count(total: number, word: string): string {
 }
 
 export function StepsTab(props: StepsTabProps) {
-  const { steps, labels, sparks, sparkById, problems, selected, onSelect, onChange } = props;
+  const { steps, labels, sparks, sparkById, workflows, problems, selected, onSelect, onChange } =
+    props;
   const root = useRef<HTMLDivElement>(null);
   const focusNext = useRef<string | null>(null);
   const [moved, setMoved] = useState<{ stepId: string; lines: string[] } | null>(null);
@@ -82,6 +85,7 @@ export function StepsTab(props: StepsTabProps) {
           labels={labels}
           sparks={sparks}
           sparkById={sparkById}
+          workflows={workflows}
           problems={problems}
           selected={selected}
           onSelect={onSelect}
@@ -107,6 +111,7 @@ export function StepsTab(props: StepsTabProps) {
         labels={labels}
         sparks={sparks}
         sparkById={sparkById}
+        workflows={workflows}
         problems={problems}
         moved={moved && moved.stepId === step?.id ? moved.lines : []}
         onChange={change}

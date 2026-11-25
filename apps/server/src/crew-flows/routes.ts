@@ -34,6 +34,7 @@ import {
   WorkflowBusyError,
   WorkflowChangedError,
   WorkflowExistsError,
+  WorkflowInUseError,
   WorkflowNotFoundError,
   WorkflowProblemsError,
   workflowStore,
@@ -73,6 +74,7 @@ export function workflowErrorStatus(error: unknown): { status: number; message: 
     error instanceof WorkflowChangedError ||
     error instanceof WorkflowBusyError ||
     error instanceof WorkflowExistsError ||
+    error instanceof WorkflowInUseError ||
     error instanceof BuilderChatTakenError
   ) {
     return { status: 409, message: error.message };

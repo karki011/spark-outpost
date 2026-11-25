@@ -1,12 +1,12 @@
 import './crew-flows.css';
 import './workflow-editor.css';
 import { useMemo } from 'react';
-import { TRY_IT_WORKFLOW_ID, type TeammateView, type WorkflowStep } from '@spark-outpost/contracts';
+import { TRY_IT_WORKFLOW_ID, type TeammateView, type ExpandedStep } from '@spark-outpost/contracts';
 import { testRunApi } from './test-run-api.ts';
 import { TestRun } from './TestRun.tsx';
 
 export function TrySpark({ spark }: { spark: TeammateView }) {
-  const steps = useMemo<WorkflowStep[]>(
+  const steps = useMemo<ExpandedStep[]>(
     () => [
       {
         id: TRY_IT_WORKFLOW_ID,

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { totalCostSourceSchema } from './audit.ts';
 import { crewSlugSchema } from './crew-files.ts';
 import type { WorkflowStep } from './crew-workflow.ts';
+import { runStepIdSchema } from './crew-workflow-nesting.ts';
 
 export const workflowStepStateSchema = z.enum([
   'waiting',
@@ -155,9 +156,9 @@ export const workflowOutcome: WorkflowOutcome = (steps, states) => {
 };
 
 export const workflowRunStepSchema = z.object({
-  stepId: crewSlugSchema,
+  stepId: runStepIdSchema,
   sparkId: z.uuid(),
-  dependsOn: z.array(crewSlugSchema),
+  dependsOn: z.array(runStepIdSchema),
   state: workflowStepStateSchema,
   runId: z.uuid().nullable(),
   note: z.string().nullable(),
@@ -183,7 +184,7 @@ export const workflowRunSchema = z.object({
   conversationId: z.uuid().nullable(),
   pull: z.string().nullable().default(null),
   runId: z.uuid().nullable(),
-  stoppedBy: crewSlugSchema.nullable(),
+  stoppedBy: runStepIdSchema.nullable(),
   steps: z.array(workflowRunStepSchema),
   spend: workflowRunSpendSchema,
   startedAt: z.iso.datetime({ offset: true }),

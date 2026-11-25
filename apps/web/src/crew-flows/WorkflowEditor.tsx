@@ -1,6 +1,8 @@
 import './workflow-editor.css';
 import { useMemo, useRef, useState } from 'react';
 import {
+  expandWorkflow,
+  nestedWorkflowProblems,
   workflowProblems,
   workflowStages,
   type Workflow,
@@ -25,13 +27,14 @@ import { triggerLabels } from './triggers-model.ts';
 import { useWorkflowActivity } from './use-activity.ts';
 import { useWorkflowSchedule } from './use-schedule.ts';
 import { useReleaseHold, useWorkflowTriggers } from './use-triggers.ts';
+import { useOtherWorkflows } from './use-other-workflows.ts';
 import { useWorkflowDraft } from './use-workflow-draft.ts';
 import { useDeleteWorkflow, useStartWorkflowRun } from './use-workflows.ts';
 import { WhenChips } from './WhenChips.tsx';
 import { WhenTab } from './WhenTab.tsx';
 import { baselineOf, draftProblems, toSchedule, type DraftTab } from './workflow-draft.ts';
 import { WorkflowPreview } from './WorkflowPreview.tsx';
-import { stepLabels, updateStep } from './workflow-model.ts';
+import { listed, namesInside, stepLabels, updateStep } from './workflow-model.ts';
 
 type EditorTab = DraftTab | 'runs';
 type Mode = 'edit' | 'preview' | 'test' | 'run';
@@ -94,11 +97,33 @@ function EditorBody({ initial, baseHash, sparks, sparkById, onClose, ...props }:
   const scheduleView = useWorkflowSchedule(id, saved);
 
   const sparkIds = useMemo(() => new Set(sparkById.keys()), [sparkById]);
-  const stepProblems = useMemo(
-    () => workflowProblems(draft.steps, sparkIds),
-    [draft.steps, sparkIds],
+  const others = useOtherWorkflows(id);
+  const stepProblems = useMemo(() => {
+    if (!others.ready) return workflowProblems(draft.steps, sparkIds);
+    const self = { id, name: draft.name, steps: draft.steps };
+    return nestedWorkflowProblems(self, sparkIds, (used) =>
+      used === id ? self : others.find(used),
+    );
+  }, [id, draft.name, draft.steps, sparkIds, others]);
+  const labels = useMemo(
+    () => stepLabels(draft.steps, sparks, others.names),
+    [draft.steps, sparks, others.names],
   );
-  const labels = useMemo(() => stepLabels(draft.steps, sparks), [draft.steps, sparks]);
+  const runSteps = useMemo(() => {
+    if (!others.ready || stepProblems.length > 0) return [];
+    return expandWorkflow({ id, name: draft.name, steps: draft.steps }, others.find).steps;
+  }, [id, draft.name, draft.steps, others, stepProblems]);
+  const runLabels = useMemo(
+    () =>
+      stepLabels(
+        runSteps,
+        sparks,
+        [],
+        namesInside({ name: draft.name, steps: draft.steps }, others.find),
+      ),
+    [runSteps, sparks, draft.name, draft.steps, others],
+  );
+  const usedIn = listed(others.usedIn.map((workflow) => workflow.name));
   const problems = draftProblems(draft, stepProblems.length);
   const blocked = problems[0] ?? null;
   const busy = editor.saving || run.isPending;
@@ -150,8 +175,8 @@ function EditorBody({ initial, baseHash, sparks, sparkById, onClose, ...props }:
       <section className="wf-editor" aria-label={label}>
         <TestRun
           name={name}
-          steps={draft.steps}
-          labels={labels}
+          steps={runSteps}
+          labels={runLabels}
           sparkById={sparkById}
           form={{
             title: `Test run of ${name}`,
@@ -205,7 +230,7 @@ function EditorBody({ initial, baseHash, sparks, sparkById, onClose, ...props }:
         changes={editor.changes}
         blocked={blocked?.text ?? null}
         busy={busy}
-        canPreview={draft.steps.length > 0 && stepProblems.length === 0}
+        canPreview={runSteps.length > 0}
         runItems={runItems}
         onName={(next) => setDraft({ ...draft, name: next })}
         onBack={back}
@@ -258,13 +283,15 @@ function EditorBody({ initial, baseHash, sparks, sparkById, onClose, ...props }:
       )}
       {mode === 'preview' ? (
         <WorkflowPreview
-          steps={draft.steps}
-          labels={labels}
+          steps={runSteps}
+          labels={runLabels}
           sparkById={sparkById}
           onContinue={(stepId) =>
             setDraft({
               ...draft,
-              steps: updateStep(draft.steps, stepId, { onFailure: 'continue' }),
+              steps: updateStep(draft.steps, stepId.split('.')[0] ?? stepId, {
+                onFailure: 'continue',
+              }),
             })
           }
         />
@@ -286,6 +313,7 @@ function EditorBody({ initial, baseHash, sparks, sparkById, onClose, ...props }:
               labels={labels}
               sparks={sparks}
               sparkById={sparkById}
+              workflows={others.names}
               problems={stepProblems}
               selected={selected}
               onSelect={setSelected}
@@ -295,10 +323,14 @@ function EditorBody({ initial, baseHash, sparks, sparkById, onClose, ...props }:
                   <div className="wf-danger">
                     <HoldToConfirm
                       label={`Hold to delete ${name || 'this workflow'}`}
-                      hint="Hold to delete this workflow. This can’t be undone."
+                      hint={
+                        usedIn
+                          ? `Used in ${usedIn}. Remove that step there before deleting this workflow.`
+                          : 'Hold to delete this workflow. This can’t be undone.'
+                      }
                       holdingHint="Keep holding to delete."
                       releasedHint="Released early. Nothing was deleted."
-                      disabled={remove.isPending}
+                      disabled={remove.isPending || usedIn !== ''}
                       onConfirm={() => remove.mutate(id, { onSuccess: onClose })}
                     />
                   </div>
@@ -309,6 +341,7 @@ function EditorBody({ initial, baseHash, sparks, sparkById, onClose, ...props }:
           {tab === 'when' && (
             <WhenTab
               draft={draft}
+              runSteps={runSteps}
               problems={problems}
               sparkById={sparkById}
               lastRunCostUsd={scheduleView.data?.lastRunCostUsd ?? null}

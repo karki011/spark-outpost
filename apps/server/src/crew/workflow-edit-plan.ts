@@ -1,11 +1,12 @@
 import {
   CREW_SLUG_PATTERN,
-  workflowProblems,
+  nestedWorkflowProblems,
   workflowSchema,
   workflowStages,
   type CrewFileChange,
   type Workflow,
 } from '@spark-outpost/contracts';
+import { workflowFinder } from '../crew-flows/runnable.ts';
 import type { WorkflowStore } from '../crew-flows/workflow-store.ts';
 import type { CrewProblem } from './crew-edit-plan.ts';
 
@@ -47,7 +48,11 @@ function withSparkIds(raw: unknown, sparks: readonly CrewSparkName[], problems: 
   }
   const steps = (raw as { steps: unknown[] }).steps.map((step) => {
     if (typeof step !== 'object' || step === null) return step;
-    const { spark, ...rest } = step as Record<string, unknown>;
+    const { spark, workflow, ...named } = step as Record<string, unknown>;
+    const rest =
+      typeof workflow === 'string' && named.workflowId === undefined
+        ? { ...named, workflowId: workflow.trim() }
+        : named;
     if (typeof spark !== 'string' || typeof rest.sparkId === 'string') return rest;
     const wanted = spark.trim().toLowerCase();
     const found = sparks.find((s) => s.id === wanted || s.name.toLowerCase() === wanted);
@@ -65,9 +70,13 @@ function withSparkIds(raw: unknown, sparks: readonly CrewSparkName[], problems: 
 
 function stageNames(workflow: Workflow, sparks: readonly CrewSparkName[]): string[][] {
   const names = new Map(sparks.map((spark) => [spark.id, spark.name]));
-  const sparkOf = new Map(workflow.steps.map((step) => [step.id, step.sparkId]));
+  const stepOf = new Map(workflow.steps.map((step) => [step.id, step]));
   return workflowStages(workflow.steps).map((stage) =>
-    stage.map((stepId) => names.get(sparkOf.get(stepId) ?? '') ?? stepId),
+    stage.map((stepId) => {
+      const step = stepOf.get(stepId);
+      if (step?.workflowId !== undefined) return `workflow ${step.workflowId}`;
+      return names.get(step?.sparkId ?? '') ?? stepId;
+    }),
   );
 }
 
@@ -95,7 +104,11 @@ export async function planWorkflowSave(
     );
   }
   const workflow = parsed.data;
-  const found = workflowProblems(workflow.steps, new Set(sparks.map((spark) => spark.id)));
+  const found = nestedWorkflowProblems(
+    workflow,
+    new Set(sparks.map((spark) => spark.id)),
+    await workflowFinder(store, workflow),
+  );
   problems.push(...found.map((problem) => ({ path: problem.stepId, text: problem.text })));
   const current = await store.read(workflow.id);
   if (!current && (await store.ids()).includes(workflow.id)) {
@@ -128,6 +141,16 @@ export async function planWorkflowRemoval(
   const current = CREW_SLUG_PATTERN.test(id) ? await store.read(id) : null;
   if (!current) {
     return failed(id, [{ path: workflowFilePath(id), text: WORKFLOW_EDIT_PROBLEMS.missing }]);
+  }
+  const users = await store.usedBy(id);
+  if (users.length > 0) {
+    const names = users.map((user) => user.name).join(', ');
+    return failed(id, [
+      {
+        path: workflowFilePath(id),
+        text: `${current.workflow.name} is a step in ${names}. Change or delete those workflows first.`,
+      },
+    ]);
   }
   return {
     id,

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   TEST_RUN_LIMITS,
   type Approval,
-  type WorkflowStep,
+  type ExpandedStep,
   type WorkflowStepState,
   type WorkflowTestRun,
 } from '@spark-outpost/contracts';
@@ -32,7 +32,7 @@ const POLL_MS = 1500;
 interface TestRunViewProps {
   runId: string;
   name: string;
-  steps: readonly WorkflowStep[];
+  steps: readonly ExpandedStep[];
   labels: ReadonlyMap<string, string>;
   sparkById: ReadonlyMap<string, CrewSpark>;
   discarding: boolean;

@@ -1,7 +1,8 @@
-import { workflowProblems, type QueuedTriggerKind } from '@spark-outpost/contracts';
+import type { QueuedTriggerKind } from '@spark-outpost/contracts';
 import { sparkPaused } from '../persistence/spark-pause.ts';
 import { chatCode, diffHash } from './chat-code.ts';
 import { chatTurnActive, firstTurnSucceeded } from './chat-started.ts';
+import { runnableWorkflow } from './runnable.ts';
 import { openScheduleChat } from './schedule-records.ts';
 import { existingRun, startWorkflowRun, type StartRunDeps } from './start-run.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
@@ -44,8 +45,12 @@ async function decide(deps: TriggerDeps, claim: ClaimedTrigger): Promise<Trigger
   if (!stored || !file) {
     return { state: 'not_started', reason: 'problem', detail: 'The workflow no longer exists.' };
   }
-  const [problem] = workflowProblems(file.workflow.steps, await workspaceSparkIds(db, workspaceId));
-  if (problem) return { state: 'not_started', reason: 'problem', detail: problem.text };
+  const { problems } = await runnableWorkflow(
+    deps.store,
+    file.workflow,
+    await workspaceSparkIds(db, workspaceId),
+  );
+  if (problems[0]) return { state: 'not_started', reason: 'problem', detail: problems[0].text };
   if (!(await openScheduleChat(db, workspaceId, claim.conversationId))) {
     return { state: 'not_started', reason: 'chat_gone', detail: null };
   }

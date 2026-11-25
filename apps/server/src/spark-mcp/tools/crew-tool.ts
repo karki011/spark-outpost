@@ -99,10 +99,9 @@ async function readWorkflow(context: SparkToolContext, id: string, teammates: re
     })),
     workflow: {
       ...file.workflow,
-      steps: file.workflow.steps.map((step) => ({
-        ...step,
-        spark: names.get(step.sparkId) ?? null,
-      })),
+      steps: file.workflow.steps.map((step) =>
+        step.sparkId === undefined ? step : { ...step, spark: names.get(step.sparkId) ?? null },
+      ),
     },
     hash: file.hash,
   };

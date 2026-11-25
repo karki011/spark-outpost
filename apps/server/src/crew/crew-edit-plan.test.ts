@@ -328,4 +328,37 @@ describe('planning and writing a workflow', () => {
       { path: 'nightly.json', text: WORKFLOW_EDIT_PROBLEMS.missing },
     ]);
   });
+
+  it('takes a workflow as a step by its id and keeps a workflow that is used', async () => {
+    const created = await planWorkflowSave(store(), nightly, sparks);
+    await applyWorkflowEdit(store(), 'nightly', created.file!, ids);
+    const weekly = {
+      id: 'weekly',
+      name: 'Weekly',
+      steps: [
+        { id: 'all', workflow: 'nightly' },
+        { id: 'sum', spark: 'Scribe', dependsOn: ['all'] },
+      ],
+    };
+
+    const planned = await planWorkflowSave(store(), weekly, sparks);
+    expect(planned.problems).toEqual([]);
+    expect(planned.stages).toEqual([['workflow nightly'], ['Scribe']]);
+    await applyWorkflowEdit(store(), 'weekly', planned.file!, ids);
+    expect((await store().read('weekly'))!.workflow.steps[0]).toMatchObject({
+      id: 'all',
+      workflowId: 'nightly',
+    });
+
+    const missing = { ...weekly, id: 'monthly', steps: [{ id: 'all', workflow: 'yearly' }] };
+    expect((await planWorkflowSave(store(), missing, sparks)).problems).toEqual([
+      { path: 'all', text: 'all uses a workflow that no longer exists.' },
+    ]);
+    expect((await planWorkflowRemoval(store(), 'nightly', sparks)).problems).toEqual([
+      {
+        path: 'nightly.json',
+        text: 'Nightly is a step in Weekly. Change or delete those workflows first.',
+      },
+    ]);
+  });
 });

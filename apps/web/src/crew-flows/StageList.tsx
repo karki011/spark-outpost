@@ -1,15 +1,22 @@
 import { workflowStages, type WorkflowProblem, type WorkflowStep } from '@spark-outpost/contracts';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { WarnIcon } from '../ui/icons.tsx';
-import { sparkChoices, type CrewSpark } from './spark-lookup.ts';
+import { chosenTarget, stepChoices, type CrewSpark } from './spark-lookup.ts';
 import { SparkDot } from './StagePreview.tsx';
-import { addStage, addStep, afterLabel } from './workflow-model.ts';
+import {
+  addStage,
+  addStep,
+  afterLabel,
+  type SparkName,
+  type StepTarget,
+} from './workflow-model.ts';
 
 interface StageListProps {
   steps: readonly WorkflowStep[];
   labels: ReadonlyMap<string, string>;
   sparks: readonly CrewSpark[];
   sparkById: ReadonlyMap<string, CrewSpark>;
+  workflows: readonly SparkName[];
   problems: readonly WorkflowProblem[];
   selected: string | null;
   onSelect: (stepId: string) => void;
@@ -25,6 +32,7 @@ export function StageList({
   labels,
   sparks,
   sparkById,
+  workflows,
   problems,
   selected,
   onSelect,
@@ -32,10 +40,10 @@ export function StageList({
 }: StageListProps) {
   const stages = workflowStages(steps);
   const byId = new Map(steps.map((step) => [step.id, step]));
-  const choices = sparkChoices(sparks);
-  const pick = (sparkId: string, place: (spark: CrewSpark) => WorkflowStep[]) => {
-    const spark = sparkById.get(sparkId);
-    if (spark) onAdd(place(spark));
+  const choices = stepChoices(sparks, workflows);
+  const pick = (choice: string, place: (target: StepTarget) => WorkflowStep[]) => {
+    const target = chosenTarget(choice, sparkById, workflows);
+    if (target) onAdd(place(target));
   };
 
   return (
@@ -61,7 +69,11 @@ export function StageList({
                     aria-label={`Edit ${label}`}
                     onClick={() => onSelect(id)}
                   >
-                    <SparkDot spark={sparkById.get(step.sparkId)} size={26} />
+                    <SparkDot
+                      spark={sparkById.get(step.sparkId ?? '')}
+                      workflow={step.workflowId !== undefined}
+                      size={26}
+                    />
                     <span className="wf-step-name">
                       <b>{label}</b>
                       <small>{afterLabel(steps, id, labels)}</small>
@@ -79,8 +91,8 @@ export function StageList({
           </ul>
           <div className="wf-add">
             <ChoicePicker
-              label={`Add a Spark to Stage ${index + 1}`}
-              placeholder="Add a Spark to this stage"
+              label={`Add a step to Stage ${index + 1}`}
+              placeholder="Add a Spark or workflow to this stage"
               showNote={false}
               value=""
               choices={choices}
@@ -91,9 +103,11 @@ export function StageList({
       ))}
       <div className="wf-add wf-add-stage" data-add-stage-wrap>
         <ChoicePicker
-          label={steps.length === 0 ? 'Add the first Spark' : 'Add a stage'}
+          label={steps.length === 0 ? 'Add the first step' : 'Add a stage'}
           placeholder={
-            steps.length === 0 ? 'Add the first Spark' : 'Add a stage that runs after the last one'
+            steps.length === 0
+              ? 'Add the first Spark or workflow'
+              : 'Add a stage that runs after the last one'
           }
           showNote={false}
           value=""
