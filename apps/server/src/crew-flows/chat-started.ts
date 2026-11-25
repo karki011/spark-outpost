@@ -1,3 +1,4 @@
+import { chatTurn } from '../persistence/chat-turns.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { markSeen, queueTrigger, triggersWith } from './trigger-records.ts';
 
@@ -70,7 +71,7 @@ export async function noteFirstMessage(
 
 export async function chatTurnActive(db: Queryable, conversationId: string): Promise<boolean> {
   const { rowCount } = await db.query(
-    `SELECT 1 FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL
+    `SELECT 1 FROM runs WHERE conversation_id = $1 AND ${chatTurn()}
        AND status IN ('queued', 'running', 'awaiting_approval') LIMIT 1`,
     [conversationId],
   );

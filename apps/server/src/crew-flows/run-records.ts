@@ -442,3 +442,15 @@ export async function workflowRunningInLane(
   );
   return rows[0] ?? null;
 }
+
+export async function moveReportToTurn(
+  db: Queryable,
+  fromRunId: string,
+  toMessageId: string,
+): Promise<void> {
+  await db.query(
+    `UPDATE workflow_runs SET report_message_id = $2
+     WHERE report_message_id = (SELECT user_message_id FROM runs WHERE id = $1)`,
+    [fromRunId, toMessageId],
+  );
+}

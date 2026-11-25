@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { workflowTriggersSchema, type WorkflowRun } from '@spark-outpost/contracts';
 import { WORKFLOW_NOTE_HEADER } from '../src/crew-flows/step-prompt.ts';
+import { chatTurnActive } from '../src/crew-flows/chat-started.ts';
 import { saveTriggers } from '../src/crew-flows/trigger-records.ts';
+import { startFreshChat } from '../src/compaction/fresh-chat.ts';
+import { recordReport, reportNoteOfTurn } from '../src/crew-flows/run-records.ts';
 import { addToQueue } from '../src/persistence/chat-queue.ts';
 import { drainQueue, sendNow } from '../src/workflow/queue-drain.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
@@ -198,5 +201,42 @@ describe('a workflow run outside the chat’s turns', { timeout: 120_000 }, () =
     );
     expect(rows[0]?.origin).toBe('workflow');
     expect(await turnFor(reportId)).toBeNull();
+  });
+
+  it('keeps the report with its turn when the turn moves to a fresh chat', async () => {
+    await review();
+    const run = await startInChat();
+    const messageId = randomUUID();
+    await recordReport(t.db, run.id, { messageId, note: 'the stored report' });
+    expect(
+      await sendNow(t.db, chat, { id: messageId, content: 'Report', origin: 'workflow' }, target),
+    ).toBe('sent');
+    const reportTurn = (await turnFor(messageId))!;
+
+    const fresh = await startFreshChat(
+      t.db,
+      {
+        identity: { threadId: chat, runId: reportTurn.id },
+        workspaceId: t.workspaceId,
+        userRequest: 'Report',
+        workflowStarted: true,
+      },
+      'summary',
+      null,
+    );
+
+    const { rows } = await t.db.query<{ id: string; source: string | null }>(
+      'SELECT id, source FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL',
+      [fresh.id],
+    );
+    expect(rows[0]?.source).toBe('workflow');
+    expect(await reportNoteOfTurn(t.db, rows[0]!.id)).toBe('the stored report');
+    expect(await reportNoteOfTurn(t.db, reportTurn.id)).toBeNull();
+  });
+
+  it('does not hold a chat-started trigger behind a background workflow run', async () => {
+    await review();
+    await startInChat();
+    expect(await chatTurnActive(t.db, chat)).toBe(false);
   });
 });
