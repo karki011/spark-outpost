@@ -12,6 +12,7 @@ import { SubChatStatusWord } from '../../conversations/SubChatStatusWord.tsx';
 import { pullRequestFact } from '../../tasks/sub-chats-pane.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import { ReviewMarkdown } from '../markdown/ReviewMarkdown.tsx';
+import { usePaneId } from '../split/chat-pane.ts';
 
 function BranchRecord({ report }: { report: SubChatReport }) {
   const pull = report.pullRequest;
@@ -62,7 +63,7 @@ interface ReportBlockProps {
 export function ReportBlock({ from, report, onOpenChat }: ReportBlockProps) {
   const title = shownChatTitle(from.title);
   const fromId = from.id;
-  const bodyId = useId();
+  const bodyId = usePaneId(useId());
   const [chosen, setChosen] = useState<boolean | null>(null);
   const open = chosen ?? report.status === 'needs_you';
   return (
