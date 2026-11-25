@@ -7,9 +7,17 @@ import {
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { ArrowDownIcon, ArrowUpIcon, TrashIcon, WarnIcon } from '../ui/icons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
-import { sparkChoices, type CrewSpark } from './spark-lookup.ts';
+import { chosenTarget, stepChoices, type CrewSpark } from './spark-lookup.ts';
 import { SparkDot } from './StagePreview.tsx';
-import { canMove, toggleParent, updateStep, type MoveDirection } from './workflow-model.ts';
+import {
+  canMove,
+  retargetStep,
+  targetKey,
+  toggleParent,
+  updateStep,
+  type MoveDirection,
+  type SparkName,
+} from './workflow-model.ts';
 
 interface StepInspectorProps {
   step: WorkflowStep | null;
@@ -17,6 +25,7 @@ interface StepInspectorProps {
   labels: ReadonlyMap<string, string>;
   sparks: readonly CrewSpark[];
   sparkById: ReadonlyMap<string, CrewSpark>;
+  workflows: readonly SparkName[];
   problems: readonly WorkflowProblem[];
   moved: readonly string[];
   onChange: (steps: WorkflowStep[]) => void;
@@ -34,7 +43,7 @@ const FAILURES = [
 ];
 
 export function StepInspector(props: StepInspectorProps) {
-  const { step, steps, labels, sparks, sparkById, problems, moved, onChange } = props;
+  const { step, steps, labels, sparks, sparkById, workflows, problems, moved, onChange } = props;
   const ids = useId();
   if (!step) {
     return (
@@ -51,10 +60,11 @@ export function StepInspector(props: StepInspectorProps) {
   const others = steps.filter((other) => other.id !== step.id);
   const parents = new Set(step.dependsOn);
   const own = problems.filter((problem) => problem.stepId === step.id);
+  const nested = step.workflowId !== undefined;
   return (
     <aside className="wf-inspector" aria-label={`Step ${label}`} data-inspect={step.id}>
       <header className="wf-inspector-head">
-        <SparkDot spark={sparkById.get(step.sparkId)} size={28} />
+        <SparkDot spark={sparkById.get(step.sparkId ?? '')} workflow={nested} size={28} />
         <h3>{label}</h3>
         <button
           type="button"
@@ -110,14 +120,17 @@ export function StepInspector(props: StepInspectorProps) {
         </p>
       ))}
       <div className="wf-fieldrow">
-        <span className="wf-lbl">Spark</span>
+        <span className="wf-lbl">Runs</span>
         <ChoicePicker
-          label={`Spark for ${label}`}
+          label={`Spark or workflow for ${label}`}
           showNote={false}
-          value={step.sparkId}
-          placeholder="Choose a Spark"
-          choices={sparkChoices(sparks)}
-          onChange={(sparkId) => onChange(updateStep(steps, step.id, { sparkId }))}
+          value={targetKey(step)}
+          placeholder="Choose a Spark or workflow"
+          choices={stepChoices(sparks, workflows)}
+          onChange={(choice) => {
+            const target = chosenTarget(choice, sparkById, workflows);
+            if (target) onChange(retargetStep(steps, step.id, target));
+          }}
         />
       </div>
       <fieldset className="wf-parents">
@@ -171,6 +184,11 @@ export function StepInspector(props: StepInspectorProps) {
           }
         />
       </div>
+      {nested && (
+        <p className="wf-hint">
+          Its steps run here as part of this workflow. Continue applies to every step inside it.
+        </p>
+      )}
       <label className="field" htmlFor={`${ids}-prompt`}>
         <span>Extra prompt</span>
         <textarea
@@ -178,7 +196,11 @@ export function StepInspector(props: StepInspectorProps) {
           className="inp"
           rows={4}
           maxLength={WORKFLOW_PROMPT_MAX}
-          placeholder="Optional. Added to what this Spark is told for this step."
+          placeholder={
+            nested
+              ? 'Optional. Added to what every Spark in that workflow is told.'
+              : 'Optional. Added to what this Spark is told for this step.'
+          }
           value={step.prompt}
           onChange={(event) => onChange(updateStep(steps, step.id, { prompt: event.target.value }))}
         />

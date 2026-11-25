@@ -3,9 +3,9 @@ import {
   planWorkflow,
   sparkWho,
   workflowOutcome,
-  type Workflow,
+  type ExpandedStep as WorkflowStep,
+  type ExpandedWorkflow as Workflow,
   type WorkflowRunStatus,
-  type WorkflowStep,
   type WorkflowStepState,
 } from '@spark-outpost/contracts';
 import {

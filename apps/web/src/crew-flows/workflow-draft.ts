@@ -93,7 +93,7 @@ export function draftProblems(draft: WorkflowDraft, stepProblems: number): Draft
   const add = (field: DraftField, tab: DraftTab, text: string) =>
     problems.push({ field, tab, text });
   if (draft.name.trim() === '') add('name', 'steps', 'Give the workflow a name.');
-  if (draft.steps.length === 0) add('steps', 'steps', 'Add a Spark to start.');
+  if (draft.steps.length === 0) add('steps', 'steps', 'Add a step to start.');
   else if (stepProblems > 0) {
     add('steps', 'steps', `Fix ${plural(stepProblems, 'problem')} to save.`);
   }

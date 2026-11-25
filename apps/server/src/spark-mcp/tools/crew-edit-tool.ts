@@ -213,13 +213,13 @@ export const crewEditTool = sparkTool({
     files: z
       .array(z.object({ path: z.string(), text: z.string().nullable() }))
       .optional()
-      .describe('text: the whole file; null deletes it.'),
+      .describe('text: whole file; null deletes it'),
     remove: z.string().optional(),
     removeFolder: z.string().optional(),
     workflow: z
       .record(z.string(), z.unknown())
       .optional()
-      .describe('{id, name, steps: [{id, spark, prompt, dependsOn, join, onFailure}]}'),
+      .describe('{id, name, steps: [{id, spark|workflow, prompt, dependsOn, join, onFailure}]}'),
     withdraw: z.array(z.string()).optional(),
   },
   run: (args, context) => edit(args, context),

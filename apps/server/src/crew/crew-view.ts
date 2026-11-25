@@ -42,7 +42,11 @@ export function workflowLine(summary: WorkflowSummary, teammates: readonly Teamm
     id: summary.id,
     name: summary.name,
     stages: summary.stages.map((stage) =>
-      stage.map((step) => `${step.stepId}: ${names.get(step.sparkId) ?? 'a deleted Spark'}`),
+      stage.map((step) =>
+        step.workflowId !== null
+          ? `${step.stepId}: workflow ${step.workflowId}`
+          : `${step.stepId}: ${names.get(step.sparkId ?? '') ?? 'a deleted Spark'}`,
+      ),
     ),
     ...(summary.problems > 0 ? { problems: summary.problems } : {}),
   };

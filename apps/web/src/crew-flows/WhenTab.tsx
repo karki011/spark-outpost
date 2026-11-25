@@ -1,4 +1,5 @@
 import './schedule.css';
+import type { ExpandedStep } from '@spark-outpost/contracts';
 import { ForwardIcon } from '../ui/icons.tsx';
 import { ActivityList } from './ActivityList.tsx';
 import { ScheduleCard } from './ScheduleCard.tsx';
@@ -12,6 +13,7 @@ const RECENT_SHOWN = 3;
 
 interface WhenTabProps {
   draft: WorkflowDraft;
+  runSteps: readonly ExpandedStep[];
   problems: readonly DraftProblem[];
   sparkById: ReadonlyMap<string, CrewSpark>;
   lastRunCostUsd: number | null;
@@ -44,7 +46,7 @@ export function WhenTab(props: WhenTabProps) {
       <div className="wf-when-side">
         <WhereCard draft={draft} onChange={onChange} />
         <MayDoCard
-          steps={draft.steps}
+          steps={props.runSteps}
           sparkById={props.sparkById}
           edits={draft.triggers.edits}
           onEdits={(edits) => onChange({ ...draft, triggers: { ...draft.triggers, edits } })}

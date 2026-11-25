@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import type { WorkflowRun, WorkflowStep, WorkflowTestRun } from '@spark-outpost/contracts';
+import type { ExpandedStep, WorkflowRun, WorkflowTestRun } from '@spark-outpost/contracts';
 import type { CrewSpark } from './spark-lookup.ts';
 import { testRunApi, type TestRunStart as Start } from './test-run-api.ts';
 import { TestRunStart } from './TestRunStart.tsx';
@@ -8,7 +8,7 @@ import { TestRunView } from './TestRunView.tsx';
 
 interface TestRunProps {
   name: string;
-  steps: readonly WorkflowStep[];
+  steps: readonly ExpandedStep[];
   labels: ReadonlyMap<string, string>;
   sparkById: ReadonlyMap<string, CrewSpark>;
   form: { title: string; hint: string; placeholder: string; submitLabel: string };

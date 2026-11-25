@@ -27,12 +27,16 @@ export interface FakeWorkflowApi {
 
 function summary(stored: StoredWorkflow, sparks: ReadonlySet<string>) {
   const { workflow } = stored;
-  const sparkOf = new Map(workflow.steps.map((step) => [step.id, step.sparkId]));
+  const stepOf = new Map(workflow.steps.map((step) => [step.id, step]));
   return {
     id: workflow.id,
     name: workflow.name,
     stages: workflowStages(workflow.steps).map((stage) =>
-      stage.map((stepId) => ({ stepId, sparkId: sparkOf.get(stepId)! })),
+      stage.map((stepId) => ({
+        stepId,
+        sparkId: stepOf.get(stepId)?.sparkId ?? null,
+        workflowId: stepOf.get(stepId)?.workflowId ?? null,
+      })),
     ),
     problems: workflowProblems(workflow.steps, sparks).length,
   };

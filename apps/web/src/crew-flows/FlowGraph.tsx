@@ -21,7 +21,7 @@ import { RunStepState } from './RunState.tsx';
 import { useFlowLayout } from './use-flow-layout.ts';
 
 interface FlowGraphProps {
-  steps: readonly Pick<WorkflowStep, 'id' | 'dependsOn' | 'sparkId'>[];
+  steps: readonly Pick<WorkflowStep, 'id' | 'dependsOn' | 'sparkId' | 'workflowId'>[];
   labels: ReadonlyMap<string, string>;
   sparks: ReadonlyMap<string, CrewSpark>;
   states?: Readonly<Record<string, WorkflowStepState>>;
@@ -35,6 +35,7 @@ interface FlowGraphProps {
 type StepNodeData = {
   label: string;
   spark: CrewSpark | undefined;
+  workflow: boolean;
   state: WorkflowStepState | null;
   selected: boolean;
   asking: boolean;
@@ -45,7 +46,7 @@ type StepNode = Node<StepNodeData, 'step'>;
 const StepNodeView = memo(function StepNodeView({ data }: NodeProps<StepNode>) {
   const face = (
     <>
-      <SparkDot spark={data.spark} size={26} />
+      <SparkDot spark={data.spark} workflow={data.workflow} size={26} />
       <span className="wf-node-text">
         <b>{data.label}</b>
         {data.state && <RunStepState state={data.state} asking={data.asking} />}
@@ -131,7 +132,8 @@ function Canvas({
           height: FLOW_NODE_HEIGHT,
           data: {
             label: labels.get(step.id) ?? step.id,
-            spark: sparks.get(step.sparkId),
+            spark: sparks.get(step.sparkId ?? ''),
+            workflow: step.workflowId !== undefined,
             state: states?.[step.id] ?? null,
             selected: selected === step.id,
             asking: asking?.has(step.id) ?? false,

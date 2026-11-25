@@ -7,6 +7,7 @@ import { workflowSchema, type Workflow } from '@spark-outpost/contracts';
 import {
   WorkflowChangedError,
   WorkflowExistsError,
+  WorkflowInUseError,
   WorkflowNotFoundError,
   WorkflowProblemsError,
   workflowStore,
@@ -143,5 +144,62 @@ describe('workflowStore', () => {
 
     expect(await readdir(dir)).toEqual([]);
     await expect(store.remove('nightly')).rejects.toBeInstanceOf(WorkflowNotFoundError);
+  });
+
+  describe('a workflow as a step', () => {
+    function outer(id: string, uses: string): Workflow {
+      return workflowSchema.parse({
+        id,
+        name: id,
+        steps: [
+          { id: 'first', sparkId: SPARK },
+          { id: 'inner', workflowId: uses, dependsOn: ['first'] },
+        ],
+      });
+    }
+
+    it('saves a workflow that uses another and lists the step with its workflow', async () => {
+      const store = workflowStore(dir);
+      await store.save(flow('nightly'), null, KNOWN);
+      await store.save(outer('weekly', 'nightly'), null, KNOWN);
+
+      const weekly = (await store.list(KNOWN)).find((listed) => listed.id === 'weekly');
+      expect(weekly).toMatchObject({
+        problems: 0,
+        stages: [
+          [{ stepId: 'first', sparkId: SPARK, workflowId: null }],
+          [{ stepId: 'inner', sparkId: null, workflowId: 'nightly' }],
+        ],
+      });
+      expect(await store.usedBy('nightly')).toEqual([{ id: 'weekly', name: 'weekly' }]);
+    });
+
+    it('refuses a workflow that is missing or that leads back to itself', async () => {
+      const store = workflowStore(dir);
+      await expect(store.save(outer('weekly', 'nightly'), null, KNOWN)).rejects.toThrow(
+        'inner uses a workflow that no longer exists.',
+      );
+      const nightly = await store.save(flow('nightly'), null, KNOWN);
+      await store.save(outer('weekly', 'nightly'), null, KNOWN);
+      await expect(store.save(outer('nightly', 'weekly'), nightly.hash, KNOWN)).rejects.toThrow(
+        'inner uses weekly, which uses this workflow.',
+      );
+      await expect(store.save(outer('alone', 'alone'), null, KNOWN)).rejects.toBeInstanceOf(
+        WorkflowProblemsError,
+      );
+    });
+
+    it('keeps a workflow another one uses, and counts the problem once it is gone', async () => {
+      const store = workflowStore(dir);
+      await store.save(flow('nightly'), null, KNOWN);
+      await store.save(outer('weekly', 'nightly'), null, KNOWN);
+
+      await expect(store.remove('nightly')).rejects.toBeInstanceOf(WorkflowInUseError);
+      expect(await store.read('nightly')).not.toBeNull();
+
+      await rm(join(dir, 'nightly.json'));
+      const [weekly] = await store.list(KNOWN);
+      expect(weekly?.problems).toBe(1);
+    });
   });
 });

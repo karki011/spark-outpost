@@ -1,17 +1,30 @@
 import { Fragment } from 'react';
 import { TeammateFace } from '../teammates/TeammateFace.tsx';
-import { ForwardIcon } from '../ui/icons.tsx';
+import { ForwardIcon, WorkflowIcon } from '../ui/icons.tsx';
 import type { CrewSpark } from './spark-lookup.ts';
-import { listed } from './workflow-model.ts';
+import { listed, type StagePreviewStep } from './workflow-model.ts';
 
 const STAGE_FACES = 4;
 
 interface StagePreviewProps {
-  stages: readonly (readonly { stepId: string; sparkId: string }[])[];
+  stages: readonly (readonly StagePreviewStep[])[];
   sparks: ReadonlyMap<string, CrewSpark>;
 }
 
-export function SparkDot({ spark, size }: { spark: CrewSpark | undefined; size: number }) {
+interface SparkDotProps {
+  spark: CrewSpark | undefined;
+  size: number;
+  workflow?: boolean;
+}
+
+export function SparkDot({ spark, size, workflow = false }: SparkDotProps) {
+  if (workflow) {
+    return (
+      <span className="wf-flowdot" style={{ width: size, height: size }} aria-hidden="true">
+        <WorkflowIcon />
+      </span>
+    );
+  }
   if (!spark) {
     return <span className="wf-missing" style={{ width: size, height: size }} aria-hidden="true" />;
   }
@@ -24,7 +37,15 @@ export function stagesText(
 ): string {
   if (stages.length === 0) return 'No steps yet';
   return stages
-    .map((stage) => listed(stage.map((step) => sparks.get(step.sparkId)?.name ?? 'Missing Spark')))
+    .map((stage) =>
+      listed(
+        stage.map((step) =>
+          step.workflowId !== null
+            ? `the ${step.workflowId} workflow`
+            : (sparks.get(step.sparkId ?? '')?.name ?? 'Missing Spark'),
+        ),
+      ),
+    )
     .join(', then ');
 }
 
@@ -40,7 +61,12 @@ export function StagePreview({ stages, sparks }: StagePreviewProps) {
           )}
           <span className="wf-mini-stage" data-parallel={stage.length > 1 || undefined}>
             {stage.slice(0, STAGE_FACES).map((step) => (
-              <SparkDot key={step.stepId} spark={sparks.get(step.sparkId)} size={20} />
+              <SparkDot
+                key={step.stepId}
+                spark={sparks.get(step.sparkId ?? '')}
+                workflow={step.workflowId !== null}
+                size={20}
+              />
             ))}
             {stage.length > STAGE_FACES && (
               <span className="wf-mini-more">+{stage.length - STAGE_FACES}</span>

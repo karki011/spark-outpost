@@ -79,13 +79,13 @@ test('an empty Workflows tab suggests workflows from the crew and a new one save
   await form.getByRole('button', { name: 'Open in editor' }).click();
 
   const open = editor(page, 'Pre-PR review');
-  await expect(open.getByText('Add a Spark to start.')).toBeVisible();
+  await expect(open.getByText('Add a step to start.')).toBeVisible();
   await expect(saveButton(page, 'Pre-PR review')).toBeDisabled();
   await expect(open.getByRole('button', { name: 'Preview' })).toBeDisabled();
   await expect(open.getByRole('tab')).toHaveText([/^Steps/, /^When it runs/, /^Runs/]);
 
-  await pickSpark(page, 'Add the first Spark', 'Security');
-  await pickSpark(page, 'Add a Spark to Stage 1', 'Lint');
+  await pickSpark(page, 'Add the first step', 'Security');
+  await pickSpark(page, 'Add a step to Stage 1', 'Lint');
   await pickSpark(page, 'Add a stage', 'Comment');
   await pickSpark(page, 'Add a stage', 'Ticketing');
   await expect(stage(page, 1).getByRole('listitem')).toHaveCount(2);
@@ -254,7 +254,7 @@ test('a deleted Spark and a stale save are reported, and a workflow can be delet
   await expect(stepRow(page, 'gone')).toContainText('Problem');
   const gone = await selectStep(page, 'gone', 'Missing Spark');
   await expect(gone).toContainText('gone uses a Spark that no longer exists.');
-  await pickSpark(page, 'Spark for Missing Spark', 'Lint');
+  await pickSpark(page, 'Spark or workflow for Missing Spark', 'Lint');
   await expect(stepRow(page, 'gone')).toContainText('Lint');
   await expect(saveButton(page, 'Review')).toBeEnabled();
 
@@ -276,6 +276,59 @@ test('a deleted Spark and a stale save are reported, and a workflow can be delet
     page.getByRole('heading', { name: 'Combine your crew into a workflow' }),
   ).toBeVisible();
   expect(api.files.size).toBe(0);
+});
+
+test('a workflow is added as a step of another and Preview shows the steps inside it', async ({
+  page,
+}) => {
+  const sparks = await crew(page);
+  const api = await fakeWorkflowApi(page, Object.values(sparks));
+  api.put({
+    id: 'review',
+    name: 'Review',
+    steps: [step('security', sparks.security), step('lint', sparks.lint, ['security'])],
+  });
+  await page.goto(PANEL_PATH);
+  await page.getByRole('button', { name: 'New workflow' }).click();
+  const form = page.getByRole('form', { name: 'New workflow' });
+  await form.getByRole('textbox', { name: 'Name' }).fill('Ship');
+  await form.getByRole('button', { name: 'Open in editor' }).click();
+  const open = editor(page, 'Ship');
+
+  await pickSpark(page, 'Add the first step', 'Review');
+  await pickSpark(page, 'Add a stage', 'Comment');
+  await expect(stepRow(page, 'review')).toContainText('Review');
+  await expect(stepRow(page, 'comment')).toContainText('After Review');
+  const nested = await selectStep(page, 'review', 'Review');
+  await expect(nested).toContainText('Continue applies to every step inside it.');
+  await expect(graphNodes(page)).toHaveCount(2);
+  await expectAccessible(page);
+  await shots(page, 'nested');
+
+  await open.getByRole('button', { name: 'Preview' }).click();
+  const steps = open.getByRole('list', { name: 'Steps' }).getByRole('listitem');
+  await expect(steps).toContainText(['Review › Security', 'Review › Lint', 'Comment']);
+  await expect(open.locator('.wf-result')).toContainText('3 steps in 3 rounds.');
+  await steps.nth(1).getByRole('checkbox', { name: 'Pretend Review › Lint fails' }).check();
+  await expect(open.locator('.wf-result')).toContainText(
+    'Review › Lint is set to Stop workflow when it fails.',
+  );
+  await open.getByRole('button', { name: 'Back to editing' }).click();
+
+  await saveButton(page, 'Ship').click();
+  await expect(open.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible();
+  expect(api.files.get('ship')?.workflow.steps).toMatchObject([
+    { id: 'review', workflowId: 'review', dependsOn: [] },
+    { id: 'comment', sparkId: sparks.comment, dependsOn: ['review'] },
+  ]);
+
+  await open.getByRole('button', { name: 'Workflows' }).click();
+  await page.getByRole('button', { name: 'Edit Review' }).click();
+  const used = editor(page, 'Review');
+  await expect(used.getByRole('button', { name: 'Hold to delete Review' })).toBeDisabled();
+  await expect(used).toContainText(
+    'Used in Ship. Remove that step there before deleting this workflow.',
+  );
 });
 
 test('Preview plays the order and a pretend failure says what stops and what does not start', async ({

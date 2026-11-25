@@ -60,7 +60,10 @@ describe('workflow files', () => {
         {
           id: 'release-check',
           name: 'Release check',
-          stages: [[{ stepId: 'tests', sparkId: pip.id }], [{ stepId: 'notes', sparkId: pip.id }]],
+          stages: [
+            [{ stepId: 'tests', sparkId: pip.id, workflowId: null }],
+            [{ stepId: 'notes', sparkId: pip.id, workflowId: null }],
+          ],
           problems: 0,
         },
       ],
@@ -158,6 +161,38 @@ describe('workflow runs', () => {
     expect(listed.body.runs.map((run: WorkflowRun) => run.id)).toEqual([first.id]);
     const ofTurn = await client.get(`/api/workflow-runs/of-turn/${done.runId}`).expect(200);
     expect(ofTurn.body).toMatchObject({ id: first.id, workflowName: 'Release check' });
+  }, 90_000);
+
+  it('runs a workflow that uses another, with the inner steps in its run', async () => {
+    const { pip } = await savedFlow();
+    const outer = {
+      id: 'ship',
+      name: 'Ship',
+      steps: [
+        { id: 'check', workflowId: 'release-check' },
+        step('announce', pip.id, { dependsOn: ['check'] }),
+      ],
+    };
+    await client
+      .send('put', '/api/workflows/ship', { workflow: outer, baseHash: null })
+      .expect(200);
+    harness = startTurnWorker(t);
+
+    const started = await client.send('post', '/api/workflows/ship/runs', {}).expect(201);
+    const first = started.body as WorkflowRun;
+    expect(first.steps.map((entry) => [entry.stepId, entry.dependsOn])).toEqual([
+      ['check.tests', []],
+      ['check.notes', ['check.tests']],
+      ['announce', ['check.notes']],
+    ]);
+
+    const done = await settled(first.id);
+    expect(done.status).toBe('succeeded');
+    expect(done.steps.map((entry) => entry.state)).toEqual(['succeeded', 'succeeded', 'succeeded']);
+
+    const refused = await client.send('delete', '/api/workflows/release-check');
+    expect(refused.status).toBe(409);
+    expect(refused.body.error).toContain('Release check is a step in Ship');
   }, 90_000);
 
   it('starts one run for a repeated request with the same Idempotency-Key', async () => {

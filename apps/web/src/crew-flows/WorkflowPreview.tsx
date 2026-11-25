@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { previewWorkflow, type WorkflowStep } from '@spark-outpost/contracts';
+import { previewWorkflow, type ExpandedStep } from '@spark-outpost/contracts';
 import { BackIcon, EyeIcon, ForwardIcon, PauseIcon, ResumeIcon } from '../ui/icons.tsx';
 import { positionLabel, previewResult, statesAt } from './preview-model.ts';
 import type { CrewSpark } from './spark-lookup.ts';
@@ -10,7 +10,7 @@ const FlowGraph = lazy(() => import('./FlowGraph.tsx'));
 const PLAY_MS = 900;
 
 interface WorkflowPreviewProps {
-  steps: readonly WorkflowStep[];
+  steps: readonly ExpandedStep[];
   labels: ReadonlyMap<string, string>;
   sparkById: ReadonlyMap<string, CrewSpark>;
   onContinue: (stepId: string) => void;
