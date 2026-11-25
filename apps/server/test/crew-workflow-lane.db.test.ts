@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
+import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { workflowTriggersSchema, type WorkflowRun } from '@spark-outpost/contracts';
 import { WORKFLOW_NOTE_HEADER } from '../src/crew-flows/step-prompt.ts';
 import { chatTurnActive } from '../src/crew-flows/chat-started.ts';
 import { saveTriggers } from '../src/crew-flows/trigger-records.ts';
+import { ensureChatWorkFolder } from '../src/chat-files/folders.ts';
+import { listChatFiles } from '../src/chat-files/store.ts';
 import { startFreshChat } from '../src/compaction/fresh-chat.ts';
 import { recordReport, reportNoteOfTurn } from '../src/crew-flows/run-records.ts';
 import { addToQueue } from '../src/persistence/chat-queue.ts';
@@ -238,5 +243,30 @@ describe('a workflow run outside the chat’s turns', { timeout: 120_000 }, () =
     await review();
     await startInChat();
     expect(await chatTurnActive(t.db, chat)).toBe(false);
+  });
+
+  it('keeps a file left in a no-project chat’s folder with the background run', async () => {
+    await review();
+    await saveTriggers(t.db, t.workspaceId, 'review', {
+      ...workflowTriggersSchema.parse({}),
+      quietWhenClean: true,
+    });
+    const base = await realpath(await mkdtemp(join(tmpdir(), 'spark-lane-files-')));
+    try {
+      chat = await openChat(t);
+      await writeFile(join(await ensureChatWorkFolder(base, chat), 'notes.md'), 'from a step');
+      harness = startTurnWorker(t, { chatFolders: base });
+      const run = await startInChat();
+
+      await settled(run.id);
+      await eventually(async () => (await repliesOf(t, run.runId!))[0]);
+      expect(await turnsOf()).toHaveLength(1);
+      const files = await listChatFiles(t.db, chat);
+      expect(files.map((file) => [file.path, file.runId])).toEqual([['notes.md', run.runId]]);
+    } finally {
+      await harness?.stop();
+      harness = null;
+      await rm(base, { recursive: true, force: true });
+    }
   });
 });
