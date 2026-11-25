@@ -50,6 +50,7 @@ export const SPARK_TOOL_STEPS: Readonly<Record<string, string>> = {
   spark_update_spark: 'Changing a Spark',
   spark_mcp_servers: 'Looking at MCP servers',
   spark_add_mcp_server: 'Adding an MCP server',
+  spark_prepare_setup: 'Preparing a connection',
   spark_update_mcp_server: 'Changing an MCP server',
   spark_switch_mcp_server: 'Switching an MCP server',
   spark_remove_mcp_server: 'Removing an MCP server',

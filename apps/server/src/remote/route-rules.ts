@@ -232,6 +232,8 @@ GET /api/mcp/servers/:id/sign-in
 POST /api/mcp/servers/:id/sign-in
 DELETE /api/mcp/servers/:id/sign-in
 POST /api/mcp/servers/:id/sign-out
+GET /api/setup-drafts
+DELETE /api/setup-drafts/:target
 POST /api/calendar/reply
 POST /api/calendar/events
 GET /api/calendar/google/sign-in

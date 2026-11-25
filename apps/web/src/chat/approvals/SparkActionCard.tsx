@@ -46,6 +46,7 @@ import { CrewEditFacts, crewByline, crewNote } from './CrewEditFacts.tsx';
 import { WorkflowControlFacts } from './WorkflowControlFacts.tsx';
 import { PluginEditFacts, pluginsByline, pluginsNote } from './PluginEditFacts.tsx';
 import { Button } from '../../ui/Button.tsx';
+import { SetupFacts } from '../../setup-drafts/SetupFacts.tsx';
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -118,6 +119,8 @@ function Facts({ action }: { action: SparkAction }) {
     case 'update_teammate':
     case 'delete_teammate':
       return <TeammateFacts action={action} />;
+    case 'prepare_setup':
+      return <SetupFacts action={action} />;
     case 'add_mcp_server':
     case 'update_mcp_server':
     case 'switch_mcp_server':

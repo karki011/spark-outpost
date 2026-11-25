@@ -112,6 +112,7 @@ describe('Ask Spark', () => {
       'spark_update_mcp_server',
       'spark_switch_mcp_server',
       'spark_remove_mcp_server',
+      'spark_prepare_setup',
       'spark_slack_post',
       'spark_browser_act',
       'spark_browser_devtools',
