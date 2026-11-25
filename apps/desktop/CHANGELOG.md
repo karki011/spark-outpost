@@ -4,6 +4,12 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.21
+
+- **Workflows inside workflows.** A workflow step can run another workflow, so you can build one workflow on top of others: in **Steps**, add a step and pick a workflow.
+- **Sub-chat reports stay out of the way.** A sub-chat's **Report** in its parent chat is folded to one line and says it is for that chat's agent; select **Report** to read it. A report that arrives during a running turn sits where it arrived, so what you send next lands below it.
+- A message you send during a turn now sits above the agent's answer to it, and a queued message from another chat no longer offers **Send now**.
+
 ## 0.1.0-beta.20
 
 - **Agents can prepare a connection.** Ask an agent to set up an AI provider or connector: it fills in everything that isn't secret, and you type the key or sign in yourself.
