@@ -76,6 +76,7 @@ interface Running {
   defaults: SettingsPlace | null;
   place: string | null;
   states: Record<string, WorkflowStepState>;
+  prompted: Set<string>;
   notes: Map<string, string | null>;
 }
 
@@ -190,6 +191,7 @@ async function launch(run: Running, step: WorkflowStep, index: number): Promise<
           testRun,
           beforePublish: turn.triggerKind === 'before_publish',
         });
+    run.prompted.add(step.id);
     const result = await runSparkChild(
       h,
       {
@@ -279,6 +281,7 @@ export async function runWorkflow(
     defaults: inChat ? null : await yourDefaults(h),
     place: await placeOf(h, turn, options.pull ?? { kind: 'none' }, Boolean(options.pullMaterial)),
     states: startingStates(turn),
+    prompted: new Set(turn.run.steps.flatMap((step) => (step.runId ? [step.stepId] : []))),
     notes: new Map(turn.run.steps.map((step) => [step.stepId, step.note])),
   };
   for (const step of turn.run.steps) {
@@ -314,10 +317,7 @@ export async function runWorkflow(
   const status = h.control.signal.aborted ? 'cancelled' : workflowOutcome(steps, run.states);
   const stoppedBy = status === 'failed' ? planWorkflow(steps, run.states).stoppedBy : null;
   await finishWorkflowRun(h.deps.db, turn.run.id, status, stoppedBy);
-  const ran = steps.filter((step) => {
-    const state = run.states[step.id];
-    return state === 'succeeded' || state === 'failed';
-  });
+  const ran = steps.filter((step) => run.prompted.has(step.id));
   const needed = new Set(ran.flatMap((step) => step.dependsOn));
   return {
     status,

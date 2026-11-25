@@ -10,6 +10,7 @@ import { reviewOptions, settleReviewOfWorkflowRun } from '../github-inbox/review
 import { closeMessage } from '../workflow/execute-run.ts';
 import { planNote } from '../workflow/plan-recorder.ts';
 import { runEvents } from '../workflow/run-events.ts';
+import { keepChatFiles } from '../workflow/chat-folder.ts';
 import { chatTarget, drainQueue } from '../workflow/queue-drain.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import {
@@ -245,6 +246,7 @@ export async function workflowTurn(
   if (input.workflowLane) {
     await updateOrchestration(deps.db, lease.runId, { phase: 'finished' });
     await publishOrchestration(h);
+    await keepChatFiles(deps.db, deps.chatFolders, input, lease);
     await finishLane(h, turn, end, { about, checkout }, quiet);
     return 'finished';
   }
