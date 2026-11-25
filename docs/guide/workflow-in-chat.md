@@ -23,13 +23,13 @@ Findings are last-step lines starting `[Critical]`, `[High]`, `[Medium]` or `[Lo
 | Found something, or failed | Stays until you select ✕.             |
 | Finished clean             | Leaves once you send another message. |
 
-The card names what each running step is doing; **Show in chat** opens it. **View** beside **Waiting on N Sparks** opens the card. Before-publish reviews show too.
+The card names what each running step is doing; **Show in chat** opens it. **View** beside **Waiting on N Sparks** opens the card.
 
 **Steps** on the line lists each step's reply; **Open run view** shows the whole run. See [Follow a workflow run](workflow-runs.md).
 
 ## The chat's agent gets the report
 
-When a run ends, the chat's agent reads the last steps' replies (4,000 characters each) and answers under the line. It isn't your message: the agent follows the chat's mode, and a run not started with `@` never pushes.
+Runs from **Run**, a schedule or a trigger work in the background. The report (the last steps' replies) reaches the agent as a later turn, queued as **Workflow report** until then. It never pushes. `@workflow` runs inside your turn.
 
 ## Pick the pull request
 

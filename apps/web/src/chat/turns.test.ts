@@ -55,6 +55,13 @@ describe('the chat\u2019s own active turn', () => {
     expect(activeRuns(only)).toEqual([]);
   });
 
+  it('is free while only a background workflow run is going', () => {
+    const lane = { ...run('flow', 'running'), workflowLane: true } as Run;
+    const only = chat([run('a', 'succeeded'), lane]);
+    expect(activeRun(only)).toBeNull();
+    expect(activeRun(chat([lane, run('mine', 'running')]))?.id).toBe('mine');
+  });
+
   it('is the user\u2019s turn when one runs beside a round', () => {
     const both = chat([run('round', 'running', true), run('mine', 'running')]);
     expect(activeRun(both)?.id).toBe('mine');
