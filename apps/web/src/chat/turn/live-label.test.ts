@@ -87,6 +87,7 @@ describe('leadStep', () => {
     expect(leadStep({ ...none, sparks: ['Docs'], outputAt: 40 })).toEqual({
       label: 'Waiting on Docs',
       since: null,
+      onSparks: true,
     });
     expect(leadStep({ ...none, sparks: ['Docs', 'Ops'] }).label).toBe('Waiting on Docs and Ops');
     expect(leadStep({ ...none, sparks: ['Docs', 'Ops', 'Scope'] }).label).toBe(

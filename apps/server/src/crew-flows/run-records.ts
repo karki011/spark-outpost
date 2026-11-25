@@ -255,7 +255,9 @@ export async function getWorkflowRunOfTurn(
   turnRunId: string,
 ): Promise<WorkflowRun | null> {
   const { rows } = await db.query<RunRow>(
-    'SELECT * FROM workflow_runs WHERE run_id = $1 AND workspace_id = $2',
+    `SELECT * FROM workflow_runs
+     WHERE (run_id = $1 OR gates_run_id = $1) AND workspace_id = $2
+     ORDER BY started_at DESC, id LIMIT 1`,
     [turnRunId, workspaceId],
   );
   return (await assemble(db, rows))[0] ?? null;

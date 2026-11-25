@@ -146,3 +146,44 @@ it('keeps focus on the working line when the focused thought goes away', () => {
   rerender(<TurnActivity {...props} lead={{ label: 'Read a.ts', since: null }} />);
   expect(document.activeElement).toBe(container.querySelector('.turn-working'));
 });
+
+it('offers View on the line only while the turn waits on Sparks that have a card', () => {
+  const view = vi.fn();
+  const waitingOnSparks = { label: 'Waiting on 3 Sparks', since: null, onSparks: true } as const;
+  const { rerender } = render(
+    <TurnActivity
+      run={run}
+      subagents={[]}
+      working
+      waiting={false}
+      background={null}
+      lead={waitingOnSparks}
+      onViewSparks={view}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'View what the Sparks are doing' }));
+  expect(view).toHaveBeenCalledOnce();
+  rerender(
+    <TurnActivity
+      run={run}
+      subagents={[]}
+      working
+      waiting={false}
+      background={null}
+      lead={{ label: 'Thinking', since: null }}
+      onViewSparks={view}
+    />,
+  );
+  expect(screen.queryByRole('button', { name: 'View what the Sparks are doing' })).toBeNull();
+  rerender(
+    <TurnActivity
+      run={run}
+      subagents={[]}
+      working
+      waiting={false}
+      background={null}
+      lead={waitingOnSparks}
+    />,
+  );
+  expect(screen.queryByRole('button', { name: 'View what the Sparks are doing' })).toBeNull();
+});
