@@ -4,8 +4,12 @@ import { RUN, watch } from '../pull-request/watch-fixture.ts';
 import {
   itemPlace,
   itemWord,
+  groupSubtitle,
+  groupTitle,
+  roundBlocks,
   roundItems,
   roundOfTurn,
+  roundsByPull,
   roundSubtitle,
   roundTitle,
 } from './round-card-model.ts';
@@ -82,5 +86,68 @@ describe('the card’s words', () => {
     expect(itemWord(item({ kind: 'check' }))).toBe('Check');
     expect(itemPlace(item({}))).toBe('greptile-apps[bot] · api/org.ts:138');
     expect(itemPlace(item({ path: null }))).toBe('greptile-apps[bot]');
+  });
+});
+
+describe('rounds folded into one card', () => {
+  const turn = (id: string, prFollowUp = false) => ({ run: { id, prFollowUp } });
+  const member = (runId: string, fields: Partial<RoundOutcome>, id = watch().id) => ({
+    runId,
+    found: {
+      watch: watch({ id }),
+      round: fields.round ?? 1,
+      outcome: { ...outcome, runId, ...fields },
+    },
+  });
+
+  it('blocks rounds in a row together and breaks at a turn of the user’s', () => {
+    const blocks = roundBlocks([
+      turn('a'),
+      turn('r1', true),
+      turn('r2', true),
+      turn('b'),
+      turn('r3', true),
+    ]);
+    expect(blocks.map((block) => block.map((entry) => entry.run.id))).toEqual([
+      ['a'],
+      ['r1', 'r2'],
+      ['b'],
+      ['r3'],
+    ]);
+  });
+
+  it('keeps rounds of different pull requests, and unknown rounds, apart', () => {
+    const other = '0190d7a0-0000-7000-8000-00000000aaaa';
+    const groups = roundsByPull([
+      member('r1', {}),
+      member('r2', {}),
+      member('r3', {}, other),
+      { runId: 'r4', found: null },
+      { runId: 'r5', found: null },
+    ]);
+    expect(groups.map((group) => group.map((entry) => entry.runId))).toEqual([
+      ['r1', 'r2'],
+      ['r3'],
+      ['r4'],
+      ['r5'],
+    ]);
+  });
+
+  it('titles the card with the count and sums what the rounds did', () => {
+    const members = [
+      member('r1', { round: 1, replied: 2 }),
+      member('r2', { round: 2, replied: 4, needs: 1 }),
+      member('r3', { round: 3, replied: 0, merged: true }),
+    ];
+    expect(groupTitle(members)).toBe('PR #7 · 3 rounds');
+    expect(groupSubtitle(members, null)).toBe(
+      'Replied to 6 comments, pushed 3 times; 1 item needs you · last: merged the base and pushed',
+    );
+    expect(groupSubtitle(members, 'r3')).toBe('Round 3 is working');
+    const quiet = [
+      member('r1', { pushed: false, replied: 0 }),
+      member('r2', { pushed: false, replied: 0 }),
+    ];
+    expect(groupSubtitle(quiet, null)).toMatch(/^Nothing changed · last: /);
   });
 });

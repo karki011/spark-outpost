@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { WorkflowRunKind, WorkflowTriggerKind } from '@spark-outpost/contracts';
 import { workflowTriggersSchema } from '@spark-outpost/contracts';
-import { insertWorkflowRun, turnOffEdits, workflowRunById } from '../src/crew-flows/run-records.ts';
+import {
+  getWorkflowRunOfTurn,
+  insertWorkflowRun,
+  turnOffEdits,
+  workflowRunById,
+} from '../src/crew-flows/run-records.ts';
 import { saveTriggers } from '../src/crew-flows/trigger-records.ts';
 import { step } from './crew-workflow-support.ts';
 import { createTestDb, startChat, type TestDb } from './support.ts';
@@ -62,5 +67,28 @@ describe('a workflow run that may update the branch from its base', () => {
     const allowed = await run('run');
     await turnOffEdits(t.db, allowed.run.id);
     expect((await workflowRunById(t.db, allowed.run.id))!.updateBase).toBe(false);
+  });
+});
+
+describe('the workflow run of a turn', () => {
+  it('finds a Before publish review by the turn it gates', async () => {
+    const { conversationId, runId } = await startChat(t, 'ship it');
+    const id = randomUUID();
+    await insertWorkflowRun(t.db, {
+      id,
+      workspaceId: t.workspaceId,
+      workflow: { id: 'tidy', name: 'Tidy', steps: [step('review', randomUUID())] },
+      kind: 'run',
+      source: 'trigger',
+      conversationId,
+      runId: null,
+      gatesRunId: runId,
+      message: '',
+      continues: true,
+      triggerKind: 'before_publish',
+    });
+    const found = await getWorkflowRunOfTurn(t.db, t.workspaceId, runId);
+    expect(found).toMatchObject({ id, runId, workflowName: 'Tidy' });
+    expect(await getWorkflowRunOfTurn(t.db, t.workspaceId, randomUUID())).toBeNull();
   });
 });

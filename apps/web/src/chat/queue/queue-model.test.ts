@@ -58,6 +58,8 @@ describe('queue model', () => {
   it('lets the user edit their own queued message and not a message from another chat', () => {
     expect(canEdit(item('a', 1))).toBe(true);
     expect(canEdit({ ...item('a', 1), origin: 'chat' })).toBe(false);
+    expect(canEdit({ ...item('a', 1), origin: 'workflow' })).toBe(false);
+    expect(authorTag({ ...item('a', 1), origin: 'workflow' })).toBe('Workflow report');
     expect(canSendNow(item('a', 1))).toBe(true);
     expect(canSendNow({ ...item('a', 1), origin: 'chat' })).toBe(false);
   });

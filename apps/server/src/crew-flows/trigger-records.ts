@@ -27,6 +27,7 @@ interface TriggersRow {
   debounce_minutes: number;
   edits: boolean;
   update_base: boolean;
+  quiet_when_clean: boolean;
 }
 
 function toStored(row: TriggersRow): StoredTriggers {
@@ -44,6 +45,7 @@ function toStored(row: TriggersRow): StoredTriggers {
       debounceMinutes: row.debounce_minutes,
       edits: row.edits,
       updateBase: row.update_base,
+      quietWhenClean: row.quiet_when_clean,
     }),
   };
 }
@@ -98,15 +100,16 @@ export async function saveTriggers(
   const { rows } = await db.query<TriggersRow>(
     `INSERT INTO workflow_triggers (workspace_id, workflow_id, turn_changed, before_publish,
        hold_on_findings, on_commit, branch_glob, pull_request, chat_started, project_id,
-       debounce_minutes, edits, update_base)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       debounce_minutes, edits, update_base, quiet_when_clean)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      ON CONFLICT (workspace_id, workflow_id) DO UPDATE SET
        turn_changed = EXCLUDED.turn_changed, before_publish = EXCLUDED.before_publish,
        hold_on_findings = EXCLUDED.hold_on_findings, on_commit = EXCLUDED.on_commit,
        branch_glob = EXCLUDED.branch_glob, pull_request = EXCLUDED.pull_request,
        chat_started = EXCLUDED.chat_started, project_id = EXCLUDED.project_id,
        debounce_minutes = EXCLUDED.debounce_minutes, edits = EXCLUDED.edits,
-       update_base = EXCLUDED.update_base, updated_at = now()
+       update_base = EXCLUDED.update_base, quiet_when_clean = EXCLUDED.quiet_when_clean,
+       updated_at = now()
      RETURNING *`,
     [
       workspaceId,
@@ -122,6 +125,7 @@ export async function saveTriggers(
       triggers.debounceMinutes,
       triggers.edits,
       triggers.updateBase,
+      triggers.quietWhenClean,
     ],
   );
   await db.query(

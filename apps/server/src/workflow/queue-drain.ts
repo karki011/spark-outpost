@@ -147,6 +147,7 @@ const STEER_REFUSALS: Record<NonNullable<QueuedMessage['origin']>, string> = {
   pages: 'A question about your tabs starts when Ask Spark is free.',
   voice: 'A spoken message starts when this chat is free.',
   chat: 'A message from another chat starts when this chat is free.',
+  workflow: 'A workflow’s report starts when this chat is free.',
 };
 
 export async function sendNow(

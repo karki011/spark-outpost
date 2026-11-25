@@ -54,6 +54,10 @@ export function WhenTab(props: WhenTabProps) {
           onUpdateBase={(updateBase) =>
             onChange({ ...draft, triggers: { ...draft.triggers, updateBase } })
           }
+          quietWhenClean={draft.triggers.quietWhenClean}
+          onQuietWhenClean={(quietWhenClean) =>
+            onChange({ ...draft, triggers: { ...draft.triggers, quietWhenClean } })
+          }
         />
         <section className="wf-card-box" aria-label="Recent">
           <header className="wf-card-head">

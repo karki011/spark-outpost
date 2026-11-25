@@ -10,6 +10,8 @@ import {
   type WorkflowRun,
 } from '@spark-outpost/contracts';
 import { sparkMembers } from '../../crew/conversation-crew.ts';
+import { isBusy } from '../../crew/crew-model.ts';
+import { runAgent } from '../../crew/crew-projection.ts';
 
 export const WORKFLOW_DISMISSED = 'spark-outpost.workflow-card.dismissed';
 export const CARD_TURNS_MAX = 5;
@@ -137,4 +139,15 @@ export function stepReplies(run: WorkflowRun): ReadonlyMap<string, string> {
     if (step.runId && note && step.state !== 'failed') replies.set(step.runId, note);
   }
   return replies;
+}
+
+export function stepsDoing(detail: ConversationDetail, turnRunId: string): Map<string, string> {
+  const doing = new Map<string, string>();
+  const orchestration = detail.orchestrations?.[turnRunId];
+  if (!orchestration) return doing;
+  for (const member of stepMembers(detail, turnRunId)) {
+    const agent = runAgent(member, orchestration, detail.activity[member.runId] ?? []);
+    if (isBusy(agent.state)) doing.set(member.runId, agent.line);
+  }
+  return doing;
 }

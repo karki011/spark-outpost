@@ -87,6 +87,7 @@ export interface ChatTurnFacts {
   followUpRound: boolean;
   taskTurn: boolean;
   roundRunning?: { number: number; round: number; doing: string } | null;
+  workflowRunning?: string | null;
 }
 
 export function chatTurnNote(facts: ChatTurnFacts): string | null {
@@ -98,5 +99,6 @@ export function chatTurnNote(facts: ChatTurnFacts): string | null {
     lines.push(text.TURN_NOTE_PUBLISHING, `- ${text.PUBLISH_FOLLOW_UP}`);
   }
   if (facts.roundRunning) lines.push(text.roundRunningNote(facts.roundRunning));
+  if (facts.workflowRunning) lines.push(text.workflowRunningNote(facts.workflowRunning));
   return lines.length === 0 ? null : [text.TURN_NOTE_INTRO, ...lines].join('\n');
 }

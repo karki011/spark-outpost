@@ -10,6 +10,7 @@ export interface LeadStep {
   thought?: string;
   quietSince?: number;
   repeatsRow?: true;
+  onSparks?: true;
 }
 
 export interface LeadInput {
@@ -76,7 +77,7 @@ export function leadStep({
       ...(thinking ? quietFrom(outputAt) : {}),
     };
   }
-  if (sparks.length > 0) return { label: waitingOn(sparks), since: null };
+  if (sparks.length > 0) return { label: waitingOn(sparks), since: null, onSparks: true };
   if (publishing) return { label: 'Publishing', since: publishing.since };
   return { label: 'Thinking', since: null, ...quietFrom(outputAt) };
 }

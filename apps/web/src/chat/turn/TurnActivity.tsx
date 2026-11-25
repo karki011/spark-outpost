@@ -12,6 +12,7 @@ interface TurnActivityProps {
   waiting: boolean;
   background: BackgroundWait | null;
   lead: LeadStep;
+  onViewSparks?: (() => void) | undefined;
 }
 
 export function TurnActivity({
@@ -21,6 +22,7 @@ export function TurnActivity({
   waiting,
   background,
   lead,
+  onViewSparks,
 }: TurnActivityProps) {
   const running = working && !waiting;
   const agents = (
@@ -32,7 +34,11 @@ export function TurnActivity({
       {background ? (
         <BackgroundWork runId={run.id} background={background} />
       ) : (
-        <WorkingLine run={run} step={lead.repeatsRow ? { label: 'Working', since: null } : lead} />
+        <WorkingLine
+          run={run}
+          step={lead.repeatsRow ? { label: 'Working', since: null } : lead}
+          onViewSparks={onViewSparks}
+        />
       )}
       {agents}
     </>

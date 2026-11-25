@@ -39,7 +39,7 @@ export function stripNote(mode: QueueMode, items: readonly Authored[]): string {
 }
 
 export function canEdit(item: Authored): boolean {
-  return !item.sparkRuleCardId && item.origin !== 'chat';
+  return !item.sparkRuleCardId && item.origin !== 'chat' && item.origin !== 'workflow';
 }
 
 export function canSendNow(item: Authored): boolean {
@@ -51,6 +51,7 @@ const ORIGIN_TAGS: Record<NonNullable<QueuedMessage['origin']>, string> = {
   voice: 'Spoken',
   pages: 'Tabs question',
   chat: 'From another chat',
+  workflow: 'Workflow report',
 };
 
 export function authorTag(item: Authored): string | null {
