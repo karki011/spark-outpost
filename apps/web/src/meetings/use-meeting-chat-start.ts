@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ConversationDetail } from '@spark-outpost/contracts';
 import { invalidateChatDetail } from '../api/chat-detail.ts';
@@ -7,23 +7,24 @@ import { markMeetingChatStarted, meetingChatStart, meetingChatStarted } from './
 import { meetingKeys } from './meeting-keys.ts';
 import { meetingsApi } from './meetings-api.ts';
 
+export interface MeetingChatStart {
+  ready: boolean;
+  ensure: () => Promise<void>;
+}
+
 export function useMeetingChatStart(
   meetingId: string,
   chatId: string,
   detail: ConversationDetail | undefined,
-): boolean {
+): MeetingChatStart {
   const queryClient = useQueryClient();
-  const [done, setDone] = useState(() => meetingChatStarted(meetingId));
-  const working = useRef(false);
+  const [tried, setTried] = useState(() => meetingChatStarted(meetingId));
+  const working = useRef<Promise<void> | null>(null);
   const untouched = detail ? detail.messages.length === 0 && detail.runs.length === 0 : null;
 
-  useEffect(() => {
-    if (done || untouched === null || working.current) return;
-    if (!untouched) {
-      markMeetingChatStarted(meetingId);
-      return;
-    }
-    working.current = true;
+  const ensure = useCallback((): Promise<void> => {
+    if (meetingChatStarted(meetingId)) return Promise.resolve();
+    if (working.current) return working.current;
     const apply = async () => {
       const view = await queryClient.fetchQuery({
         queryKey: meetingKeys.model,
@@ -37,10 +38,23 @@ export function useMeetingChatStart(
       }
       markMeetingChatStarted(meetingId);
     };
-    void apply()
-      .catch(() => undefined)
-      .finally(() => setDone(true));
-  }, [done, untouched, meetingId, chatId, queryClient]);
+    const attempt = apply().finally(() => {
+      working.current = null;
+    });
+    working.current = attempt;
+    return attempt;
+  }, [meetingId, chatId, queryClient]);
 
-  return done || untouched === false;
+  useEffect(() => {
+    if (tried || untouched === null) return;
+    if (!untouched) {
+      markMeetingChatStarted(meetingId);
+      return;
+    }
+    void ensure()
+      .catch(() => undefined)
+      .finally(() => setTried(true));
+  }, [tried, untouched, meetingId, ensure]);
+
+  return { ready: tried || untouched === false, ensure };
 }

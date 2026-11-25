@@ -75,7 +75,9 @@ function MeetingModelRows({ view, connected }: MeetingModelRowsProps) {
     staleTime: CAPABILITIES_STALE_MS,
     enabled: providerId !== null,
   });
-  const update = (change: Partial<MeetingModelSettings>) => save.mutate({ ...settings, ...change });
+  const update = (change: Partial<MeetingModelSettings>) => {
+    if (!save.isPending) save.mutate({ ...settings, ...change });
+  };
 
   const providerChoices: PickerChoice[] = [
     { id: SAME_PROVIDER, label: 'Same as default chat provider' },
@@ -110,6 +112,7 @@ function MeetingModelRows({ view, connected }: MeetingModelRowsProps) {
       </SettingRow>
       <SettingRow
         label={MODEL}
+        disabled={save.isPending}
         standsFor={efforts.length > 0 ? undefined : EFFORT_HIDDEN}
         hint={save.error?.message ?? modelHint(view)}
         hintId={modelHintId}
@@ -124,6 +127,7 @@ function MeetingModelRows({ view, connected }: MeetingModelRowsProps) {
       {efforts.length > 0 && (
         <SettingRow
           label={EFFORT}
+          disabled={save.isPending}
           hint={
             view.runsOn?.effort
               ? `Notes are written at ${view.runsOn.effort} effort.`
