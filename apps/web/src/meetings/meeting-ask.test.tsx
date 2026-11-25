@@ -4,9 +4,10 @@ import {
   TRANSCRIPT_CHARS_MAX,
   askPresets,
   meetingAskNote,
-  meetingChat,
+  markMeetingChatStarted,
   meetingChatId,
   meetingChatStart,
+  meetingChatStarted,
   transcriptText,
 } from './meeting-ask.ts';
 import { MEETING_ID, detail, lines } from './meetings-test-support.tsx';
@@ -75,10 +76,12 @@ describe('the chat a meeting’s questions go to', () => {
 });
 
 describe('a new meeting chat and the meeting model setting', () => {
-  it('is fresh only the first time a meeting gets its chat', () => {
-    const first = meetingChat(MEETING_ID);
-    expect(first.fresh).toBe(true);
-    expect(meetingChat(MEETING_ID)).toEqual({ id: first.id, fresh: false });
+  it('counts a meeting chat as started only once it is marked', () => {
+    expect(meetingChatStarted(MEETING_ID)).toBe(false);
+    expect(meetingChatId(MEETING_ID)).toBe(meetingChatId(MEETING_ID));
+    expect(meetingChatStarted(MEETING_ID)).toBe(false);
+    markMeetingChatStarted(MEETING_ID);
+    expect(meetingChatStarted(MEETING_ID)).toBe(true);
   });
 
   it('starts on nothing while the setting is untouched or no provider is connected', () => {
@@ -100,6 +103,9 @@ describe('a new meeting chat and the meeting model setting', () => {
     expect(
       meetingChatStart({ settings: { provider: 'codex', model: null, effort: null }, runsOn }),
     ).toEqual({ provider: 'codex' });
+    expect(
+      meetingChatStart({ settings: { provider: null, model: 'gone', effort: 'max' }, runsOn }),
+    ).toBeNull();
     expect(
       meetingChatStart({
         settings: { provider: null, model: 'big', effort: 'high' },

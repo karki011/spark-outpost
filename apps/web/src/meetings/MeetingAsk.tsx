@@ -17,9 +17,8 @@ import { activeRuns } from '../chat/turns.ts';
 import { useStop } from '../chat/use-stop.ts';
 import { SparkleIcon } from '../ui/icons.tsx';
 import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
-import { askPresets, meetingAttachment, meetingChat, meetingChatStart } from './meeting-ask.ts';
-import { meetingKeys } from './meeting-keys.ts';
-import { meetingsApi } from './meetings-api.ts';
+import { askPresets, meetingAttachment, meetingChatId } from './meeting-ask.ts';
+import { useMeetingChatStart } from './use-meeting-chat-start.ts';
 
 interface MeetingAskProps {
   meeting: Meeting;
@@ -61,8 +60,7 @@ function Entry({ message }: { message: Message }) {
 export function MeetingAsk({ meeting, onOpenChat }: MeetingAskProps) {
   const ids = useId();
   const queryClient = useQueryClient();
-  const [chat] = useState(() => meetingChat(meeting.id));
-  const chatId = chat.id;
+  const [chatId] = useState(() => meetingChatId(meeting.id));
   const thread = useRef<HTMLOListElement>(null);
   const detail = useQuery({
     queryKey: queryKeys.conversation(chatId),
@@ -75,21 +73,7 @@ export function MeetingAsk({ meeting, onOpenChat }: MeetingAskProps) {
   );
   const attachments = useAttachments();
   const refresh = () => invalidateChatDetail(queryClient, chatId);
-  const model = useQuery({
-    queryKey: meetingKeys.model,
-    queryFn: meetingsApi.model,
-    enabled: chat.fresh,
-  });
-  const applied = useRef(false);
-  useEffect(() => {
-    const start = model.data ? meetingChatStart(model.data) : null;
-    if (!chat.fresh || !start || applied.current) return;
-    applied.current = true;
-    void api
-      .updateChatSettings(chatId, start)
-      .then(() => invalidateChatDetail(queryClient, chatId))
-      .catch(() => undefined);
-  }, [chat.fresh, chatId, model.data, queryClient]);
+  const chatReady = useMeetingChatStart(meeting.id, chatId, detail.data);
   const stop = useStop(chatId, detail.data, refresh);
   const running = activeRuns(detail.data).length > 0;
   const messages = detail.data?.messages ?? [];
@@ -170,7 +154,7 @@ export function MeetingAsk({ meeting, onOpenChat }: MeetingAskProps) {
             key={preset.id}
             type="button"
             className="btn line sm"
-            disabled={live || !detail.data}
+            disabled={live || !detail.data || !chatReady}
             onClick={() => send.mutate({ content: preset.question, files: [] })}
           >
             {preset.label}
@@ -188,7 +172,7 @@ export function MeetingAsk({ meeting, onOpenChat }: MeetingAskProps) {
         busy={running}
         stopping={stop.stopping}
         sending={send.isPending}
-        ready={Boolean(detail.data)}
+        ready={Boolean(detail.data) && chatReady}
         error={send.error?.message ?? stop.error}
         attachments={attachments}
         onSend={async (content, files) => {

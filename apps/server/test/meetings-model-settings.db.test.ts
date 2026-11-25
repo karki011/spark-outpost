@@ -80,14 +80,23 @@ describe('the meeting model setting', () => {
     });
   });
 
-  it('falls back to the fast choice when the pick is no longer offered', async () => {
+  it('refuses a model or effort the provider does not offer', async () => {
     await connect('claude');
     await offer('claude', ['alpha']);
-    await saveMeetingModel(t.db, t.workspaceId, { provider: null, model: 'gone', effort: 'max' });
-    const fast = await meetingRunsOn(t.db, t.workspaceId);
-    await saveMeetingModel(t.db, t.workspaceId, { provider: null, model: null, effort: null });
-    expect(fast).toEqual(await meetingRunsOn(t.db, t.workspaceId));
-    expect(fast?.model).not.toBe('gone');
+    const save = (model: string | null, effort: string | null) =>
+      saveMeetingModel(t.db, t.workspaceId, { provider: null, model, effort });
+    await expect(save('gone', null)).rejects.toThrow('does not offer that model or effort');
+    await expect(save(null, 'ultra')).rejects.toThrow('does not offer that model or effort');
+    expect((await meetingModelView(t.db, t.workspaceId)).settings.model).toBeNull();
+  });
+
+  it('falls back to the fast choice when the pick is no longer offered', async () => {
+    await connect('claude');
+    await offer('claude', ['alpha', 'beta']);
+    await saveMeetingModel(t.db, t.workspaceId, { provider: null, model: 'beta', effort: null });
+    expect((await meetingRunsOn(t.db, t.workspaceId))?.model).toBe('beta');
+    await offer('claude', ['alpha']);
+    expect((await meetingRunsOn(t.db, t.workspaceId))?.model).not.toBe('beta');
   });
 
   it('falls back to the default provider when the picked one is disconnected', async () => {

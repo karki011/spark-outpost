@@ -40,6 +40,12 @@ async function connectedProviders(db: Db, workspaceId: string): Promise<Provider
   return rows.map((row) => row.provider);
 }
 
+function defaultProvider(row: SettingsRow, connected: ProviderId[]): ProviderId | null {
+  return row.default_provider && connected.includes(row.default_provider)
+    ? row.default_provider
+    : (connected[0] ?? null);
+}
+
 async function runsOn(
   db: Db,
   workspaceId: string,
@@ -47,11 +53,7 @@ async function runsOn(
 ): Promise<MeetingModelRunsOn | null> {
   const connected = await connectedProviders(db, workspaceId);
   const chosen = row.provider && connected.includes(row.provider) ? row.provider : null;
-  const fallback =
-    row.default_provider && connected.includes(row.default_provider)
-      ? row.default_provider
-      : (connected[0] ?? null);
-  const provider = chosen ?? fallback;
+  const provider = chosen ?? defaultProvider(row, connected);
   if (!provider) return null;
   const fast = await digestModelFor(db, workspaceId, provider);
   const capabilities = await getCapabilities(db, workspaceId, provider);
@@ -91,23 +93,44 @@ export async function meetingModelView(db: Db, workspaceId: string): Promise<Mee
   };
 }
 
+const NOT_OFFERED = 'This provider does not offer that model or effort. Pick again.';
+
+async function assertOffered(
+  db: Db,
+  workspaceId: string,
+  provider: ProviderId,
+  settings: MeetingModelSettings,
+): Promise<void> {
+  const capabilities = await getCapabilities(db, workspaceId, provider);
+  const models = (capabilities?.models ?? []).filter((model) => model.availability !== 'unusable');
+  const modelKnown =
+    settings.model === null ||
+    models.length === 0 ||
+    models.some((model) => model.id === settings.model);
+  const efforts = reportedEfforts(provider, capabilities?.efforts ?? null);
+  const effortKnown =
+    settings.effort === null || efforts.some((effort) => effort.id === settings.effort);
+  if (!modelKnown || !effortKnown) throw new BadRequestError(NOT_OFFERED);
+}
+
 export async function saveMeetingModel(
   db: Db,
   workspaceId: string,
   settings: MeetingModelSettings,
 ): Promise<MeetingModelView> {
-  if (
-    settings.provider &&
-    !(await connectedProviders(db, workspaceId)).includes(settings.provider)
-  ) {
+  const row = await settingsRow(db, workspaceId);
+  if (!row) throw new BadRequestError(NOT_SET_UP);
+  const connected = await connectedProviders(db, workspaceId);
+  if (settings.provider && !connected.includes(settings.provider)) {
     throw new BadRequestError(NOT_CONNECTED);
   }
-  const { rowCount } = await db.query(
+  const provider = settings.provider ?? defaultProvider(row, connected);
+  if (provider) await assertOffered(db, workspaceId, provider, settings);
+  await db.query(
     `UPDATE profiles SET meeting_provider = $2, meeting_model = $3, meeting_effort = $4,
        updated_at = now()
      WHERE workspace_id = $1`,
     [workspaceId, settings.provider, settings.model, settings.effort],
   );
-  if (!rowCount) throw new BadRequestError(NOT_SET_UP);
   return meetingModelView(db, workspaceId);
 }

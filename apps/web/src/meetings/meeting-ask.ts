@@ -131,40 +131,52 @@ export async function meetingAttachment(meetingId: string): Promise<Attachment> 
 
 const CHAT_KEY = 'spark-outpost.meetings.chat.';
 
-export interface MeetingChat {
-  id: string;
-  fresh: boolean;
-}
-
-export function meetingChat(meetingId: string): MeetingChat {
+export function meetingChatId(meetingId: string): string {
   try {
     const saved = localStorage.getItem(CHAT_KEY + meetingId);
-    if (saved) return { id: saved, fresh: false };
+    if (saved) return saved;
   } catch {
-    return { id: newDraftId(), fresh: true };
+    return newDraftId();
   }
   const id = newDraftId();
   try {
     localStorage.setItem(CHAT_KEY + meetingId, id);
   } catch {
-    return { id, fresh: true };
+    return id;
   }
-  return { id, fresh: true };
+  return id;
 }
 
-export function meetingChatId(meetingId: string): string {
-  return meetingChat(meetingId).id;
+const STARTED_KEY = 'spark-outpost.meetings.chat-started.';
+
+export function meetingChatStarted(meetingId: string): boolean {
+  try {
+    return localStorage.getItem(STARTED_KEY + meetingId) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export function markMeetingChatStarted(meetingId: string): void {
+  try {
+    localStorage.setItem(STARTED_KEY + meetingId, '1');
+  } catch {
+    return;
+  }
 }
 
 export function meetingChatStart(view: MeetingModelView): UpdateChatSettingsRequest | null {
   const { settings, runsOn } = view;
   if (!runsOn) return null;
+  const model = settings.model !== null && settings.model === runsOn.model ? runsOn.model : null;
+  const effort =
+    settings.effort !== null && settings.effort === runsOn.effort ? runsOn.effort : null;
   const picked = {
-    ...(settings.provider || settings.model || settings.effort
+    ...(settings.provider === runsOn.provider || model || effort
       ? { provider: runsOn.provider }
       : {}),
-    ...(settings.model && runsOn.model ? { model: runsOn.model } : {}),
-    ...(settings.effort && runsOn.effort ? { effort: runsOn.effort } : {}),
+    ...(model ? { model } : {}),
+    ...(effort ? { effort } : {}),
   };
   return Object.keys(picked).length > 0 ? picked : null;
 }
