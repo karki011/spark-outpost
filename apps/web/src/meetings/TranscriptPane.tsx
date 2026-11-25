@@ -28,7 +28,7 @@ const Line = memo(function Line({ line }: { line: MeetingLine }) {
 
 function LiveLine({ words }: { words: MeetingLiveWords }) {
   return (
-    <li className="mt-line mt-live">
+    <li className="mt-line mt-line-live">
       <span className="mt-who">{MEETING_SPEAKER_LABELS[words.speaker]}</span>
       <time className="mt-time">{formatOffset(words.startMs)}</time>
       <span className="mt-text">{words.text}</span>

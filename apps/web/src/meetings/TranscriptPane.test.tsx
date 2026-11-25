@@ -70,7 +70,7 @@ describe('Transcript live words', () => {
     hear({ speaker: 'you', text: 'we should ship', startMs: 3_000 });
     const items = list.querySelectorAll('li');
     expect(items).toHaveLength(3);
-    expect(items[2]?.className).toContain('mt-live');
+    expect(items[2]?.className).toContain('mt-line-live');
     expect(items[2]?.textContent).toContain('You');
     expect(items[2]?.textContent).toContain('we should ship');
   });
@@ -89,10 +89,10 @@ describe('Transcript live words', () => {
     const list = await screen.findByRole('list', { name: 'Transcript' });
     hear({ speaker: 'you', text: 'line thr', startMs: 3_000 });
     hear({ speaker: 'others', text: 'and then', startMs: 4_000 });
-    expect(list.querySelectorAll('.mt-live')).toHaveLength(2);
+    expect(list.querySelectorAll('.mt-line-live')).toHaveLength(2);
     grow(3);
     expect(await screen.findByText('line 3')).toBeTruthy();
-    const live = list.querySelectorAll('.mt-live');
+    const live = list.querySelectorAll('.mt-line-live');
     expect(live).toHaveLength(1);
     expect(live[0]?.textContent).toContain('and then');
   });
@@ -102,7 +102,7 @@ describe('Transcript live words', () => {
     const list = await screen.findByRole('list', { name: 'Transcript' });
     hear('not json');
     hear(JSON.stringify({ speaker: 'someone', text: 'x', startMs: 0 }));
-    expect(list.querySelectorAll('.mt-live')).toHaveLength(0);
+    expect(list.querySelectorAll('.mt-line-live')).toHaveLength(0);
   });
 
   it('follows nothing once the meeting has ended', async () => {

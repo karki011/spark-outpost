@@ -324,7 +324,7 @@
 .mt-text {
   overflow-wrap: anywhere;
 }
-.mt-live .mt-text {
+.mt-line-live .mt-text {
   color: var(--muted);
 }
 .mt-earlier {
