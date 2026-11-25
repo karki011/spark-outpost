@@ -4,7 +4,9 @@ import {
   TRANSCRIPT_CHARS_MAX,
   askPresets,
   meetingAskNote,
+  meetingChat,
   meetingChatId,
+  meetingChatStart,
   transcriptText,
 } from './meeting-ask.ts';
 import { MEETING_ID, detail, lines } from './meetings-test-support.tsx';
@@ -69,5 +71,40 @@ describe('the chat a meeting’s questions go to', () => {
     expect(first).toMatch(/^[0-9a-f-]{36}$/);
     expect(meetingChatId(MEETING_ID)).toBe(first);
     expect(meetingChatId('22222222-2222-4222-8222-222222222222')).not.toBe(first);
+  });
+});
+
+describe('a new meeting chat and the meeting model setting', () => {
+  it('is fresh only the first time a meeting gets its chat', () => {
+    const first = meetingChat(MEETING_ID);
+    expect(first.fresh).toBe(true);
+    expect(meetingChat(MEETING_ID)).toEqual({ id: first.id, fresh: false });
+  });
+
+  it('starts on nothing while the setting is untouched or no provider is connected', () => {
+    const untouched = { provider: null, model: null, effort: null };
+    const runsOn = {
+      provider: 'claude' as const,
+      model: 'fast',
+      modelLabel: 'Fast',
+      effort: 'low',
+    };
+    expect(meetingChatStart({ settings: untouched, runsOn })).toBeNull();
+    expect(
+      meetingChatStart({ settings: { ...untouched, provider: 'codex' }, runsOn: null }),
+    ).toBeNull();
+  });
+
+  it('starts on the picked parts only', () => {
+    const runsOn = { provider: 'codex' as const, model: 'fast', modelLabel: 'Fast', effort: 'low' };
+    expect(
+      meetingChatStart({ settings: { provider: 'codex', model: null, effort: null }, runsOn }),
+    ).toEqual({ provider: 'codex' });
+    expect(
+      meetingChatStart({
+        settings: { provider: null, model: 'big', effort: 'high' },
+        runsOn: { provider: 'claude', model: 'big', modelLabel: 'Big', effort: 'high' },
+      }),
+    ).toEqual({ provider: 'claude', model: 'big', effort: 'high' });
   });
 });

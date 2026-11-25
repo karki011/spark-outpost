@@ -1,11 +1,10 @@
-import { digestModelFor } from '../digest/service.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { insertHiddenRun, STALE_RUNNING_MS } from '../persistence/hidden-runs.ts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
-import { getSetupState } from '../persistence/setup.ts';
 import type { TurnDeps } from '../workflow/agent-turn.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
+import { meetingRunsOn } from './model-settings.ts';
 
 export interface NotesCompletion {
   text: string;
@@ -78,24 +77,21 @@ async function waitForReply(db: Queryable, runId: string, pollMs: number): Promi
 }
 
 export function childRunNotesModel(db: Db, workspaceId: string, pollMs = POLL_MS): NotesModel {
-  const defaultProvider = async () =>
-    (await getSetupState(db, workspaceId)).profile.defaultProvider;
   return {
     async available() {
-      return (await defaultProvider()) !== null;
+      return (await meetingRunsOn(db, workspaceId)) !== null;
     },
     async complete(prompt, meetingId) {
-      const provider = await defaultProvider();
-      if (!provider) throw new NotesModelError('Connect a provider to write notes.');
-      const model = await digestModelFor(db, workspaceId, provider);
+      const target = await meetingRunsOn(db, workspaceId);
+      if (!target) throw new NotesModelError('Connect a provider to write notes.');
       const runId = await withTransaction(db, async (client) => {
         const run = await insertHiddenRun(client, workspaceId, {
           title: MEETING_NOTES_TITLE,
           archived: true,
           prompt,
-          provider,
-          model: model.model,
-          effort: model.effort,
+          provider: target.provider,
+          model: target.model,
+          effort: target.effort,
         });
         await client.query('INSERT INTO meeting_note_runs (run_id, meeting_id) VALUES ($1, $2)', [
           run.runId,

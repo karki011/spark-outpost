@@ -18,6 +18,7 @@ import {
   WARN_LABEL,
 } from '../spark/CompactionSettings.tsx';
 import { INSTRUCTIONS_LABEL } from '../spark/AgentInstructionsSetting.tsx';
+import { MEETING_MODEL_ROWS } from '../meetings/index.ts';
 import { MORNING_BRIEF_LABEL } from '../spark/MorningBriefSetting.tsx';
 import { ResetSection, KEEP_KEYS_LABEL } from '../reset/ResetSection.tsx';
 import { HelpSection, helpRows } from '../help/HelpSection.tsx';
@@ -176,11 +177,12 @@ export const SETTINGS_SECTIONS = [
     label: 'Notifications',
     icon: icons.NOTIFICATIONS_ICON,
     remoteSwitch: 'settings',
-    rows: ({ calendar }) => [
+    rows: ({ calendar, remote }) => [
       MORNING_BRIEF_LABEL,
       ...(calendar ? [CALENDAR_BRIEF_LABEL] : []),
       COMPANION_LABEL,
       ...(calendar ? CALENDAR_NOTIFY_ROWS : []),
+      ...(remote ? [] : MEETING_MODEL_ROWS),
       ...islandRows(),
     ],
     render: ({ setup }) => setup && <NotificationsSection profile={setup.profile} />,

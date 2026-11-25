@@ -2,6 +2,7 @@ import { rmSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { apiNow, matchApiClock } from './api-clock.ts';
 import { resetTestDatabase } from './database.ts';
+import { openSettingsTab } from './rail-menu.ts';
 import { FAKE_CALENDAR_STATE } from './stub-config.ts';
 
 test.skip(
@@ -141,4 +142,67 @@ test('a calendar meeting offers Take notes and shows it is recording', async ({ 
   expect(detail.meeting).toMatchObject({ title: 'Design review', source: 'calendar' });
   await main.getByRole('button', { name: 'Stop' }).first().click();
   await expect(main.getByRole('button', { name: 'Stop' })).toHaveCount(0);
+});
+
+async function pickMeeting(page: Page, picker: string, choice: RegExp) {
+  await page.getByRole('button', { name: picker, exact: true }).click();
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/meetings/model') && response.ok(),
+  );
+  await page
+    .getByRole('menu', { name: picker })
+    .getByRole('menuitemradio', { name: choice })
+    .click();
+  await saved;
+}
+
+test('the meeting provider and effort are kept, and a new meeting’s questions start on them', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], catalog: true });
+  expect((await page.request.post('/api/calendar/connect', { data: {} })).ok()).toBe(true);
+  await page.goto('/');
+  await openSettingsTab(page, 'Notifications');
+  const provider = page.getByRole('button', { name: 'Meeting provider', exact: true });
+  await expect(provider).toHaveText('Same as default chat provider');
+  await expect(page.getByRole('button', { name: 'Meeting model', exact: true })).toHaveText(
+    'Fast (recommended)',
+  );
+
+  await pickMeeting(page, 'Meeting provider', /^Codex/);
+  await pickMeeting(page, 'Meeting effort', /^high/);
+  await page.reload();
+  await openSettingsTab(page, 'Notifications');
+  await expect(page.getByRole('button', { name: 'Meeting provider', exact: true })).toHaveText(
+    'Codex',
+  );
+  await expect(page.getByRole('button', { name: 'Meeting effort', exact: true })).toHaveText(
+    'high',
+  );
+  const saved = await (await page.request.get('/api/meetings/model')).json();
+  expect(saved.settings).toEqual({ provider: 'codex', model: null, effort: 'high' });
+  expect(saved.runsOn).toMatchObject({ provider: 'codex', effort: 'high' });
+
+  const started = await (
+    await page.request.post('/api/meetings', { data: { title: 'Sync' } })
+  ).json();
+  const id = (started as { meeting: { id: string } }).meeting.id;
+  await page.request.post(`/api/meetings/${id}/stop`, { data: {} });
+  await openMeetings(page);
+  await today(page).getByRole('list', { name: 'Meetings' }).getByRole('button').first().click();
+  await expect(today(page).getByText('Ask about this meeting')).toBeVisible();
+  const chatId = await page.evaluate(
+    (meetingId) => localStorage.getItem(`spark-outpost.meetings.chat.${meetingId}`),
+    id,
+  );
+  await expect
+    .poll(async () => {
+      const chat = await page.request.get(`/api/conversations/${chatId}`);
+      if (!chat.ok()) return null;
+      const { settings } = (await chat.json()) as {
+        settings: { provider: string; effort: string };
+      };
+      return [settings.provider, settings.effort];
+    })
+    .toEqual(['codex', 'high']);
 });

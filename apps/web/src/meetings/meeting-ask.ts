@@ -4,6 +4,8 @@ import {
   type Attachment,
   type MeetingDetail,
   type MeetingLine,
+  type MeetingModelView,
+  type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
 import { uploadAttachment } from '../api/attachments.ts';
 import { newDraftId } from '../api/client.ts';
@@ -129,18 +131,40 @@ export async function meetingAttachment(meetingId: string): Promise<Attachment> 
 
 const CHAT_KEY = 'spark-outpost.meetings.chat.';
 
-export function meetingChatId(meetingId: string): string {
+export interface MeetingChat {
+  id: string;
+  fresh: boolean;
+}
+
+export function meetingChat(meetingId: string): MeetingChat {
   try {
     const saved = localStorage.getItem(CHAT_KEY + meetingId);
-    if (saved) return saved;
+    if (saved) return { id: saved, fresh: false };
   } catch {
-    return newDraftId();
+    return { id: newDraftId(), fresh: true };
   }
   const id = newDraftId();
   try {
     localStorage.setItem(CHAT_KEY + meetingId, id);
   } catch {
-    return id;
+    return { id, fresh: true };
   }
-  return id;
+  return { id, fresh: true };
+}
+
+export function meetingChatId(meetingId: string): string {
+  return meetingChat(meetingId).id;
+}
+
+export function meetingChatStart(view: MeetingModelView): UpdateChatSettingsRequest | null {
+  const { settings, runsOn } = view;
+  if (!runsOn) return null;
+  const picked = {
+    ...(settings.provider || settings.model || settings.effort
+      ? { provider: runsOn.provider }
+      : {}),
+    ...(settings.model && runsOn.model ? { model: runsOn.model } : {}),
+    ...(settings.effort && runsOn.effort ? { effort: runsOn.effort } : {}),
+  };
+  return Object.keys(picked).length > 0 ? picked : null;
 }
