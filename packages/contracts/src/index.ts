@@ -3,6 +3,7 @@ export * from './agent-config.ts';
 export * from './user-plugins.ts';
 export * from './mcp.ts';
 export * from './spark-mcp-actions.ts';
+export * from './setup-drafts.ts';
 export * from './annotations.ts';
 export * from './agent-commands.ts';
 export * from './agent-terminal.ts';

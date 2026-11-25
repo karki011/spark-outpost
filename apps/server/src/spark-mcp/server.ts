@@ -36,6 +36,7 @@ import { ticketActionTools } from './actions/ticket-actions.ts';
 import { createTeammateTool, updateTeammateTool } from './actions/teammate-actions.ts';
 import { workflowTool } from './tools/workflow-tool.ts';
 import { mcpActionTools } from './actions/mcp-actions.ts';
+import { prepareSetupTool } from './actions/setup-actions.ts';
 import { slackPostTool } from './actions/slack-actions.ts';
 import { slackTool } from './tools/slack-tool.ts';
 import { attentionTool } from './tools/attention-tool.ts';
@@ -106,6 +107,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   updateTeammateTool,
   workflowTool,
   ...mcpActionTools,
+  prepareSetupTool,
   slackPostTool,
   subChatsTool,
   ...browserTools,

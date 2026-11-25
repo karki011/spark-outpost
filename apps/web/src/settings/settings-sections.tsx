@@ -51,6 +51,8 @@ import { VOICE_ROWS, VoiceSection } from './VoiceSection.tsx';
 import { WIDE_WINDOW_LABEL } from './WideWindowSetting.tsx';
 import * as icons from './settings-icons.tsx';
 import { sectionAvailable, type SettingsPage, type SettingsSection } from './section-ids.ts';
+import { PreparedSetups } from '../setup-drafts/PreparedSetups.tsx';
+import { CONNECTOR_SETUPS, PROVIDER_SETUPS } from '../setup-drafts/setup-groups.ts';
 
 export const SETTINGS_GROUPS = [
   { id: 'general', title: 'General' },
@@ -194,7 +196,13 @@ export const SETTINGS_SECTIONS = [
         id: 'ai',
         title: 'Providers',
         remoteSwitch: 'connections',
-        render: ({ setup }) => setup && <ProvidersBody setup={setup} />,
+        render: ({ setup }) =>
+          setup && (
+            <>
+              <PreparedSetups targets={PROVIDER_SETUPS} />
+              <ProvidersBody setup={setup} />
+            </>
+          ),
       },
       {
         id: 'models',
@@ -275,6 +283,7 @@ export const SETTINGS_SECTIONS = [
         render: () => (
           <>
             <p className="lede">{CONNECTORS_LEDE}</p>
+            <PreparedSetups targets={CONNECTOR_SETUPS} />
             <ConnectorGrid paged />
           </>
         ),
