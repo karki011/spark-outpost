@@ -7,6 +7,7 @@ import {
   type StartMeetingRequest,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
+import { createLiveWords, type WordsListener } from './live-words.ts';
 import { MEETINGS_NEED_THE_MAC_APP, MeetingSourceError, type MeetingSource } from './source.ts';
 import {
   MeetingAlreadyRecording,
@@ -41,6 +42,7 @@ export interface MeetingServiceOptions {
   onEnded?: (meeting: Meeting) => void;
   writeNotes?: (meetingId: string) => Promise<void>;
   linesAnnounceMs?: number;
+  now?: () => number;
 }
 
 const LINES_ANNOUNCE_MS = 1_000;
@@ -48,6 +50,8 @@ const LINES_ANNOUNCE_MS = 1_000;
 export interface MeetingService {
   readonly writeNotes: ((meetingId: string) => Promise<void>) | undefined;
   announce(meetingId: string): void;
+  watchWords(meetingId: string, listener: WordsListener, onEnd: () => void): () => void;
+  wordsWatchers(meetingId: string): number;
   status(): Promise<MeetingStatus>;
   start(request: StartMeetingRequest): Promise<Meeting>;
   started(): Promise<void>;
@@ -74,22 +78,34 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
       JSON.stringify({ kind: 'meeting', conversationId: null, runId: null, meetingId }),
     );
 
+  const now = options.now ?? Date.now;
+  const words = createLiveWords();
   const pendingLines = new Map<string, ReturnType<typeof setTimeout>>();
+  const linesAnnouncedAt = new Map<string, number>();
+
+  const announceLinesNow = (meetingId: string) => {
+    pendingLines.delete(meetingId);
+    linesAnnouncedAt.set(meetingId, now());
+    announce(meetingId);
+  };
 
   const announceLines = (meetingId: string) => {
     if (pendingLines.has(meetingId)) return;
+    const wait = (linesAnnouncedAt.get(meetingId) ?? -Infinity) + linesAnnounceMs - now();
+    if (wait <= 0) {
+      announceLinesNow(meetingId);
+      return;
+    }
     pendingLines.set(
       meetingId,
-      setTimeout(() => {
-        pendingLines.delete(meetingId);
-        announce(meetingId);
-      }, linesAnnounceMs),
+      setTimeout(() => announceLinesNow(meetingId), wait),
     );
   };
 
   const announceNow = (meetingId: string) => {
     clearTimeout(pendingLines.get(meetingId));
     pendingLines.delete(meetingId);
+    linesAnnouncedAt.delete(meetingId);
     announce(meetingId);
   };
 
@@ -112,6 +128,7 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
   };
 
   async function finish(meetingId: string, state: 'ended' | 'interrupted'): Promise<void> {
+    words.end(meetingId);
     const ended = await endMeeting(db, workspaceId, meetingId, state);
     if (!ended) return;
     announceNow(meetingId);
@@ -146,11 +163,18 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
   }
 
   async function startSource(active: MeetingSource, meetingId: string): Promise<void> {
+    words.begin(meetingId);
     try {
-      await active.start(meetingId, deliverTo(meetingId), () => {
-        void finish(meetingId, 'interrupted').catch(() => undefined);
-      });
+      await active.start(
+        meetingId,
+        deliverTo(meetingId),
+        () => {
+          void finish(meetingId, 'interrupted').catch(() => undefined);
+        },
+        (heard) => words.push(meetingId, heard),
+      );
     } catch (error) {
+      words.end(meetingId);
       await deleteMeeting(db, workspaceId, meetingId);
       announce(meetingId);
       if (error instanceof MeetingSourceError) throw new MeetingError(503, error.message);
@@ -161,6 +185,8 @@ export function createMeetingService(options: MeetingServiceOptions): MeetingSer
   return {
     writeNotes: options.writeNotes,
     announce,
+    watchWords: words.watch,
+    wordsWatchers: words.watchers,
 
     async status() {
       const recording = await recordingMeeting(db, workspaceId);

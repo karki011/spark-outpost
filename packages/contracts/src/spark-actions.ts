@@ -17,6 +17,7 @@ import {
   switchMcpServerActionSchema,
   updateMcpServerActionSchema,
 } from './spark-mcp-actions.ts';
+import { prepareSetupActionSchema } from './setup-drafts.ts';
 import { SLACK_POST_TEXT_MAX, slackChannelIdSchema } from './slack.ts';
 import { rulesEditActionSchema, rulesEditLabels, rulesEditQuestion } from './spark-rules-edit.ts';
 import { crewEditActionSchema, crewEditLabels, crewEditQuestion } from './crew-edit.ts';
@@ -242,6 +243,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   updateMcpServerActionSchema,
   switchMcpServerActionSchema,
   removeMcpServerActionSchema,
+  prepareSetupActionSchema,
   ...browserActionSchemas,
   macUseAppActionSchema,
   macActActionSchema,
@@ -298,6 +300,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   update_mcp_server: [],
   switch_mcp_server: [],
   remove_mcp_server: [],
+  prepare_setup: [],
   read_page: [],
   open_page: [],
   act_page: [],
@@ -385,6 +388,11 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     doing: 'Starting the follow-up round…',
   },
   ...teammateActionLabels,
+  prepare_setup: {
+    question: 'Prepare this connection?',
+    confirm: 'Prepare',
+    doing: 'Preparing the connection…',
+  },
   add_mcp_server: {
     question: 'Add this MCP server?',
     confirm: 'Add server',

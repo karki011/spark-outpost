@@ -5,6 +5,7 @@ import {
   MEETING_LINES_PAGE,
   MEETING_LIST_PAGE,
   meetingAttachRequestSchema,
+  meetingModelSettingsSchema,
   type MeetingJoinNotes,
   meetingNotesEditSchema,
   meetingNotesVersion,
@@ -18,6 +19,7 @@ import {
 import { paramId, parseBody, parseQuery } from '../api/validation.ts';
 import { calendarConnection } from '../calendar/store.ts';
 import type { Db } from '../persistence/db.ts';
+import { meetingModelView, saveMeetingModel } from './model-settings.ts';
 import { MeetingError, type MeetingService } from './service.ts';
 import {
   attachToMeeting,
@@ -53,6 +55,9 @@ const linesQuerySchema = z.object({
 });
 
 const RECORDING_TITLE_SHOWN = 80;
+const LIVE_WORDS_CLIENT_LIMIT = 8;
+const LIVE_WORDS_RETRY_MS = 2_000;
+const LIVE_WORDS_HEARTBEAT_MS = 15_000;
 
 function stillRecording(title: string): string {
   return `Still recording ${title.slice(0, RECORDING_TITLE_SHOWN)}. Stop it to take notes here.`;
@@ -70,6 +75,15 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
 
   router.get('/meetings/status', async (_req, res) => {
     res.json(await meetings.status());
+  });
+
+  router.get('/meetings/model', async (_req, res) => {
+    res.json(await meetingModelView(db, workspaceId));
+  });
+
+  router.put('/meetings/model', async (req, res) => {
+    const settings = parseBody(meetingModelSettingsSchema, req);
+    res.json(await saveMeetingModel(db, workspaceId, settings));
   });
 
   router.get('/meetings', async (req, res) => {
@@ -157,6 +171,40 @@ export function meetingRoutes({ db, workspaceId, meetings }: MeetingRouteDeps) {
       ? { lines: await lastLines(db, id, query.limit), more: false }
       : await linesAfter(db, id, query.after, query.limit);
     res.json(page);
+  });
+
+  router.get('/meetings/:id/live', async (req, res) => {
+    const id = paramId(req);
+    const stops: (() => void)[] = [];
+    res.on('close', () => {
+      for (const stop of stops) stop();
+    });
+    const meeting = await getMeeting(db, workspaceId, id);
+    if (res.destroyed) return;
+    if (!meeting) throw new MeetingError(404, 'Meeting not found.');
+    if (meeting.state !== 'recording') {
+      res.status(204).end();
+      return;
+    }
+    if (meetings.wordsWatchers(id) >= LIVE_WORDS_CLIENT_LIMIT) {
+      throw new MeetingError(503, 'Too many windows are following this meeting.');
+    }
+    res.status(200).set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    });
+    res.flushHeaders();
+    res.write(`retry: ${LIVE_WORDS_RETRY_MS}\n\n`);
+    const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), LIVE_WORDS_HEARTBEAT_MS);
+    stops.push(() => clearInterval(heartbeat));
+    stops.push(
+      meetings.watchWords(
+        id,
+        (words) => res.write(`data: ${JSON.stringify(words)}\n\n`),
+        () => res.end(),
+      ),
+    );
   });
 
   router.put('/meetings/:id/notes', async (req, res) => {

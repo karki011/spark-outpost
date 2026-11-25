@@ -4,6 +4,16 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.20
+
+- **Agents can prepare a connection.** Ask an agent to set up an AI provider or connector: it fills in everything that isn't secret, and you type the key or sign in yourself.
+- **Choose the meeting model.** Settings → Notifications → **Meeting notes and questions** picks the provider, model and effort that write a meeting's notes; a new meeting's questions start on the same choice.
+- **Live words in meetings.** A meeting's transcript shows the words in grey while someone is still speaking, then replaces them with the finished sentence.
+- **PR follow-up on its own agent.** A follow-up round no longer holds the chat: a message you send during a round starts a normal turn, and the chat's agent can stop the round or send it a note.
+- **Workflows read any pull request.** A workflow run on a pull request link gets the pull request from GitHub even when the chat has no project or the repository isn't linked.
+- **Chats feel quicker.** A sent message shows as a working turn at once, a turn says **starting** until the agent has the message, long chats open at the latest message without jumping, and chats you viewed recently keep following their running turns.
+- A Claude agent's long command moves to the background after 30 seconds so it can read your messages, and changing a setting no longer reloads the main window.
+
 ## 0.1.0-beta.19
 
 - **Spark Outpost for Windows (alpha).** An unsigned installer for Windows 10 and 11 (x64) is on the website for testing: Terminal sessions that survive a restart, Windows Hello for the privacy screen, the island, jump list and tray, Ctrl shortcuts, and Codex commands in PowerShell checked by the approval gate. Windows SmartScreen warns before it installs; choose **More info**, then **Run anyway**.

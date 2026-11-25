@@ -13,10 +13,11 @@ const CLOSED_BY_THE_USER = new Set<string>([
 
 export interface ConversationCandidate {
   parentRunId: string | null;
+  followUpLane?: boolean;
 }
 
 export function usesConversationSession(input: ConversationCandidate): boolean {
-  return input.parentRunId === null;
+  return input.parentRunId === null && input.followUpLane !== true;
 }
 
 export function conversationKey(provider: string): string {

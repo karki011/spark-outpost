@@ -63,6 +63,7 @@ export function createMeetingHub(): MeetingHub {
                   });
                 }
               },
+              words: (words) => post({ kind: 'meeting:partial', meetingId, words }),
               ended: (reason, detail) => {
                 mine.delete(meetingId);
                 post({ kind: 'meeting:ended', meetingId, reason, detail });

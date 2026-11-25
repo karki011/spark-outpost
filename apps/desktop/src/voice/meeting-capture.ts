@@ -1,4 +1,10 @@
-import type { NewMeetingLine, VoiceErrorCode, VoiceHelperMessage } from '@spark-outpost/contracts';
+import {
+  MEETING_LINE_MAX,
+  type MeetingLiveWords,
+  type NewMeetingLine,
+  type VoiceErrorCode,
+  type VoiceHelperMessage,
+} from '@spark-outpost/contracts';
 import type { VoiceHelper } from './helper-process.ts';
 
 export interface MeetingCaptureState {
@@ -8,6 +14,7 @@ export interface MeetingCaptureState {
 
 export interface MeetingSink {
   lines(lines: NewMeetingLine[]): void;
+  words(words: MeetingLiveWords): void;
   ended(reason: 'stopped' | 'failed', detail: string | null): void;
 }
 
@@ -78,6 +85,13 @@ export function createMeetingCapture(effects: MeetingCaptureEffects): MeetingCap
             endMs: Math.max(message.startMs, message.endMs),
           },
         ]);
+        return;
+      case 'meeting_partial':
+        recording.sink.words({
+          speaker: message.source,
+          text: message.text.slice(0, MEETING_LINE_MAX),
+          startMs: message.startMs,
+        });
         return;
       case 'meeting_ended':
         recordings.delete(message.id);

@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { MEETING_LINES_APPEND_MAX, newMeetingLineSchema } from './meetings.ts';
+import {
+  MEETING_LINES_APPEND_MAX,
+  meetingLiveWordsSchema,
+  newMeetingLineSchema,
+} from './meetings.ts';
 
 export const MEETING_START_TIMEOUT_MS = 15_000;
 export const MEETING_STOP_TIMEOUT_MS = 30_000;
@@ -22,6 +26,11 @@ export const meetingBridgeFromHostSchema = z.discriminatedUnion('kind', [
     kind: z.literal('meeting:lines'),
     meetingId: z.uuid(),
     lines: z.array(newMeetingLineSchema).max(MEETING_LINES_APPEND_MAX),
+  }),
+  z.object({
+    kind: z.literal('meeting:partial'),
+    meetingId: z.uuid(),
+    words: meetingLiveWordsSchema,
   }),
   z.object({
     kind: z.literal('meeting:ended'),

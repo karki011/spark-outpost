@@ -1,13 +1,20 @@
 import { memo, useEffect, useLayoutEffect, useRef, type UIEvent } from 'react';
-import { MEETING_SPEAKER_LABELS, type Meeting, type MeetingLine } from '@spark-outpost/contracts';
+import {
+  MEETING_SPEAKER_LABELS,
+  type Meeting,
+  type MeetingLine,
+  type MeetingLiveWords,
+} from '@spark-outpost/contracts';
 import { SpinnerIcon } from '../ui/icons.tsx';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { formatOffset } from './meeting-format.ts';
 import { useMeetingLines } from './use-meeting-lines.ts';
+import { useMeetingLive } from './use-meeting-live.ts';
 
 const BOTTOM_SLACK_PX = 48;
 const TOP_TRIGGER_PX = 80;
+const RECENT_LINES = 20;
 
 const Line = memo(function Line({ line }: { line: MeetingLine }) {
   return (
@@ -19,11 +26,31 @@ const Line = memo(function Line({ line }: { line: MeetingLine }) {
   );
 });
 
+function LiveLine({ words }: { words: MeetingLiveWords }) {
+  return (
+    <li className="mt-line mt-line-live">
+      <span className="mt-who">{MEETING_SPEAKER_LABELS[words.speaker]}</span>
+      <time className="mt-time">{formatOffset(words.startMs)}</time>
+      <span className="mt-text">{words.text}</span>
+    </li>
+  );
+}
+
+function stillOpen(words: MeetingLiveWords, lines: MeetingLine[]): boolean {
+  if (words.text.length === 0) return false;
+  return !lines
+    .slice(-RECENT_LINES)
+    .some((line) => line.speaker === words.speaker && line.startMs >= words.startMs);
+}
+
 export function TranscriptPane({ meeting }: { meeting: Meeting }) {
   const { lines, query, hasEarlier, loadingEarlier, loadEarlier } = useMeetingLines(
     meeting.id,
     meeting.lineCount,
   );
+  const heard = useMeetingLive(meeting.id, meeting.state === 'recording');
+  const live = heard.filter((words) => stillOpen(words, lines));
+  const liveText = live.map((words) => words.text).join('\n');
   const scroller = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
   const following = useRef(meeting.state === 'recording');
@@ -41,9 +68,9 @@ export function TranscriptPane({ meeting }: { meeting: Meeting }) {
       return;
     }
     if (following.current) element.scrollTop = element.scrollHeight;
-  }, [firstSeq, lastSeq]);
+  }, [firstSeq, lastSeq, liveText]);
 
-  const shown = lines.length > 0;
+  const shown = lines.length > 0 || live.length > 0;
   useEffect(() => {
     const element = scroller.current;
     const content = list.current;
@@ -76,7 +103,7 @@ export function TranscriptPane({ meeting }: { meeting: Meeting }) {
       </QueryWait>
     );
   }
-  if (lines.length === 0) {
+  if (!shown) {
     return (
       <p className="mt-hint">
         {meeting.state === 'recording'
@@ -102,6 +129,9 @@ export function TranscriptPane({ meeting }: { meeting: Meeting }) {
       <ol className="mt-lines" aria-label="Transcript" ref={list}>
         {lines.map((line) => (
           <Line key={line.seq} line={line} />
+        ))}
+        {live.map((words) => (
+          <LiveLine key={words.speaker} words={words} />
         ))}
       </ol>
     </div>

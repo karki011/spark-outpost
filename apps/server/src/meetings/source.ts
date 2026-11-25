@@ -1,6 +1,7 @@
-import type { NewMeetingLine } from '@spark-outpost/contracts';
+import type { MeetingLiveWords, NewMeetingLine } from '@spark-outpost/contracts';
 
 export type DeliverLines = (lines: NewMeetingLine[]) => Promise<void>;
+export type DeliverWords = (words: MeetingLiveWords) => void;
 
 export interface MeetingSourceState {
   available: boolean;
@@ -10,7 +11,12 @@ export interface MeetingSourceState {
 export interface MeetingSource {
   state(): MeetingSourceState;
   onState?(listener: () => void): void;
-  start(meetingId: string, deliver: DeliverLines, lost: () => void): Promise<void>;
+  start(
+    meetingId: string,
+    deliver: DeliverLines,
+    lost: () => void,
+    words?: DeliverWords,
+  ): Promise<void>;
   stop(meetingId: string): Promise<void>;
 }
 

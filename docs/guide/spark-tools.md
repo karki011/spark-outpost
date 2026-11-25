@@ -42,7 +42,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Create, comment on, move or assign a ticket                                                             | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket`         |
 | Post to an allowed Slack channel or thread                                                              | `spark_slack_post`                                                                                      |
-| Start a PR follow-up round; post an allowed review                                                      | `spark_pr_follow_up_round`, `spark_github_review_post`                                                  |
+| Start, stop or message a PR round; post a review                                                        | `spark_pr_follow_up_round`, `spark_github_review_post`                                                  |
 | Push the chat's branch, open its PR                                                                     | `spark_push`, `spark_pull_request` (no card)                                                            |
 | Change a Spark, its files or a workflow; run one                                                        | `spark_create_spark`, `spark_update_spark`, `spark_crew_edit`, `spark_workflow`                         |
 | Manage MCP servers                                                                                      | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
@@ -98,5 +98,7 @@ Edit, then confirm or select **Don't**; the card shows the result or **Try again
 | Your terminals' output       | Its name, folder and running program.                 |
 | Password and card fields     | `[masked]`; painted over in screenshots.              |
 | Secrets, API keys and tokens | Redacted before agents see them.                      |
+
+`spark_prepare_setup` prefills a provider or connector form; you type the key or sign in.
 
 After private reads, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).

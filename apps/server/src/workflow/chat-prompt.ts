@@ -86,6 +86,7 @@ export interface ChatTurnFacts {
   project: ChatPromptProject | null;
   followUpRound: boolean;
   taskTurn: boolean;
+  roundRunning?: { number: number; round: number; doing: string } | null;
 }
 
 export function chatTurnNote(facts: ChatTurnFacts): string | null {
@@ -96,5 +97,6 @@ export function chatTurnNote(facts: ChatTurnFacts): string | null {
   if (facts.followUpRound && facts.project && canPushTo(facts.project)) {
     lines.push(text.TURN_NOTE_PUBLISHING, `- ${text.PUBLISH_FOLLOW_UP}`);
   }
+  if (facts.roundRunning) lines.push(text.roundRunningNote(facts.roundRunning));
   return lines.length === 0 ? null : [text.TURN_NOTE_INTRO, ...lines].join('\n');
 }

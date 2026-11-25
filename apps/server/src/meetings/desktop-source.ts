@@ -11,6 +11,7 @@ import {
   MEETINGS_NEED_THE_MAC_APP,
   MeetingSourceError,
   type DeliverLines,
+  type DeliverWords,
   type MeetingSource,
   type MeetingSourceState,
 } from './source.ts';
@@ -23,6 +24,7 @@ export interface DesktopMeetingSourceOptions {
 
 interface Running {
   deliver: DeliverLines;
+  words: DeliverWords | undefined;
   lost: () => void;
   started: (() => void) | null;
   failed: ((error: MeetingSourceError) => void) | null;
@@ -73,6 +75,10 @@ export function createDesktopMeetingSource(options: DesktopMeetingSourceOptions)
       entry.started?.();
       return;
     }
+    if (message.kind === 'meeting:partial') {
+      entry.words?.(message.words);
+      return;
+    }
     entry.delivering = entry.delivering
       .then(() => entry.deliver(message.lines))
       .catch(() => undefined);
@@ -83,10 +89,11 @@ export function createDesktopMeetingSource(options: DesktopMeetingSourceOptions)
     state: () => state,
     onState: (listener) => void stateListeners.push(listener),
 
-    start(meetingId, deliver, lost) {
+    start(meetingId, deliver, lost, words) {
       return new Promise<void>((resolve, reject) => {
         const entry: Running = {
           deliver,
+          words,
           lost,
           started: null,
           failed: null,

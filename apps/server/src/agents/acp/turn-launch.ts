@@ -48,6 +48,7 @@ import {
   type SparkTools,
 } from './spark-tools.ts';
 import type { AcpProviderOptions } from './acp-provider.ts';
+import { withStartingModel } from './starting-model-env.ts';
 
 export interface Workspace {
   cwd: string;
@@ -263,7 +264,7 @@ export async function spawnConnection(
     const notes =
       definition.repoStyle === 'codex' && !prepared.profiles ? [CODEX_PLAIN_SANDBOX_NOTE] : [];
     const env = withCodexSparkServer(
-      { ...launchEnv, ...prepared.cli },
+      withStartingModel(definition, { ...launchEnv, ...prepared.cli }, turn.settings.model),
       definition.repoStyle === 'codex' ? tools : null,
     );
     const connection = await startLiveConnection({

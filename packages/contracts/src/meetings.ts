@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { providerIdSchema } from './provider-ids.ts';
 
 export const MEETING_TITLE_MAX = 200;
 export const MEETING_GOAL_MAX = 500;
@@ -63,6 +64,15 @@ export const newMeetingLineSchema = z.object({
 });
 export type NewMeetingLine = z.infer<typeof newMeetingLineSchema>;
 
+export const MEETING_LIVE_WORDS_STALE_MS = 3_000;
+
+export const meetingLiveWordsSchema = z.object({
+  speaker: meetingSpeakerSchema,
+  text: z.string().max(MEETING_LINE_MAX),
+  startMs: z.number().int().min(0),
+});
+export type MeetingLiveWords = z.infer<typeof meetingLiveWordsSchema>;
+
 export const meetingNotesSchema = z.object({
   markdown: z.string(),
   writtenAt: z.iso.datetime(),
@@ -99,6 +109,27 @@ export const meetingStatusSchema = z.object({
   recordingId: z.uuid().nullable(),
 });
 export type MeetingStatus = z.infer<typeof meetingStatusSchema>;
+
+export const meetingModelSettingsSchema = z.object({
+  provider: providerIdSchema.nullable(),
+  model: z.string().min(1).max(200).nullable(),
+  effort: z.string().min(1).max(40).nullable(),
+});
+export type MeetingModelSettings = z.infer<typeof meetingModelSettingsSchema>;
+
+export const meetingModelRunsOnSchema = z.object({
+  provider: providerIdSchema,
+  model: z.string().nullable(),
+  modelLabel: z.string().nullable(),
+  effort: z.string().nullable(),
+});
+export type MeetingModelRunsOn = z.infer<typeof meetingModelRunsOnSchema>;
+
+export const meetingModelViewSchema = z.object({
+  settings: meetingModelSettingsSchema,
+  runsOn: meetingModelRunsOnSchema.nullable(),
+});
+export type MeetingModelView = z.infer<typeof meetingModelViewSchema>;
 
 export const startMeetingRequestSchema = z.object({
   title: z.string().trim().max(MEETING_TITLE_MAX).optional(),

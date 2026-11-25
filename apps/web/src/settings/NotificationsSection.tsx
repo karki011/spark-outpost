@@ -4,6 +4,7 @@ import {
   CalendarBriefSetting,
   CalendarMeetingSettings,
 } from '../calendar/CalendarNotifySettings.tsx';
+import { MeetingModelSetting } from '../meetings/index.ts';
 import { MorningBriefSetting } from '../spark/MorningBriefSetting.tsx';
 import { WeekRecapSetting } from '../spark/WeekRecapSetting.tsx';
 import { CompanionSetting } from './CompanionSetting.tsx';
@@ -24,6 +25,7 @@ export function NotificationsSection({ profile }: { profile: Profile }) {
         <CompanionSetting />
       </section>
       <CalendarMeetingSettings />
+      <MeetingModelSetting />
       <DesktopCompanionSetting />
     </>
   );

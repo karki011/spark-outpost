@@ -2,15 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   providerIdSchema,
+  setupTargetSchema,
   type AdvisorSetup,
   type ConnectionMethod,
   type CustomKeyHeader,
   type ProviderSetup,
+  type SetupFields,
   type VerifyFailureCode,
   type VerifyRequest,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
 import { setupKey, verifyProvider } from '../api/setup.ts';
+import { usePreparedSetup } from '../setup-drafts/use-setup-drafts.ts';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import type { VerifyFailure } from './tile-status.ts';
 import { endpointFieldsOf, keyHeaderOf, type EndpointFields } from './endpoint-fields.ts';
@@ -82,6 +85,25 @@ export function useProviderConnect(
   const [failureCode, setFailureCode] = useState<VerifyFailureCode | null>(null);
   const nextLineId = useRef(0);
   const latest = useRef(callbacks);
+  const parsedTarget = setupTargetSchema.safeParse(provider.id);
+  const prepared = usePreparedSetup(parsedTarget.success ? parsedTarget.data : null);
+  const [applied, setApplied] = useState<SetupFields | null>(null);
+  if (prepared.fields && prepared.fields !== applied) {
+    setApplied(prepared.fields);
+    const wanted = prepared.fields.method as ConnectionMethod | undefined;
+    if (wanted && provider.methods.includes(wanted)) setMethod(wanted);
+    if (provider.id === 'custom') {
+      setChanging(connection !== null);
+      setEndpoint((current) => ({
+        baseUrl: prepared.fields?.baseUrl ?? current.baseUrl,
+        model: prepared.fields?.model ?? current.model,
+        fastModel: prepared.fields?.fastModel ?? current.fastModel,
+      }));
+      if (prepared.fields.keyHeader === 'x-api-key' || prepared.fields.keyHeader === 'bearer') {
+        setKeyHeader(prepared.fields.keyHeader);
+      }
+    }
+  }
 
   useEffect(() => {
     latest.current = callbacks;
@@ -128,6 +150,7 @@ export function useProviderConnect(
   async function handleConnected() {
     setTerminalOpen(false);
     await queryClient.invalidateQueries({ queryKey: setupKey });
+    prepared.clear();
     void queryClient.invalidateQueries({ queryKey: queryKeys.planUsage, exact: true });
     refreshModels();
     setVerifying(false);

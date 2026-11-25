@@ -68,7 +68,9 @@ test('shows the message as starting at once and offers Retry while the server is
   expect(new Set(ids).size).toBe(1);
 });
 
-test('an accepted message stays sent while conversation history is delayed', async ({ page }) => {
+test('an accepted message shows as a turn while conversation history is delayed', async ({
+  page,
+}) => {
   const [chat] = await seedChats([{ title: 'Delayed conversation refresh' }]);
   await openChats(page);
   await page
@@ -98,13 +100,17 @@ test('an accepted message stays sent while conversation history is delayed', asy
   await input.press('Enter');
   expect((await accepted).ok()).toBe(true);
   const pending = page.locator('.msg.me', { hasText: marker });
-  await expect(pending.getByRole('status')).toHaveText('Sent');
+  const turn = page.locator('.thread section[aria-label="Turn"]', { hasText: marker });
+  await expect(turn).toHaveCount(1);
+  await expect(pending.locator('.send-status')).toHaveCount(0);
   await expect.poll(() => refreshes).toBeGreaterThan(0);
   await page.clock.fastForward(6_000);
-  await expect(pending.getByRole('status')).toHaveText('Sent');
+  await expect(turn).toHaveCount(1);
+  await expect(pending.locator('.send-status')).toHaveCount(0);
   await expect(pending.getByRole('button', { name: 'Retry' })).toHaveCount(0);
   await input.fill('A separate draft');
-  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Queue message' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeVisible();
   expect(ids).toHaveLength(1);
   release();
   await expect(page.locator('.bubble', { hasText: marker })).toHaveCount(1);

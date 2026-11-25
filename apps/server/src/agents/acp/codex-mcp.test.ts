@@ -6,6 +6,7 @@ import { agentDefinitions } from './agents.ts';
 import { agentEnvironment } from './agent-env.ts';
 import { codexUserMcpNames } from './codex-mcp.ts';
 import { CLAUDE_WINDOWS_ENV } from './claude-windows-env.fixture.ts';
+import { FOREGROUND_COMMAND_ENV } from './claude-env.ts';
 
 let home: string;
 let codexHome: string;
@@ -59,6 +60,7 @@ describe('user-level Codex MCP servers', () => {
       PATH: '/bin',
       CODEX_HOME: codexHome,
       CLAUDE_CODE_FORK_SUBAGENT: '1',
+      ...FOREGROUND_COMMAND_ENV,
       ...CLAUDE_WINDOWS_ENV,
     });
   });

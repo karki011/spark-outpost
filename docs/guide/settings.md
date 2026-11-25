@@ -6,7 +6,7 @@ order: 610
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 
-**Settings…**: left bar → **More**, or **⌘,** on the Mac. **Search settings** finds rows.
+**Settings…**: left bar → **More**, or **⌘,**. **Search settings** finds rows.
 
 ## General
 
@@ -32,6 +32,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **Quick chat shortcut**, **Inbox shortcut**                                                                                                                   | ⌥Space (Windows: Ctrl+Shift+Space), ⌥⇧Space            | [Shortcuts](companion-quick-chat.md#change-a-shortcut)  |
 | Mac app: **Add today’s calendar to the brief**, **Wrap-up reminder**, **Join opens**, **Meeting alerts**, **Alert at**                                        | On, 15 min, 10 min, **Center of the screen**, at start | [Calendar](calendar.md)                                 |
 | **Join meetings automatically**, **Take notes when I join a meeting**, **Hold chimes during**, **Calendars that nudge**, **Meeting alerts on paired devices** | Off, off, **Focus blocks**, all, off                   | [Calendar](calendar.md)                                 |
+| **Meeting provider**, **Meeting model**, **Meeting effort**                                                                                                   | Default, **Fast**, **Default**                         | [Meetings](meetings.md#choose-the-model)                |
 
 ### Spark assistant
 
@@ -58,7 +59,7 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 | **Warn when context is**, **Compact automatically at**, **Compact at a natural break** | 60%; 80%, on; on       | [Compaction](compaction.md#change-when-spark-compacts) |
 | **Compact idle conversations**                                                         | Off                    | [Compaction](compaction.md#compact-idle-chats)         |
 | **While the agent is working, Enter**                                                  | **Queues the message** | [Queue](follow-a-turn.md#queue-messages)               |
-| **On wide windows**                                                                    | **Context rail**       | Rail, panel, nothing                                   |
+| **On wide windows**                                                                    | **Context rail**       | Rail, panel, none                                      |
 | **Collapse finished turns**                                                            | On                     | [Turns](follow-a-turn.md#after-a-turn)                 |
 | **Archive inactive chats**                                                             | **After 2 days**       | [Chat list](statuses-and-limits.md#chat-list)          |
 | **Code Mode**                                                                          | On                     | [Below](#code-mode)                                    |
@@ -69,13 +70,13 @@ summary: Every Settings section by group, its rows and defaults, and the page th
 
 ### Code Mode
 
-Agents combine Spark tools locally; cards still apply. Off: direct tools only, from the next turn. Terminal sessions don't change. An installation can disable it.
+Agents combine Spark tools locally; cards still apply. Off: direct tools only, from the next turn. An installation can disable it.
 
 ### Record Terminal sessions
 
 On for new profiles. With Spark’s mod, Claude [Terminal](terminals.md) turns keep tool inputs/outputs, replies, changed files and an audit. Secret-file values are hidden.
 
-Pushes to other branches, force pushes, protected files and writes outside the project are flagged, not stopped. Not for Codex.
+Other-branch pushes, force pushes, protected files and outside writes are flagged, not stopped. Not for Codex.
 
 **GitHub**, with [auto-review](github-page.md#review-with-a-spark-or-workflow):
 

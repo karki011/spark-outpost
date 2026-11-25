@@ -178,6 +178,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     const id = await s.publish('html', HTML);
     const client = s.client();
     const body = { expiresInDays: 7, passcode: true };
+    s.fake.uploadMs = 300;
     const [first, second] = await Promise.all([
       client.send('post', sharePath(id), body),
       client.send('post', sharePath(id), body),
@@ -192,6 +193,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
   it('answers a different create that arrives during the upload with the new link', async () => {
     const id = await s.publish('html', HTML);
     const client = s.client();
+    s.fake.uploadMs = 300;
     const answers = await Promise.all([
       client.send('post', sharePath(id), { expiresInDays: 7, passcode: true }),
       client.send('post', sharePath(id), { expiresInDays: 1, passcode: true }),

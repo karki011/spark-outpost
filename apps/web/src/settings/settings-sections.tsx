@@ -18,6 +18,7 @@ import {
   WARN_LABEL,
 } from '../spark/CompactionSettings.tsx';
 import { INSTRUCTIONS_LABEL } from '../spark/AgentInstructionsSetting.tsx';
+import { MEETING_MODEL_ROWS } from '../meetings/index.ts';
 import { MORNING_BRIEF_LABEL } from '../spark/MorningBriefSetting.tsx';
 import { ResetSection, KEEP_KEYS_LABEL } from '../reset/ResetSection.tsx';
 import { HelpSection, helpRows } from '../help/HelpSection.tsx';
@@ -51,6 +52,8 @@ import { VOICE_ROWS, VoiceSection } from './VoiceSection.tsx';
 import { WIDE_WINDOW_LABEL } from './WideWindowSetting.tsx';
 import * as icons from './settings-icons.tsx';
 import { sectionAvailable, type SettingsPage, type SettingsSection } from './section-ids.ts';
+import { PreparedSetups } from '../setup-drafts/PreparedSetups.tsx';
+import { CONNECTOR_SETUPS, PROVIDER_SETUPS } from '../setup-drafts/setup-groups.ts';
 
 export const SETTINGS_GROUPS = [
   { id: 'general', title: 'General' },
@@ -174,11 +177,12 @@ export const SETTINGS_SECTIONS = [
     label: 'Notifications',
     icon: icons.NOTIFICATIONS_ICON,
     remoteSwitch: 'settings',
-    rows: ({ calendar }) => [
+    rows: ({ calendar, remote }) => [
       MORNING_BRIEF_LABEL,
       ...(calendar ? [CALENDAR_BRIEF_LABEL] : []),
       COMPANION_LABEL,
       ...(calendar ? CALENDAR_NOTIFY_ROWS : []),
+      ...(remote ? [] : MEETING_MODEL_ROWS),
       ...islandRows(),
     ],
     render: ({ setup }) => setup && <NotificationsSection profile={setup.profile} />,
@@ -194,7 +198,13 @@ export const SETTINGS_SECTIONS = [
         id: 'ai',
         title: 'Providers',
         remoteSwitch: 'connections',
-        render: ({ setup }) => setup && <ProvidersBody setup={setup} />,
+        render: ({ setup }) =>
+          setup && (
+            <>
+              <PreparedSetups targets={PROVIDER_SETUPS} />
+              <ProvidersBody setup={setup} />
+            </>
+          ),
       },
       {
         id: 'models',
@@ -275,6 +285,7 @@ export const SETTINGS_SECTIONS = [
         render: () => (
           <>
             <p className="lede">{CONNECTORS_LEDE}</p>
+            <PreparedSetups targets={CONNECTOR_SETUPS} />
             <ConnectorGrid paged />
           </>
         ),

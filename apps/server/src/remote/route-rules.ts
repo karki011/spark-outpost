@@ -185,6 +185,8 @@ GET /api/github/reviews
 POST /api/github/reviews
 POST /api/github/reviews/:id/stop
 GET /api/meetings/status
+GET /api/meetings/model
+PUT /api/meetings/model
 GET /api/meetings
 POST /api/meetings
 POST /api/meetings/join-notes
@@ -193,6 +195,7 @@ PATCH /api/meetings/:id
 DELETE /api/meetings/:id
 POST /api/meetings/:id/stop
 GET /api/meetings/:id/lines
+GET /api/meetings/:id/live
 PUT /api/meetings/:id/notes
 POST /api/meetings/:id/notes/write
 POST /api/meetings/:id/attachments
@@ -232,6 +235,8 @@ GET /api/mcp/servers/:id/sign-in
 POST /api/mcp/servers/:id/sign-in
 DELETE /api/mcp/servers/:id/sign-in
 POST /api/mcp/servers/:id/sign-out
+GET /api/setup-drafts
+DELETE /api/setup-drafts/:target
 POST /api/calendar/reply
 POST /api/calendar/events
 GET /api/calendar/google/sign-in

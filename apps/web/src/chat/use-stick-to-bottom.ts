@@ -61,6 +61,7 @@ export function useStickToBottom() {
       observer.observe(scroller);
       for (const child of scroller.children) observer.observe(child);
       scroller.addEventListener('scroll', onScroll, { passive: true });
+      if (following.current) toBottom(false);
       return () => {
         observer.disconnect();
         scroller.removeEventListener('scroll', onScroll);

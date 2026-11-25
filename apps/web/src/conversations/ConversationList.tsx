@@ -6,7 +6,9 @@ import './chat-menu.css';
 import './sidebar-layout.css';
 import { memo, useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ConversationSummary, Project } from '@spark-outpost/contracts';
+import type { ConversationDetail, ConversationSummary, Project } from '@spark-outpost/contracts';
+import { activeRuns } from '../chat/turns.ts';
+import { warmRunStreams } from '../chat/use-run-stream.ts';
 import { api, queryKeys } from '../api/client.ts';
 import { projectKeys } from '../api/projects.ts';
 import { isConnectionLoss } from '../app/connection/connection-failure.ts';
@@ -257,11 +259,17 @@ export const ConversationList = memo(function ConversationList({
     if (title) actions.rename(chat, title);
   });
   const prepareChat = useStableCallback((id: string) => {
-    void client.prefetchQuery({
-      queryKey: queryKeys.conversation(id),
-      queryFn: () => api.getConversation(id),
-      staleTime: 5_000,
-    });
+    const key = queryKeys.conversation(id);
+    void client
+      .prefetchQuery({ queryKey: key, queryFn: () => api.getConversation(id), staleTime: 5_000 })
+      .then(() => {
+        const running = activeRuns(client.getQueryData<ConversationDetail>(key));
+        warmRunStreams(
+          client,
+          id,
+          running.map((run) => run.id),
+        );
+      });
   });
   const handleRestore = useStableCallback((chat: ConversationSummary) =>
     actions.archive(chat, false),

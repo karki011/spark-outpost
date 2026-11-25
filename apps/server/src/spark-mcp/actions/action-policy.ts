@@ -31,6 +31,8 @@ function asked(verbs: string, nouns: string): RegExp {
 }
 
 const MCP_NOUN = 'mcp|mcp servers?';
+const SETUP_NOUN =
+  'providers?|connectors?|connections?|claude|codex|z\\.?ai|endpoints?|atlassian|jira|confluence|servicenow|linear|github|slack|calendars?|google|microsoft|outlook|zoom|mcp';
 const TICKET_NOUN = 'tickets?|issues?|[A-Z][A-Z0-9]+-\\d+|[A-Z]{2,8}\\d{4,12}';
 const RECORD_NOUN =
   'servicenow|records?|incidents?|requests?|tasks?|problems?|changes?|tickets?|[A-Z]{2,8}\\d{4,12}';
@@ -62,6 +64,7 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   create_teammate: asked(CREW_CREATE_VERB, CREW_NOUN),
   update_teammate: asked(CREW_CHANGE_VERB, CREW_NOUN),
   delete_teammate: asked('delete|remove|drop|get rid of', 'sparks?|teammates?'),
+  prepare_setup: asked('connect|set up|configure|add|link|sign in|prepare', SETUP_NOUN),
   add_mcp_server: asked('add|create|set up|install|connect|configure|register', MCP_NOUN),
   update_mcp_server: asked('change|update|rename|edit|fix|reconfigure|point', MCP_NOUN),
   switch_mcp_server: asked('turn on|turn off|enable|disable|switch', MCP_NOUN),

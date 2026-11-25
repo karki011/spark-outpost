@@ -14,6 +14,8 @@ public final class MeetingStream {
     private var recent: [Float] = []
     private var quietSeconds: Double = 0
     private var position = 0
+    private var draftedAt = 0
+    public private(set) var turn = 0
 
     public init(rules: ListenRules = ListenRules()) {
         self.rules = rules
@@ -59,6 +61,15 @@ public final class MeetingStream {
 
     public var openStartMs: Int? { inSpeech ? milliseconds(segmentStart) : nil }
 
+    public func draft() -> [Float]? {
+        guard inSpeech, quietSeconds == 0,
+              segment.count >= samples(rules.interimMinimum),
+              segment.count - draftedAt >= samples(rules.interimEvery)
+        else { return nil }
+        draftedAt = segment.count
+        return segment
+    }
+
     public func flush() -> MeetingSegment? {
         guard inSpeech else { return nil }
         inSpeech = false
@@ -71,6 +82,8 @@ public final class MeetingStream {
         segment = []
         segmentStart = position
         quietSeconds = 0
+        draftedAt = 0
+        turn += 1
         return closed.samples.isEmpty ? nil : closed
     }
 

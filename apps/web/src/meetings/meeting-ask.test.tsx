@@ -4,7 +4,10 @@ import {
   TRANSCRIPT_CHARS_MAX,
   askPresets,
   meetingAskNote,
+  markMeetingChatStarted,
   meetingChatId,
+  meetingChatStart,
+  meetingChatStarted,
   transcriptText,
 } from './meeting-ask.ts';
 import { MEETING_ID, detail, lines } from './meetings-test-support.tsx';
@@ -69,5 +72,45 @@ describe('the chat a meeting’s questions go to', () => {
     expect(first).toMatch(/^[0-9a-f-]{36}$/);
     expect(meetingChatId(MEETING_ID)).toBe(first);
     expect(meetingChatId('22222222-2222-4222-8222-222222222222')).not.toBe(first);
+  });
+});
+
+describe('a new meeting chat and the meeting model setting', () => {
+  it('counts a meeting chat as started only once it is marked', () => {
+    expect(meetingChatStarted(MEETING_ID)).toBe(false);
+    expect(meetingChatId(MEETING_ID)).toBe(meetingChatId(MEETING_ID));
+    expect(meetingChatStarted(MEETING_ID)).toBe(false);
+    markMeetingChatStarted(MEETING_ID);
+    expect(meetingChatStarted(MEETING_ID)).toBe(true);
+  });
+
+  it('starts on nothing while the setting is untouched or no provider is connected', () => {
+    const untouched = { provider: null, model: null, effort: null };
+    const runsOn = {
+      provider: 'claude' as const,
+      model: 'fast',
+      modelLabel: 'Fast',
+      effort: 'low',
+    };
+    expect(meetingChatStart({ settings: untouched, runsOn })).toBeNull();
+    expect(
+      meetingChatStart({ settings: { ...untouched, provider: 'codex' }, runsOn: null }),
+    ).toBeNull();
+  });
+
+  it('starts on the picked parts only', () => {
+    const runsOn = { provider: 'codex' as const, model: 'fast', modelLabel: 'Fast', effort: 'low' };
+    expect(
+      meetingChatStart({ settings: { provider: 'codex', model: null, effort: null }, runsOn }),
+    ).toEqual({ provider: 'codex' });
+    expect(
+      meetingChatStart({ settings: { provider: null, model: 'gone', effort: 'max' }, runsOn }),
+    ).toBeNull();
+    expect(
+      meetingChatStart({
+        settings: { provider: null, model: 'big', effort: 'high' },
+        runsOn: { provider: 'claude', model: 'big', modelLabel: 'Big', effort: 'high' },
+      }),
+    ).toEqual({ provider: 'claude', model: 'big', effort: 'high' });
   });
 });

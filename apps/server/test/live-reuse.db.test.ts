@@ -53,10 +53,12 @@ describe.each(['hands-off', 'full-auto'] as const)(
       expect(reused(await sequence(['user', 'user', 'user'], level))).toEqual([false, true, true]);
     });
 
-    it('after a follow-up round', async () => {
-      expect(reused(await sequence(['user', 'round', 'user'], level))).toEqual(
-        level === 'hands-off' ? [false, false, false] : [false, true, true],
-      );
+    it('keeps it through a follow-up round, which runs on its own session', async () => {
+      expect(reused(await sequence(['user', 'round', 'user'], level))).toEqual([
+        false,
+        false,
+        true,
+      ]);
     });
 
     it('reopens it for a message from another chat, whose turn is offered other Spark tools', async () => {

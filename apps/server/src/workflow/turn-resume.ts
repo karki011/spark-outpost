@@ -28,7 +28,7 @@ export async function turnResume(
   idleMs: number,
   now: Date,
 ): Promise<TurnResume> {
-  const chatTurn = input.parentRunId === null;
+  const chatTurn = usesConversationSession(input);
   const resumeKey = input.resumeKey ?? null;
   const conversation = usesConversationSession(input);
   const key = conversation

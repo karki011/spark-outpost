@@ -17,6 +17,8 @@ const FINISHED_MOODS: Record<TerminalRunStatus, string> = {
   outcome_unknown: 'interrupted',
 };
 
+export const STARTING = 'starting';
+
 interface MoodFacts {
   run: Run;
   live: LiveRunStatus;
@@ -31,5 +33,5 @@ export function turnMood({ run, live, waiting, waitingText, started }: MoodFacts
   if (waiting) return 'waiting for you';
   if (waitingText) return waitingText;
   const mood = LIVE_MOODS[live];
-  return mood === 'working' && !started ? 'thinking' : mood;
+  return mood === 'working' && !started ? STARTING : mood;
 }
