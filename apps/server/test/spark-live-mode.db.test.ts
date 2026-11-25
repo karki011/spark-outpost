@@ -39,7 +39,9 @@ async function switchTo(mode: string) {
 }
 
 const decided = () =>
-  appended.filter((event) => 'name' in event && event.name === APPROVAL_DECIDED);
+  [...appended, ...h.recorded.events].filter(
+    (event) => 'name' in event && event.name === APPROVAL_DECIDED,
+  );
 
 describe('Spark action reads follow the mode the agent is in now', () => {
   it('lets a read waiting on a card go once the agent moves to Bypass permissions', async () => {
