@@ -152,6 +152,25 @@ describe('the Cloudflare connection', { timeout: 30_000 }, () => {
     expect((await client.get(sharePath(id)).expect(200)).body.days).toEqual([1, 7]);
   });
 
+  it('changes nothing when the keychain can’t be read before a reconnect', async () => {
+    const client = s.client();
+    await connect(client, { address: own.origin, uploadKey: UPLOAD_KEY }).expect(200);
+    const next = await startFakeWorker();
+    const nextKey = `${UPLOAD_KEY}_next`;
+    next.fake.uploadKey = nextKey;
+    const read = s.secrets.get.bind(s.secrets);
+    s.secrets.get = () => Promise.reject(new Error('keychain locked'));
+    try {
+      await connect(client, { address: next.origin, uploadKey: nextKey }).expect(500);
+    } finally {
+      s.secrets.get = read;
+      await next.close();
+    }
+    expect(await s.secrets.get(CLOUDFLARE_UPLOAD_KEY_SECRET)).toBe(UPLOAD_KEY);
+    const { rows } = await s.t.db.query('SELECT origin FROM cloudflare_connections');
+    expect(rows).toEqual([{ origin: own.origin }]);
+  });
+
   it('turns sharing through it off and on', async () => {
     const client = s.client();
     await client.send('patch', '/api/cloudflare', { shareArtifacts: false }).expect(400);

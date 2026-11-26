@@ -112,8 +112,9 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
       return;
     }
     const saved = await inTurn(async () => {
-      const previous = await secrets.get(CLOUDFLARE_UPLOAD_KEY_SECRET).catch(() => null);
+      let previous: string | null;
       try {
+        previous = await secrets.get(CLOUDFLARE_UPLOAD_KEY_SECRET);
         await secrets.set(CLOUDFLARE_UPLOAD_KEY_SECRET, parsed.data.uploadKey);
       } catch {
         return false;
@@ -142,10 +143,12 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
   });
 
   router.post('/cloudflare/check', async (_req, res) => {
-    const row = await cloudflareRow(db, workspaceId);
+    const { row, key } = await inTurn(async () => ({
+      row: await cloudflareRow(db, workspaceId),
+      key: await storedUploadKey(secrets),
+    }));
     if (!row) throw new BadRequestError(NOT_CONNECTED);
     const origin = shareServiceOrigin(row.origin);
-    const key = await storedUploadKey(secrets);
     const checked: ServiceCheckResult = !origin
       ? { problem: 'address' }
       : !key
