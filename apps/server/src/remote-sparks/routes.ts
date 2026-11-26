@@ -15,12 +15,14 @@ import type { Db } from '../persistence/db.ts';
 import { remoteAccess } from '../remote/store.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { RemoteSparkLink, RemoteSparkPort } from './bridge.ts';
+import { iconPathOf, sparkIconRoutes, toLocalSpark } from './icon-routes.ts';
 import { forgetSparkCookie, savedSparkCookie } from './secrets.ts';
 import {
   RemoteSparkTakenError,
   addRemoteSpark,
   deleteRemoteSpark,
   listRemoteSparks,
+  localSpark,
   markRemoteSparkOpened,
   remoteSpark,
   renameRemoteSpark,
@@ -51,7 +53,7 @@ export function macNameOf(hostname: string): string {
 export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkLink): Router {
   const { db, workspaceId, secrets } = deps;
   const port = link.port;
-  const deviceName = macNameOf(deps.thisMacName ?? computerHostname());
+  const defaultName = macNameOf(deps.thisMacName ?? computerHostname());
   const router = Router();
 
   const toSpark = async (row: RemoteSparkRow): Promise<RemoteSpark> => {
@@ -63,6 +65,7 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkL
       reach: reachOfHostname(row.hostname) ?? 'tailscale',
       paired,
       ...link.stateOf(row.id, paired),
+      icon: iconPathOf(row.id, row.icon_version),
       createdAt: row.created_at.toISOString(),
       lastOpenedAt: row.last_opened_at?.toISOString() ?? null,
     };
@@ -78,17 +81,20 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkL
       id: row.id,
       name: row.name,
       hostname: row.hostname,
-      deviceName,
+      deviceName: (await localSpark(db, workspaceId)).name ?? defaultName,
       code,
       cookie: await savedSparkCookie(secrets, row.id),
     });
     return (await markRemoteSparkOpened(db, workspaceId, row.id)) ?? row;
   };
 
+  router.use(sparkIconRoutes({ db, workspaceId, defaultName, noSpark: NO_SPARK, toSpark }));
+
   router.get('/remote-sparks', async (_req, res) => {
     const rows = await listRemoteSparks(db, workspaceId);
     const list: RemoteSparkList = {
       available: port !== null,
+      local: toLocalSpark(await localSpark(db, workspaceId), defaultName),
       sparks: await Promise.all(rows.map(toSpark)),
     };
     res.json(list);

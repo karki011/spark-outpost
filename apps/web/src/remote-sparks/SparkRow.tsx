@@ -1,54 +1,16 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { REMOTE_SPARK_NAME_MAX, type RemoteSpark } from '@spark-outpost/contracts';
-import '../conversations/chat-menu.css';
-import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
-import { DotsIcon, LaptopIcon } from '../ui/icons.tsx';
+import type { RemoteSpark } from '@spark-outpost/contracts';
+import { MenuItem } from '../conversations/MenuShell.tsx';
+import { ActionsMenu, useActionsButton } from './ActionsMenu.tsx';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
-import { lastOpenedLine } from './remote-sparks-copy.ts';
+import { CHANGE_ICON_ITEM, REMOVE_ICON_ITEM, lastOpenedLine } from './remote-sparks-copy.ts';
+import { RenameForm } from './RenameForm.tsx';
+import { SparkIcon } from './SparkIcon.tsx';
 import { SparkStatus } from './SparkStatus.tsx';
+import { useSparkIcon } from './use-spark-icon.tsx';
 
-function RenameSpark({ spark, onDone }: { spark: RemoteSpark; onDone: () => void }) {
-  const queryClient = useQueryClient();
-  const [name, setName] = useState(spark.name);
-  const rename = useMutation({
-    mutationFn: () => remoteSparksApi.rename(spark.id, name.trim()),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: remoteSparkKeys.all });
-      onDone();
-    },
-  });
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    if (name.trim()) rename.mutate();
-  };
-  return (
-    <form className="ph-rename" onSubmit={submit}>
-      <input
-        className="inp"
-        aria-label={`New name for ${spark.name}`}
-        value={name}
-        maxLength={REMOTE_SPARK_NAME_MAX}
-        autoFocus
-        onChange={(event) => setName(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') onDone();
-        }}
-      />
-      <button type="submit" className="btn primary sm" disabled={rename.isPending || !name.trim()}>
-        Save
-      </button>
-      <button type="button" className="btn ghost sm" onClick={onDone}>
-        Cancel
-      </button>
-      {rename.error && (
-        <p className="ph-error" role="alert">
-          {rename.error.message}
-        </p>
-      )}
-    </form>
-  );
-}
+export const ROW_ICON_SIZE = 28;
 
 interface SparkRowProps {
   spark: RemoteSpark;
@@ -58,39 +20,29 @@ interface SparkRowProps {
 
 export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
   const queryClient = useQueryClient();
-  const menuButton = useRef<HTMLButtonElement>(null);
+  const actions = useActionsButton();
+  const icon = useSparkIcon(spark.id, spark.name);
   const [renaming, setRenaming] = useState(false);
-  const [anchor, setAnchor] = useState<MenuAnchor | null>(null);
   const open = useMutation({
     mutationFn: () => remoteSparksApi.open(spark.id),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: remoteSparkKeys.all }),
   });
   const finishRename = () => {
     setRenaming(false);
-    requestAnimationFrame(() => menuButton.current?.focus());
+    actions.focus();
   };
-  const closeMenu = () => {
-    setAnchor(null);
-    menuButton.current?.focus();
-  };
-  const openMenu = () => {
-    const rect = menuButton.current?.getBoundingClientRect();
-    if (!rect) return;
-    setAnchor({
-      x: rect.right - 212,
-      y: rect.bottom + 4,
-      above: rect.top - 4,
-      focusBack: menuButton.current,
-    });
-  };
+  const problem = open.error?.message ?? icon.problem;
   return (
     <li className="rs-row">
-      <span className="ph-device-icon" aria-hidden="true">
-        <LaptopIcon />
-      </span>
+      <SparkIcon icon={spark.icon} size={ROW_ICON_SIZE} />
       <div className="ph-device-body rs-body">
         {renaming ? (
-          <RenameSpark spark={spark} onDone={finishRename} />
+          <RenameForm
+            label={`New name for ${spark.name}`}
+            initial={spark.name}
+            save={(name) => remoteSparksApi.rename(spark.id, name)}
+            onDone={finishRename}
+          />
         ) : (
           <>
             <div className="ph-device-line">
@@ -103,6 +55,7 @@ export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
           </>
         )}
       </div>
+      {icon.field}
       {!renaming && (
         <div className="rs-actions">
           <button
@@ -114,46 +67,51 @@ export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
           >
             Open
           </button>
-          <button
-            ref={menuButton}
-            type="button"
-            className="icon-btn ph-device-menu"
-            aria-label={`Actions for ${spark.name}`}
-            aria-haspopup="menu"
-            aria-expanded={anchor !== null}
-            onClick={() => (anchor ? closeMenu() : openMenu())}
-          >
-            <DotsIcon />
-          </button>
+          <ActionsMenu label={`Actions for ${spark.name}`} buttonRef={actions.button}>
+            {(dismiss) => (
+              <>
+                <MenuItem
+                  label="Rename"
+                  onSelect={() => {
+                    dismiss();
+                    setRenaming(true);
+                  }}
+                />
+                <MenuItem
+                  label={CHANGE_ICON_ITEM}
+                  onSelect={() => {
+                    dismiss();
+                    actions.button.current?.focus();
+                    icon.choose();
+                  }}
+                />
+                {spark.icon !== null && (
+                  <MenuItem
+                    label={REMOVE_ICON_ITEM}
+                    onSelect={() => {
+                      dismiss();
+                      actions.button.current?.focus();
+                      icon.remove();
+                    }}
+                  />
+                )}
+                <hr />
+                <MenuItem
+                  danger
+                  label="Remove…"
+                  onSelect={() => {
+                    dismiss();
+                    if (actions.button.current) onRemove(spark, actions.button.current);
+                  }}
+                />
+              </>
+            )}
+          </ActionsMenu>
         </div>
       )}
-      {anchor && (
-        <MenuShell
-          anchor={anchor}
-          label={`Actions for ${spark.name}`}
-          page="main"
-          onClose={closeMenu}
-        >
-          <MenuItem
-            label="Rename"
-            onSelect={() => {
-              setAnchor(null);
-              setRenaming(true);
-            }}
-          />
-          <MenuItem
-            danger
-            label="Remove…"
-            onSelect={() => {
-              setAnchor(null);
-              if (menuButton.current) onRemove(spark, menuButton.current);
-            }}
-          />
-        </MenuShell>
-      )}
-      {open.error && (
+      {problem && (
         <p className="ph-error rs-row-note" role="alert">
-          {open.error.message}
+          {problem}
         </p>
       )}
     </li>

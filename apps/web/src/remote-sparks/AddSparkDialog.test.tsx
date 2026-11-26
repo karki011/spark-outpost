@@ -16,6 +16,7 @@ const SAVED = {
   paired: false,
   status: 'not-paired',
   needsYou: 0,
+  icon: null,
   createdAt: '2026-11-20T10:00:00Z',
   lastOpenedAt: null,
 };
@@ -27,7 +28,15 @@ function serve(status: number, body: unknown) {
     vi.fn(async (_url: unknown, init?: RequestInit) => {
       if (init?.method === 'POST') sent.push(JSON.parse(String(init.body)));
       return new Response(
-        JSON.stringify(init?.method === 'POST' ? body : { available: true, sparks: [] }),
+        JSON.stringify(
+          init?.method === 'POST'
+            ? body
+            : {
+                available: true,
+                local: { name: null, defaultName: 'Hazel’s MacBook', icon: null },
+                sparks: [],
+              },
+        ),
         {
           status: init?.method === 'POST' ? status : 200,
           headers: { 'Content-Type': 'application/json' },

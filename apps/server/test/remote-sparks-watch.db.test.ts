@@ -301,9 +301,9 @@ describe('the list the desktop app watches', () => {
     const id = await added();
     await secrets.set(remoteSparkSecret(id), STUDIO_COOKIE);
 
-    expect(await list(plain)).toEqual({
+    expect(await list(plain)).toMatchObject({
       available: false,
-      sparks: [expect.objectContaining({ id, paired: true, status: 'checking', needsYou: 0 })],
+      sparks: [{ id, paired: true, status: 'checking', needsYou: 0 }],
     });
   });
 

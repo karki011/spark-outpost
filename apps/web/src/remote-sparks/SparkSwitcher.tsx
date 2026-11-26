@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
 import { hostWords } from '../desktop/host-words.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
-import { GearIcon, LaptopIcon, PlusIcon } from '../ui/icons.tsx';
+import { GearIcon, PlusIcon } from '../ui/icons.tsx';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { requestAddSpark } from './add-spark-request.ts';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
@@ -16,26 +16,14 @@ import {
   thisComputer,
   waitingTotal,
 } from './remote-sparks-copy.ts';
+import { SparkIcon } from './SparkIcon.tsx';
 import { SparkStatus } from './SparkStatus.tsx';
 
 const POLL_MS = 5000;
 const GAP = 8;
 
-const SWITCH_ICON = (
-  <svg
-    width={20}
-    height={20}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.8}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M5 6h14v10H5zM3 19h18" />
-  </svg>
-);
+const BUTTON_ICON_SIZE = 24;
+const MENU_ICON_SIZE = 20;
 
 export function SparkSwitcher({ onManage }: { onManage: () => void }) {
   const queryClient = useQueryClient();
@@ -57,7 +45,8 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
   const sparks = list.data?.sparks ?? [];
   if (!local || !list.data?.available || sparks.length === 0) return null;
 
-  const computer = hostWords().computer;
+  const own = list.data.local;
+  const name = own.name ?? thisComputer(hostWords().computer);
   const total = waitingTotal(sparks);
   const closeMenu = () => {
     setAnchor(null);
@@ -81,11 +70,12 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
         className="rail-btn rs-switch"
         aria-haspopup="menu"
         aria-expanded={anchor !== null}
-        aria-label={switcherName(computer, total)}
+        aria-label={switcherName(name, total)}
+        title={own.name ?? undefined}
         onClick={() => (anchor ? closeMenu() : openMenu())}
       >
-        {SWITCH_ICON}
-        {thisComputer(computer)}
+        <SparkIcon icon={own.icon} size={BUTTON_ICON_SIZE} />
+        <span className="rs-switch-name">{name}</span>
         {total > 0 && (
           <i className="rbadge" aria-hidden="true">
             {total}
@@ -106,15 +96,15 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
           onClose={closeMenu}
         >
           <MenuItem
-            icon={<LaptopIcon />}
-            label={thisComputer(computer)}
+            icon={<SparkIcon icon={own.icon} size={MENU_ICON_SIZE} />}
+            label={name}
             checked
             onSelect={closeMenu}
           />
           {sparks.map((spark) => (
             <MenuItem
               key={spark.id}
-              icon={<LaptopIcon />}
+              icon={<SparkIcon icon={spark.icon} size={MENU_ICON_SIZE} />}
               label={spark.name}
               trailing={<SparkStatus spark={spark} />}
               onSelect={() => {

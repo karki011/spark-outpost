@@ -9,6 +9,7 @@ import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { PlusIcon } from '../ui/icons.tsx';
+import { LocalSparkRow } from './LocalSparkRow.tsx';
 import { AddSparkDialog } from './AddSparkDialog.tsx';
 import { useAddSparkRequest } from './add-spark-request.ts';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
@@ -93,20 +94,18 @@ export function OtherSparks({ ownHostname }: { ownHostname: string | null }) {
       {list.data && !available && <p className="ph-empty">{OTHER_SPARKS_UNAVAILABLE}</p>}
       {list.data && available && (
         <>
-          {sparks.length === 0 ? (
-            <p className="ph-empty">{OTHER_SPARKS_EMPTY}</p>
-          ) : (
-            <ul className="ph-devices rs-list">
-              {sparks.map((spark) => (
-                <SparkRow
-                  key={spark.id}
-                  spark={spark}
-                  now={now}
-                  onRemove={(target, from) => setRemoval({ spark: target, from })}
-                />
-              ))}
-            </ul>
-          )}
+          <ul className="ph-devices rs-list">
+            <LocalSparkRow local={list.data.local} />
+            {sparks.map((spark) => (
+              <SparkRow
+                key={spark.id}
+                spark={spark}
+                now={now}
+                onRemove={(target, from) => setRemoval({ spark: target, from })}
+              />
+            ))}
+          </ul>
+          {sparks.length === 0 && <p className="ph-empty">{OTHER_SPARKS_EMPTY}</p>}
         </>
       )}
       {remove.error && (

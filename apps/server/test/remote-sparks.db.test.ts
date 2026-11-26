@@ -33,6 +33,7 @@ afterEach(async () => {
 });
 
 const UNKNOWN = '0198c0de-0000-7000-8000-000000000001';
+const UNNAMED = { name: null, defaultName: THIS_MAC, icon: null };
 
 const add = (address: string, name = 'Studio Mac', on = app) =>
   localClient(on).send('post', '/api/remote-sparks', { address, name });
@@ -66,7 +67,7 @@ describe('saved Sparks', () => {
         cookie: null,
       },
     ]);
-    expect(await list()).toEqual({ available: true, sparks: [response.body] });
+    expect(await list()).toEqual({ available: true, local: UNNAMED, sparks: [response.body] });
     expect(await everyRow(t)).not.toContain('ABCD-EFGH-JKLM');
   });
 
@@ -193,7 +194,11 @@ describe('saved Sparks', () => {
     const response = await add(`https://${STUDIO}`, 'Studio Mac', plain).expect(201);
 
     expect(response.body.lastOpenedAt).toBeNull();
-    expect(await list(plain)).toEqual({ available: false, sparks: [response.body] });
+    expect(await list(plain)).toEqual({
+      available: false,
+      local: UNNAMED,
+      sparks: [response.body],
+    });
     const refused = await localClient(plain)
       .send('post', `/api/remote-sparks/${response.body.id}/open`)
       .expect(409);

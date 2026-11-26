@@ -1,0 +1,29 @@
+.rs-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.rs-icon svg {
+  width: 72%;
+  height: 72%;
+}
+.rs-switch .rs-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.rs-icon img {
+  display: block;
+  border-radius: 22%;
+  object-fit: cover;
+}
+.rs-switch-name {
+  max-width: 100%;
+  padding: 0 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rs-local-tag {
+  color: var(--muted);
+}

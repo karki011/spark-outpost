@@ -15,6 +15,7 @@ vi.mock('../phone/use-remote-client.ts', () => ({
   }),
 }));
 
+const LOCAL = { name: null, defaultName: 'Hazel’s MacBook', icon: null };
 const SETTLE = { timeout: 3000 };
 const STUDIO: RemoteSpark = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -24,6 +25,7 @@ const STUDIO: RemoteSpark = {
   paired: true,
   status: 'online',
   needsYou: 2,
+  icon: null,
   createdAt: '2026-11-20T10:00:00Z',
   lastOpenedAt: '2026-11-24T10:00:00Z',
 };
@@ -90,20 +92,20 @@ afterEach(() => {
 
 describe('SparkSwitcher', () => {
   it('shows nothing while no Spark is saved', async () => {
-    serve({ available: true, sparks: [] });
+    serve({ available: true, local: LOCAL, sparks: [] });
     await show();
     expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('shows nothing outside the Mac app', async () => {
-    serve({ available: false, sparks: [STUDIO] });
+    serve({ available: false, local: LOCAL, sparks: [STUDIO] });
     await show();
     expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('shows nothing and asks for nothing on a paired device or before the session is known', async () => {
     client.remote = true;
-    const calls = serve({ available: true, sparks: [STUDIO] });
+    const calls = serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     await show();
     expect(screen.queryByRole('button')).toBeNull();
     cleanup();
@@ -115,7 +117,7 @@ describe('SparkSwitcher', () => {
   });
 
   it('names this Mac and totals the requests waiting on other Sparks', async () => {
-    serve({ available: true, sparks: [STUDIO, ATTIC, CELLAR] });
+    serve({ available: true, local: LOCAL, sparks: [STUDIO, ATTIC, CELLAR] });
     await show();
     const button = screen.getByRole('button', {
       name: 'This Mac. 3 requests waiting on other Sparks',
@@ -125,11 +127,11 @@ describe('SparkSwitcher', () => {
   });
 
   it('has no badge when nothing waits and says one request in the singular', async () => {
-    serve({ available: true, sparks: [CELLAR] });
+    serve({ available: true, local: LOCAL, sparks: [CELLAR] });
     await show();
     expect(screen.getByRole('button', { name: 'This Mac' }).textContent).toBe('This Mac');
     cleanup();
-    serve({ available: true, sparks: [ATTIC] });
+    serve({ available: true, local: LOCAL, sparks: [ATTIC] });
     await show();
     expect(
       screen.getByRole('button', { name: 'This Mac. 1 request waiting on other Sparks' }),
@@ -137,7 +139,7 @@ describe('SparkSwitcher', () => {
   });
 
   it('lists this Mac checked, then each Spark with its status and count', async () => {
-    serve({ available: true, sparks: [STUDIO, ATTIC, CELLAR] });
+    serve({ available: true, local: LOCAL, sparks: [STUDIO, ATTIC, CELLAR] });
     await show();
     const { menu } = openMenu();
     const own = within(menu).getByRole('menuitemradio', { name: 'This Mac' });
@@ -160,7 +162,7 @@ describe('SparkSwitcher', () => {
   });
 
   it('opens the chosen Spark and returns focus to the button', async () => {
-    const calls = serve({ available: true, sparks: [STUDIO, ATTIC] });
+    const calls = serve({ available: true, local: LOCAL, sparks: [STUDIO, ATTIC] });
     await show();
     const { button, menu } = openMenu();
     fireEvent.click(within(menu).getByRole('menuitem', { name: /Attic Mac/ }));
@@ -177,7 +179,7 @@ describe('SparkSwitcher', () => {
   });
 
   it('closes on Esc and on this Mac without opening anything', async () => {
-    const calls = serve({ available: true, sparks: [STUDIO] });
+    const calls = serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     await show();
     const first = openMenu();
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
@@ -191,7 +193,7 @@ describe('SparkSwitcher', () => {
   });
 
   it('goes to the page for Manage, and also asks for the Add dialog for Add', async () => {
-    serve({ available: true, sparks: [STUDIO] });
+    serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     const { onManage, onAdd } = await show();
     fireEvent.click(within(openMenu().menu).getByRole('menuitem', { name: 'Manage Sparks…' }));
     expect(onManage).toHaveBeenCalledTimes(1);
@@ -199,5 +201,38 @@ describe('SparkSwitcher', () => {
     fireEvent.click(within(openMenu().menu).getByRole('menuitem', { name: 'Add a Spark…' }));
     expect(onManage).toHaveBeenCalledTimes(2);
     expect(onAdd).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows this Mac’s own name and icon, and each Spark’s icon in the menu', async () => {
+    const icon = '/api/remote-sparks/local/icon?v=4';
+    const studioIcon = `/api/remote-sparks/${STUDIO.id}/icon?v=1`;
+    const name = 'Office in the garden shed';
+    serve({
+      available: true,
+      local: { ...LOCAL, name, icon },
+      sparks: [{ ...STUDIO, icon: studioIcon }, ATTIC],
+    });
+    await show();
+    const button = screen.getByRole('button', {
+      name: `${name}. 3 requests waiting on other Sparks`,
+    });
+    expect(button.querySelector('img')?.getAttribute('src')).toBe(icon);
+    expect(button.querySelector('.rs-switch-name')?.textContent).toBe(name);
+    fireEvent.click(button);
+    const menu = screen.getByRole('menu', { name: 'Sparks' });
+    const own = within(menu).getByRole('menuitemradio', { name });
+    expect(own.querySelector('img')?.getAttribute('src')).toBe(icon);
+    const [studio, attic] = within(menu).getAllByRole('menuitem');
+    expect(studio!.querySelector('img')?.getAttribute('src')).toBe(studioIcon);
+    expect(attic!.querySelector('img')).toBeNull();
+    expect(attic!.querySelector('.rs-icon svg')).toBeTruthy();
+  });
+
+  it('keeps the laptop and This Mac while this Mac has no name or icon of its own', async () => {
+    serve({ available: true, local: LOCAL, sparks: [CELLAR] });
+    await show();
+    const button = screen.getByRole('button', { name: 'This Mac' });
+    expect(button.querySelector('img')).toBeNull();
+    expect(button.querySelector('.rs-icon svg')).toBeTruthy();
   });
 });
