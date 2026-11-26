@@ -148,7 +148,7 @@ the web app draws it (see [The UI page](#the-ui-page)).
   never the request; 7-day TTL, pruned on write.
 - `map_link_pairs`, `map_links`: links per unordered repo pair, stored apart from either map.
 
-- `map_area_notes` (0285): one agent-written explanation per **root path and area id** (like
+- `map_area_notes` (0287): one agent-written explanation per **root path and area id** (like
   overrides, it survives rebuilds): `body` (≤ 4,000 characters, through `redactText`), `sources`
   (path, line range and the file's `content_hash` when it was written) and the chat that wrote it.
 
