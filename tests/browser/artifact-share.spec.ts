@@ -55,7 +55,7 @@ test('the user shares a version with a passcode, copies both, and stops sharing 
   await expect(confirm).toContainText('Shared from');
   await expect(confirm).toContainText('Spark’s shared service');
   await expect(confirm).toContainText('Expires in 1 day');
-  await expect(confirm.getByRole('radio')).toHaveCount(0);
+  await expect(confirm.getByRole('button', { name: 'Link ends after' })).toHaveCount(0);
   await expect(confirm).toContainText(
     'Links from Spark’s shared service last 1 day. Connect your own Cloudflare account for 7 days.',
   );

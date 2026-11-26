@@ -6,7 +6,7 @@ import {
   takeConnectorCardRequest,
   useConnectorCardRequests,
 } from '../connectors/connector-open.ts';
-import { CALENDAR_PATH, ChevronIcon, CloudIcon, VideoIcon } from '../ui/icons.tsx';
+import { CALENDAR_PATH, ChevronIcon, ExternalLinkIcon, VideoIcon } from '../ui/icons.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { SLACK_DESCRIPTION, SlackCard } from '../slack/SlackCard.tsx';
 import { ATLASSIAN_DESCRIPTION, AtlassianCard } from '../tickets/AtlassianCard.tsx';
@@ -205,7 +205,7 @@ function ConnectorList({ listRef, paged, openId, toggle }: ConnectorListProps) {
       />
       <ZoomCard icon={<VideoIcon />} open={openId === 'zoom'} onToggle={() => toggle('zoom')} />
       <CloudflareCard
-        icon={<CloudIcon />}
+        icon={<ExternalLinkIcon />}
         open={openId === 'cloudflare'}
         onToggle={() => toggle('cloudflare')}
       />

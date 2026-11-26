@@ -35,12 +35,15 @@ describe('the share sheet', () => {
     expect(sheet.textContent).toContain('Your Cloudflare account');
     expect(sheet.textContent).toContain('spark-share.acme.workers.dev');
     expect(sheet.textContent).not.toContain(HOSTED_LIMIT_LINE);
-    expect(screen.getAllByRole('radio').map((radio) => radio.textContent)).toEqual([
+    const picker = screen.getByRole('button', { name: 'Link ends after' });
+    expect(picker.textContent).toBe('7 days');
+    fireEvent.click(picker);
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
       '1 day',
       '7 days',
     ]);
-    expect(screen.getByRole('radio', { name: '7 days' }).getAttribute('aria-checked')).toBe('true');
-    fireEvent.click(screen.getByRole('radio', { name: '1 day' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '1 day' }));
+    expect(picker.textContent).toBe('1 day');
     fireEvent.click(screen.getByRole('button', { name: 'Create link' }));
     expect(onCreate).toHaveBeenCalledWith({ expiresInDays: 1, passcode: false });
   });

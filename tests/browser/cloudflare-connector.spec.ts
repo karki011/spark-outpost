@@ -80,10 +80,16 @@ test('the user connects their own share service, shares from it and disconnects 
   const confirm = page.getByRole('dialog', { name: 'Share “Own page”?' });
   await expect(confirm).toContainText('Your Cloudflare account');
   await expect(confirm).toContainText(OWN_SHARE_HOST);
-  await expect(confirm.getByRole('radio', { name: '7 days' })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
+  const ends = confirm.getByRole('button', { name: 'Link ends after' });
+  await expect(ends).toHaveText('7 days');
+  await ends.click();
+  const choices = page.getByRole('menu', { name: 'Link ends after' });
+  await expect(choices.getByRole('menuitemradio')).toHaveText(['1 day', '7 days']);
+  await expect(choices.getByRole('menuitemradio', { name: '7 days' })).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  await expect(ends).toHaveText('1 day');
+  await expect(ends).toBeFocused();
   await confirm.getByRole('button', { name: 'Create link' }).click();
   const shared = page.getByRole('dialog', { name: 'Shared · version 1' });
   await expect(shared.getByRole('textbox', { name: 'Link' })).toHaveValue(

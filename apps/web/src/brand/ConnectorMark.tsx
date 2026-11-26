@@ -12,7 +12,7 @@ const CONNECTOR_MARK: Record<ConnectorId, { letters: string; hue: number; logo?:
   servicenow: { letters: 'SN', hue: 170, logo: 'servicenow' },
   slack: { letters: 'Sl', hue: 10, logo: 'slack' },
   zoom: { letters: 'Zo', hue: 230 },
-  cloudflare: { letters: 'Cf', hue: 35 },
+  cloudflare: { letters: 'Cf', hue: 35, logo: 'cloudflare' },
 };
 
 interface ConnectorMarkProps {

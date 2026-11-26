@@ -8,10 +8,10 @@ import {
   type ArtifactShareService,
 } from '@spark-outpost/contracts';
 import { formatBytes } from '../../api/attachments.ts';
+import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { Switch } from '../../ui/Switch.tsx';
 import { CheckIcon } from '../../ui/icons.tsx';
 import { ModalFrame } from '../../ui/ModalFrame.tsx';
-import { Segmented } from '../../ui/Segmented.tsx';
 import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 
 interface SheetButtonProps {
@@ -122,9 +122,9 @@ export function ShareConfirmSheet(props: ConfirmSheetProps) {
       {props.days.length > 1 ? (
         <div className="ashare-row">
           <b className="ashare-label">Link ends after</b>
-          <Segmented
-            ariaLabel="Link ends after"
-            options={props.days.map((count) => ({ id: String(count), label: dayCount(count) }))}
+          <ChoicePicker
+            label="Link ends after"
+            choices={props.days.map((count) => ({ id: String(count), label: dayCount(count) }))}
             value={String(days)}
             onChange={(id) => setDays(Number(id))}
           />
