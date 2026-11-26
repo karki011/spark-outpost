@@ -38,8 +38,8 @@ export interface RemoteSparkRouteDeps {
 }
 
 const NO_SPARK = 'That saved Spark was not found.';
-const NO_DESKTOP_APP = 'Open another Mac’s Spark from the Spark Outpost app on this Mac.';
-const FALLBACK_NAME = 'Mac';
+const NO_DESKTOP_APP = 'Open another computer’s Spark from the Spark Outpost app on this computer.';
+const FALLBACK_NAME = 'Computer';
 
 export function macNameOf(hostname: string): string {
   const name = hostname

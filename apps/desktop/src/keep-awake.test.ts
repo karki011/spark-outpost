@@ -48,6 +48,8 @@ function api(routes: Record<string, unknown>) {
 
 const ACCESS_ON = {
   hostname: 'mac.tail.ts.net',
+  reach: 'tailscale' as const,
+  forwardTo: 'http://127.0.0.1:32682',
   switches: REMOTE_SWITCH_DEFAULTS,
   cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
 };
@@ -83,6 +85,8 @@ describe('reading what keep-awake needs from the API', () => {
     const { asked, fetchImpl } = api({
       '/api/remote/access': {
         hostname: null,
+        reach: 'tailscale' as const,
+        forwardTo: 'http://127.0.0.1:32682',
         switches: REMOTE_SWITCH_DEFAULTS,
         cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
       },

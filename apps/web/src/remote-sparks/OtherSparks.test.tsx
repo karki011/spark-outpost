@@ -191,7 +191,7 @@ describe('OtherSparks', () => {
     expect(calls[0]).toMatchObject({ method: 'PATCH', body: { name: 'Garage Mac' } });
   });
 
-  it('asks before removing and says what removing does on both Macs', async () => {
+  it('asks before removing and says what removing does on both computers', async () => {
     const calls = serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     await show();
     const actions = screen.getByRole('button', { name: 'Actions for Studio Mac' });
@@ -203,7 +203,7 @@ describe('OtherSparks', () => {
     const dialog = screen.getByRole('alertdialog', { name: 'Remove Studio Mac?' });
     expect(
       within(dialog).getByText(
-        'Removing deletes this Mac’s saved sign-in for Studio Mac. Spark also asks Studio Mac to end this Mac’s access. If that Mac is asleep or offline, revoke this Mac there.',
+        'Removing deletes this computer’s saved sign-in for Studio Mac. Spark also asks Studio Mac to end this computer’s access. If that computer is asleep or offline, revoke this computer there.',
       ),
     ).toBeTruthy();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));

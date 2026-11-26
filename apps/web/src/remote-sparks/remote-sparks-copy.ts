@@ -9,8 +9,8 @@ import { relativeTime } from '../ui/relative-time.ts';
 export const OTHER_SPARKS_TITLE = 'Other Sparks';
 export const ADD_SPARK = 'Add a Spark';
 export const OTHER_SPARKS_INTRO =
-  'This Mac controls another Mac’s Spark as a paired device. What you do there runs on that Mac.';
-export const OTHER_SPARKS_UNAVAILABLE = 'Other Sparks open from the Mac app.';
+  'This computer controls another computer’s Spark as a paired device. What you do there runs on that computer.';
+export const OTHER_SPARKS_UNAVAILABLE = 'Other Sparks open from the Spark Outpost app.';
 export const OTHER_SPARKS_EMPTY = 'No other Spark is saved yet.';
 export const NAME_PROBLEM = 'Give this Spark a name.';
 
@@ -19,17 +19,15 @@ export const REMOVE_ICON_ITEM = 'Remove icon';
 export const USE_COMPUTER_NAME_ITEM = 'Use computer name';
 export const ICON_PROBLEM = 'That image could not be used. Pick a PNG, JPEG, WebP or GIF.';
 
-export function localSparkNote(computer: string): string {
-  return `The other ${computer} sees this name when this one pairs. Icons stay on this ${computer}.`;
-}
+export const LOCAL_SPARK_NOTE =
+  'The other computer sees this name when this one pairs. Icons stay on this computer.';
 
 export const SWITCHER_MENU = 'Sparks';
 export const ADD_SPARK_ITEM = 'Add a Spark…';
 export const MANAGE_SPARKS_ITEM = 'Manage Sparks…';
 
-export function thisComputer(computer: string): string {
-  return `This ${computer}`;
-}
+export const THIS_COMPUTER = 'This computer';
+export const SWITCHER_LABEL = 'Computers';
 
 export function waitingWord(count: number): string {
   return `${count} waiting`;
@@ -68,7 +66,7 @@ export function summaryLine(
 export function removeCopy(name: string): DisconnectCopy {
   return {
     title: `Remove ${name}?`,
-    text: `Removing deletes this Mac’s saved sign-in for ${name}. Spark also asks ${name} to end this Mac’s access. If that Mac is asleep or offline, revoke this Mac there.`,
+    text: `Removing deletes this computer’s saved sign-in for ${name}. Spark also asks ${name} to end this computer’s access. If that computer is asleep or offline, revoke this computer there.`,
   };
 }
 

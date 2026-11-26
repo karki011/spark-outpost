@@ -115,13 +115,13 @@ export function sparkIconPath(id: string, version: string): string {
 export type RenameRemoteSparkRequest = z.infer<typeof renameRemoteSparkRequestSchema>;
 
 export const SPARK_ADDRESS_PROBLEMS = {
-  empty: 'Paste the other Mac’s Remote control address or its pairing link.',
+  empty: 'Paste the other computer’s Remote control address or its pairing link.',
   scheme: 'The address must start with https://.',
   shape:
     'Use the address alone, like https://studio.example.ts.net, with no port, path or sign-in in it.',
-  host: 'That is not an address Spark can reach. Use the address shown on the other Mac’s Remote control page.',
+  host: 'That is not an address Spark can reach. Use the address shown on the other computer’s Remote control page.',
   untrusted: 'This is not a Tailscale address. Confirm that you trust it before adding it.',
-  own: 'That is this Mac’s own address. Paste the address of the other Mac.',
+  own: 'That is this computer’s own address. Paste the address of the other computer.',
 } as const;
 export type SparkAddressProblem = keyof typeof SPARK_ADDRESS_PROBLEMS;
 

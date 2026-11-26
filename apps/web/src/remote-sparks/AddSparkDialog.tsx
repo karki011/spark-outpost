@@ -100,7 +100,7 @@ export function AddSparkDialog({ ownHostname, onClose }: AddSparkDialogProps) {
             }}
           />
           <p id={`${ids}-address-note`} className={problem ? 'rs-problem' : 'rs-hint'}>
-            {problem ?? hint ?? 'Copy it from Remote control on the other Mac.'}
+            {problem ?? hint ?? 'Copy it from Remote control on the other computer.'}
           </p>
         </div>
         {custom && (

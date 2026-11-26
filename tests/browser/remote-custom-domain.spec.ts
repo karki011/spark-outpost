@@ -83,7 +83,7 @@ test('a Spark at a custom domain needs the trust tick and carries its tag', asyn
 
   await page
     .getByRole('navigation', { name: 'Main' })
-    .getByRole('button', { name: /^This Mac/ })
+    .getByRole('button', { name: /^This computer/ })
     .click();
   const item = page.getByRole('menu', { name: 'Sparks' }).getByRole('menuitem', { name: /Cabin/ });
   await expect(item.getByText('Custom domain')).toBeVisible();

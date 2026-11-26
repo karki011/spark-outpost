@@ -20,7 +20,6 @@ import { PhoneCardAnswering } from './PhoneCardAnswering.tsx';
 import { PushContact } from './PushContact.tsx';
 import { setupSteps } from './setup-steps.ts';
 import { OtherSparks } from '../remote-sparks/OtherSparks.tsx';
-import { hostWords } from '../desktop/host-words.ts';
 
 const STATE_POLL_MS = 10_000;
 const LIST_POLL_MS = 5000;
@@ -167,7 +166,7 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
       <div className="ph-area ph-area-main">
         <div className="ph-zone" role="group" aria-labelledby={inboundTitle}>
           <p id={inboundTitle} className="ph-zone-title">
-            Control this {hostWords().computer}
+            Control this computer
           </p>
           <PhoneDevices
             devices={devices.data}
@@ -197,7 +196,7 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
         </div>
         <div className="ph-zone" role="group" aria-labelledby={outboundTitle}>
           <p id={outboundTitle} className="ph-zone-title">
-            Control another {hostWords().computer}
+            Control another computer
           </p>
           <OtherSparks ownHostname={state.hostname} />
         </div>
