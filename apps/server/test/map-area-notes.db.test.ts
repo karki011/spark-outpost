@@ -2,7 +2,13 @@ import { rm } from 'node:fs/promises';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SPARK_ACTION_OPTION } from '@spark-outpost/contracts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
-import { AreaNoteError, checkAreaNote, readAreaNote, saveAreaNote } from '../src/map/area-notes.ts';
+import {
+  AreaNoteError,
+  checkAreaNote,
+  readAreaNote,
+  saveAreaNote,
+  type NoteSourceInput,
+} from '../src/map/area-notes.ts';
 import { projectMap } from '../src/map/read-store.ts';
 import { addProject, fakeJev, git, mapBuilder, writeFiles, writeRepo } from './map-support.ts';
 import {
@@ -45,7 +51,7 @@ async function areaHolding(path: string) {
   return rows[0]!.area_id;
 }
 
-function note(areaId: string, sources: { path: string; startLine: number; endLine: number }[]) {
+function note(areaId: string, sources: NoteSourceInput[]) {
   return {
     root,
     areaId,
