@@ -34,7 +34,7 @@ The window now shows the other Mac's Spark. Later, **Open** on its row signs in 
 | Addresses                  | `https` Tailscale addresses ending in `.ts.net`, never this Mac's own             |
 | Not available              | Downloads, notifications, and adding a Spark from a paired device                 |
 
-**Remove** deletes this Mac's saved sign-in only. To end its access, select **Revoke** on the other Mac's **Devices** list. A Spark not opened for 30 days pairs again.
+**Remove…** in its **Actions** menu deletes this Mac's saved sign-in only. To end its access, select **Revoke** on the other Mac's **Devices** list. A Spark not opened for 30 days pairs again.
 
 The window is the other Mac's page: never type a password or key into it.
 

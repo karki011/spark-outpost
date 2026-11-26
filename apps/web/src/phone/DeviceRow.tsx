@@ -6,9 +6,8 @@ import {
   REMOTE_DEVICE_NAME_MAX,
   type RemoteDevice,
 } from '@spark-outpost/contracts';
-import { BlobScout } from '../brand/BlobScout.tsx';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
-import { CheckIcon, DotsIcon, GlobeIcon, WarnIcon } from '../ui/icons.tsx';
+import { CheckIcon, DotsIcon, GlobeIcon, LaptopIcon, WarnIcon } from '../ui/icons.tsx';
 import {
   daysUntilUnused,
   deviceSummary,
@@ -146,7 +145,7 @@ export function DeviceRow({ device, fresh, now }: DeviceRowProps) {
   return (
     <li className={fresh ? 'ph-device fresh' : 'ph-device'}>
       <span className="ph-device-icon" aria-hidden="true">
-        {device.kind === 'spark' ? <BlobScout size={20} /> : <GlobeIcon />}
+        {device.kind === 'spark' ? <LaptopIcon /> : <GlobeIcon />}
       </span>
       <div className="ph-device-body">
         {renaming ? (

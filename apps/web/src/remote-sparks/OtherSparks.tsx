@@ -8,6 +8,7 @@ import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
+import { PlusIcon } from '../ui/icons.tsx';
 import { AddSparkDialog } from './AddSparkDialog.tsx';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
 import {
@@ -66,6 +67,19 @@ export function OtherSparks({ ownHostname }: { ownHostname: string | null }) {
       id="other-sparks"
       title={OTHER_SPARKS_TITLE}
       count={available ? sparks.length : undefined}
+      actions={
+        available && (
+          <button
+            ref={addButton}
+            type="button"
+            className="btn line sm"
+            onClick={() => setAdding(true)}
+          >
+            <PlusIcon />
+            {ADD_SPARK}
+          </button>
+        )
+      }
       className="rs-card"
     >
       <p className="ph-note">{OTHER_SPARKS_INTRO}</p>
@@ -91,14 +105,6 @@ export function OtherSparks({ ownHostname }: { ownHostname: string | null }) {
               ))}
             </ul>
           )}
-          <button
-            ref={addButton}
-            type="button"
-            className="btn line sm rs-add"
-            onClick={() => setAdding(true)}
-          >
-            {ADD_SPARK}
-          </button>
         </>
       )}
       {remove.error && (

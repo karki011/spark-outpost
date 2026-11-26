@@ -99,9 +99,11 @@ describe('OtherSparks', () => {
     expect(within(studio!).getByText(/studio\.tail1234\.ts\.net · Last opened /)).toBeTruthy();
     expect(within(attic!).getByText('Not paired yet')).toBeTruthy();
     expect(within(attic!).getByText(/Last opened: Never/)).toBeTruthy();
-    for (const action of ['Open', 'Rename', 'Remove']) {
-      expect(within(attic!).getByRole('button', { name: `${action} Attic Mac` })).toBeTruthy();
-    }
+    expect(within(attic!).getByRole('button', { name: 'Open Attic Mac' })).toBeTruthy();
+    fireEvent.click(within(attic!).getByRole('button', { name: 'Actions for Attic Mac' }));
+    const menu = screen.getByRole('menu', { name: 'Actions for Attic Mac' });
+    expect(within(menu).getByRole('menuitem', { name: 'Rename' })).toBeTruthy();
+    expect(within(menu).getByRole('menuitem', { name: 'Remove…' })).toBeTruthy();
   });
 
   it('opens a saved Spark', async () => {
@@ -118,7 +120,8 @@ describe('OtherSparks', () => {
   it('renames a saved Spark', async () => {
     const calls = serve({ available: true, sparks: [STUDIO] });
     await show();
-    fireEvent.click(screen.getByRole('button', { name: 'Rename Studio Mac' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Studio Mac' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
     fireEvent.change(screen.getByLabelText('New name for Studio Mac'), {
       target: { value: ' Garage Mac ' },
     });
@@ -130,16 +133,20 @@ describe('OtherSparks', () => {
   it('asks before removing and says the host must revoke', async () => {
     const calls = serve({ available: true, sparks: [STUDIO] });
     await show();
-    const remove = screen.getByRole('button', { name: 'Remove Studio Mac' });
-    fireEvent.click(remove);
+    const actions = screen.getByRole('button', { name: 'Actions for Studio Mac' });
+    const chooseRemove = () => {
+      fireEvent.click(actions);
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Remove…' }));
+    };
+    chooseRemove();
     const dialog = screen.getByRole('alertdialog', { name: 'Remove Studio Mac?' });
     expect(within(dialog).getByText(/Also revoke this Mac on Studio Mac/)).toBeTruthy();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
-    expect(document.activeElement).toBe(remove);
+    expect(document.activeElement).toBe(actions);
     expect(calls).toHaveLength(0);
 
-    fireEvent.click(remove);
+    chooseRemove();
     fireEvent.click(
       within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove' }),
     );

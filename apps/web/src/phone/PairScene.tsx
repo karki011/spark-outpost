@@ -33,7 +33,7 @@ interface PairSceneProps {
 const RING_RADIUS = 15;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
-function PhoneGlyph() {
+function PhoneGlyph({ computer = false }: { computer?: boolean }) {
   return (
     <svg
       className="ph-scene-phone"
@@ -47,8 +47,17 @@ function PhoneGlyph() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
-      <path d="M11 18.5h2" />
+      {computer ? (
+        <>
+          <rect x="4.5" y="5" width="15" height="10.5" rx="1.8" />
+          <path d="M2.5 19h19" />
+        </>
+      ) : (
+        <>
+          <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+          <path d="M11 18.5h2" />
+        </>
+      )}
     </svg>
   );
 }
@@ -157,7 +166,9 @@ export function PairScene({
           <BlobScout size={compact ? 40 : 72} mood={motionMood(motion)} />
           <i className="ph-scene-shadow" />
         </span>
-        {meetsPhone && <PhoneGlyph />}
+        {meetsPhone && (
+          <PhoneGlyph computer={stage.kind === 'found' && stage.request.kind === 'spark'} />
+        )}
       </div>
       <p className="ph-scene-line" aria-hidden="true">
         {line}

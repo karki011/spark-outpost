@@ -178,6 +178,21 @@ h2[data-status='https_off'] .ph-dot {
   gap: 16px;
   min-width: 0;
 }
+.ph-zone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+.ph-zone + .ph-zone {
+  margin-top: 12px;
+}
+.ph-zone-title {
+  margin: 0 0 0 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
 @container ph (min-width: 900px) {
   .ph-cols:not([data-setup]) {
     grid-template-columns: minmax(0, 1fr) 300px;

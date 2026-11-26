@@ -27,15 +27,11 @@
 }
 .rs-actions {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
 .rs-row-note {
   flex-basis: 100%;
-}
-.rs-add {
-  justify-self: start;
-  align-self: flex-start;
 }
 .rs-dialog {
   gap: 12px;

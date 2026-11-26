@@ -1,8 +1,9 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { REMOTE_SPARK_NAME_MAX, type RemoteSpark } from '@spark-outpost/contracts';
-import { BlobScout } from '../brand/BlobScout.tsx';
-import { CheckIcon, ClockIcon } from '../ui/icons.tsx';
+import '../conversations/chat-menu.css';
+import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
+import { CheckIcon, ClockIcon, DotsIcon, LaptopIcon } from '../ui/icons.tsx';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
 import { lastOpenedLine, pairedWord } from './remote-sparks-copy.ts';
 
@@ -56,20 +57,35 @@ interface SparkRowProps {
 
 export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
   const queryClient = useQueryClient();
-  const renameButton = useRef<HTMLButtonElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
   const [renaming, setRenaming] = useState(false);
+  const [anchor, setAnchor] = useState<MenuAnchor | null>(null);
   const open = useMutation({
     mutationFn: () => remoteSparksApi.open(spark.id),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: remoteSparkKeys.all }),
   });
   const finishRename = () => {
     setRenaming(false);
-    requestAnimationFrame(() => renameButton.current?.focus());
+    requestAnimationFrame(() => menuButton.current?.focus());
+  };
+  const closeMenu = () => {
+    setAnchor(null);
+    menuButton.current?.focus();
+  };
+  const openMenu = () => {
+    const rect = menuButton.current?.getBoundingClientRect();
+    if (!rect) return;
+    setAnchor({
+      x: rect.right - 212,
+      y: rect.bottom + 4,
+      above: rect.top - 4,
+      focusBack: menuButton.current,
+    });
   };
   return (
     <li className="rs-row">
       <span className="ph-device-icon" aria-hidden="true">
-        <BlobScout size={20} />
+        <LaptopIcon />
       </span>
       <div className="ph-device-body rs-body">
         {renaming ? (
@@ -93,7 +109,7 @@ export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
         <div className="rs-actions">
           <button
             type="button"
-            className="btn line sm"
+            className="btn primary sm"
             aria-label={`Open ${spark.name}`}
             disabled={open.isPending}
             onClick={() => open.mutate()}
@@ -101,23 +117,41 @@ export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
             Open
           </button>
           <button
-            ref={renameButton}
+            ref={menuButton}
             type="button"
-            className="btn ghost sm"
-            aria-label={`Rename ${spark.name}`}
-            onClick={() => setRenaming(true)}
+            className="icon-btn ph-device-menu"
+            aria-label={`Actions for ${spark.name}`}
+            aria-haspopup="menu"
+            aria-expanded={anchor !== null}
+            onClick={() => (anchor ? closeMenu() : openMenu())}
           >
-            Rename
-          </button>
-          <button
-            type="button"
-            className="btn ghost sm"
-            aria-label={`Remove ${spark.name}`}
-            onClick={(event) => onRemove(spark, event.currentTarget)}
-          >
-            Remove
+            <DotsIcon />
           </button>
         </div>
+      )}
+      {anchor && (
+        <MenuShell
+          anchor={anchor}
+          label={`Actions for ${spark.name}`}
+          page="main"
+          onClose={closeMenu}
+        >
+          <MenuItem
+            label="Rename"
+            onSelect={() => {
+              setAnchor(null);
+              setRenaming(true);
+            }}
+          />
+          <MenuItem
+            danger
+            label="Remove…"
+            onSelect={() => {
+              setAnchor(null);
+              if (menuButton.current) onRemove(spark, menuButton.current);
+            }}
+          />
+        </MenuShell>
       )}
       {open.error && (
         <p className="ph-error rs-row-note" role="alert">

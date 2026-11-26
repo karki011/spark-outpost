@@ -96,13 +96,15 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
   await expect(dialog).toBeHidden();
   await expect(add).toBeFocused();
 
-  await row.getByRole('button', { name: 'Rename Studio Mac' }).click();
+  await row.getByRole('button', { name: 'Actions for Studio Mac' }).click();
+  await page.getByRole('menuitem', { name: 'Rename' }).click();
   await page.getByLabel('New name for Studio Mac').fill('Garage Mac');
   await page.keyboard.press('Enter');
   const renamed = card.getByRole('listitem').filter({ hasText: 'Garage Mac' });
   await expect(renamed).toBeVisible();
 
-  await renamed.getByRole('button', { name: 'Remove Garage Mac' }).click();
+  await renamed.getByRole('button', { name: 'Actions for Garage Mac' }).click();
+  await page.getByRole('menuitem', { name: 'Remove…' }).click();
   const confirm = page.getByRole('alertdialog', { name: 'Remove Garage Mac?' });
   await expect(confirm.getByText(/Also revoke this Mac on Garage Mac/)).toBeVisible();
   await confirm.getByRole('button', { name: 'Remove' }).click();
