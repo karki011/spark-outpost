@@ -9,6 +9,15 @@ export const REMOTE_SPARK_PARTITION_PREFIX = 'spark-remote-';
 export const REMOTE_SPARK_WATCH_MS = 60_000;
 export const REMOTE_SPARK_NEEDS_YOU_MAX = 999;
 export const REMOTE_SPARKS_MAX = 50;
+export const REMOTE_SPARK_ICON_SIZE = 96;
+export const REMOTE_SPARK_ICON_MAX_BYTES = 64 * 1024;
+export const REMOTE_SPARK_ICON_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+] as const;
+export const LOCAL_SPARK_ID = 'local';
 
 export const remoteReachSchema = z.enum(['tailscale']);
 export type RemoteReach = z.infer<typeof remoteReachSchema>;
@@ -64,13 +73,22 @@ export const remoteSparkSchema = z.object({
   paired: z.boolean(),
   status: remoteSparkStatusSchema,
   needsYou,
+  icon: z.string().nullable(),
   createdAt: z.string(),
   lastOpenedAt: z.string().nullable(),
 });
 export type RemoteSpark = z.infer<typeof remoteSparkSchema>;
 
+export const localSparkSchema = z.object({
+  name: z.string().nullable(),
+  defaultName: z.string(),
+  icon: z.string().nullable(),
+});
+export type LocalSpark = z.infer<typeof localSparkSchema>;
+
 export const remoteSparkListSchema = z.object({
   available: z.boolean(),
+  local: localSparkSchema,
   sparks: z.array(remoteSparkSchema),
 });
 export type RemoteSparkList = z.infer<typeof remoteSparkListSchema>;
@@ -82,6 +100,24 @@ export const addRemoteSparkRequestSchema = z.object({
 export type AddRemoteSparkRequest = z.infer<typeof addRemoteSparkRequestSchema>;
 
 export const renameRemoteSparkRequestSchema = z.object({ name: sparkName });
+
+export const renameLocalSparkRequestSchema = z.object({ name: sparkName.nullable() });
+export type RenameLocalSparkRequest = z.infer<typeof renameLocalSparkRequestSchema>;
+
+const ICON_BASE64_MAX = Math.ceil(REMOTE_SPARK_ICON_MAX_BYTES / 3) * 4;
+
+export const setSparkIconRequestSchema = z.object({
+  png: z
+    .string()
+    .min(1)
+    .max(ICON_BASE64_MAX)
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/),
+});
+export type SetSparkIconRequest = z.infer<typeof setSparkIconRequestSchema>;
+
+export function sparkIconPath(id: string, version: string): string {
+  return `/api/remote-sparks/${id}/icon?v=${version}`;
+}
 export type RenameRemoteSparkRequest = z.infer<typeof renameRemoteSparkRequestSchema>;
 
 export const SPARK_ADDRESS_PROBLEMS = {
