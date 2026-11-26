@@ -15,7 +15,7 @@ vi.mock('./spark-icon-canvas.ts', () => ({
 }));
 
 const SETTLE = { timeout: 3000 };
-const NOTE = 'The other Mac sees this name when this one pairs. Icons stay on this Mac.';
+const NOTE = 'The other computer sees this name when this one pairs. Icons stay on this computer.';
 const LOCAL: LocalSpark = { name: null, defaultName: 'Hazel’s MacBook', icon: null };
 const STUDIO: RemoteSpark = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -141,22 +141,22 @@ describe('a saved Spark’s icon', () => {
   });
 });
 
-describe('the This Mac row', () => {
+describe('the This computer row', () => {
   it('is first, shows the computer name and stays with no Spark saved', async () => {
     const { own } = await show({ sparks: [] });
     expect(within(own).getByText('Hazel’s MacBook').tagName).toBe('B');
-    expect(within(own).getByText('This Mac')).toBeTruthy();
+    expect(within(own).getByText('This computer')).toBeTruthy();
     expect(within(own).getByText(NOTE)).toBeTruthy();
     expect(own.querySelector('.rs-icon svg')).toBeTruthy();
     expect(within(own).queryByRole('button', { name: /^Open/ })).toBeNull();
     expect(screen.getByText(OTHER_SPARKS_EMPTY)).toBeTruthy();
-    expect(menuOf('This Mac').labels).toEqual(['Rename', 'Change icon…']);
+    expect(menuOf('This computer').labels).toEqual(['Rename', 'Change icon…']);
   });
 
-  it('renames this Mac', async () => {
+  it('renames this computer', async () => {
     const { calls } = await show();
-    menuOf('This Mac').choose('Rename');
-    const field = screen.getByLabelText<HTMLInputElement>('New name for This Mac');
+    menuOf('This computer').choose('Rename');
+    const field = screen.getByLabelText<HTMLInputElement>('New name for This computer');
     expect(field.value).toBe('');
     fireEvent.change(field, { target: { value: ' Office ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -168,17 +168,17 @@ describe('the This Mac row', () => {
     });
   });
 
-  it('shows a custom name with This Mac beside it and clears it two ways', async () => {
+  it('shows a custom name with This computer beside it and clears it two ways', async () => {
     const { calls, own } = await show({ local: { ...LOCAL, name: 'Office' } });
     expect(within(own).getByText('Office').tagName).toBe('B');
-    expect(within(own).getByText('This Mac')).toBeTruthy();
+    expect(within(own).getByText('This computer')).toBeTruthy();
     expect(within(own).queryByText('Hazel’s MacBook')).toBeNull();
-    const menu = menuOf('This Mac');
+    const menu = menuOf('This computer');
     expect(menu.labels).toEqual(['Rename', 'Use computer name', 'Change icon…']);
     menu.choose('Use computer name');
     await waitFor(() => expect(calls).toHaveLength(1), SETTLE);
-    menuOf('This Mac').choose('Rename');
-    const field = screen.getByLabelText<HTMLInputElement>('New name for This Mac');
+    menuOf('This computer').choose('Rename');
+    const field = screen.getByLabelText<HTMLInputElement>('New name for This computer');
     expect(field.value).toBe('Office');
     fireEvent.change(field, { target: { value: '  ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -187,18 +187,18 @@ describe('the This Mac row', () => {
     expect(calls).toEqual([cleared, cleared]);
   });
 
-  it('saves and removes this Mac’s icon', async () => {
+  it('saves and removes this computer’s icon', async () => {
     const icon = '/api/remote-sparks/local/icon?v=1';
     const { calls, own } = await show({ local: { ...LOCAL, icon } });
     expect(own.querySelector('img')?.getAttribute('src')).toBe(icon);
-    pick('This Mac', LOGO);
+    pick('This computer', LOGO);
     await waitFor(() => expect(calls).toHaveLength(1), SETTLE);
     expect(calls[0]).toEqual({
       method: 'PUT',
       path: '/api/remote-sparks/local/icon',
       body: { png: 'iVBORw0KGgo=' },
     });
-    const menu = menuOf('This Mac');
+    const menu = menuOf('This computer');
     expect(menu.labels).toEqual(['Rename', 'Change icon…', 'Remove icon']);
     menu.choose('Remove icon');
     await waitFor(() => expect(calls).toHaveLength(2), SETTLE);

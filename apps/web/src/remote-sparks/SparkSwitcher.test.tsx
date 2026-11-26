@@ -78,7 +78,7 @@ async function show(onManage = vi.fn(), onAdd = vi.fn()) {
 }
 
 function openMenu() {
-  const button = screen.getByRole('button', { name: /^This Mac/ });
+  const button = screen.getByRole('button', { name: /^This computer/ });
   fireEvent.click(button);
   return { button, menu: screen.getByRole('menu', { name: 'Sparks' }) };
 }
@@ -116,33 +116,49 @@ describe('SparkSwitcher', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it('names this Mac and totals the requests waiting on other Sparks', async () => {
+  it('tags a custom domain in the menu and leaves Tailscale rows alone', async () => {
+    const cabin: RemoteSpark = {
+      ...CELLAR,
+      name: 'Cabin Mac',
+      hostname: 'spark.example.com',
+      reach: 'custom',
+    };
+    serve({ available: true, local: LOCAL, sparks: [STUDIO, cabin] });
+    await show();
+    const { menu } = openMenu();
+    const custom = within(menu).getByRole('menuitem', { name: /Cabin Mac/ });
+    expect(within(custom).getByText('Custom domain').querySelector('svg')).toBeTruthy();
+    const studio = within(menu).getByRole('menuitem', { name: /Studio Mac/ });
+    expect(within(studio).queryByText('Custom domain')).toBeNull();
+  });
+
+  it('names this computer and totals the requests waiting on other Sparks', async () => {
     serve({ available: true, local: LOCAL, sparks: [STUDIO, ATTIC, CELLAR] });
     await show();
     const button = screen.getByRole('button', {
-      name: 'This Mac. 3 requests waiting on other Sparks',
+      name: 'This computer. 3 requests waiting on other Sparks',
     });
-    expect(button.textContent).toBe('This Mac3');
+    expect(button.textContent).toBe('Computers3');
     expect(button.getAttribute('aria-haspopup')).toBe('menu');
   });
 
   it('has no badge when nothing waits and says one request in the singular', async () => {
     serve({ available: true, local: LOCAL, sparks: [CELLAR] });
     await show();
-    expect(screen.getByRole('button', { name: 'This Mac' }).textContent).toBe('This Mac');
+    expect(screen.getByRole('button', { name: 'This computer' }).textContent).toBe('Computers');
     cleanup();
     serve({ available: true, local: LOCAL, sparks: [ATTIC] });
     await show();
     expect(
-      screen.getByRole('button', { name: 'This Mac. 1 request waiting on other Sparks' }),
+      screen.getByRole('button', { name: 'This computer. 1 request waiting on other Sparks' }),
     ).toBeTruthy();
   });
 
-  it('lists this Mac checked, then each Spark with its status and count', async () => {
+  it('lists this computer checked, then each Spark with its status and count', async () => {
     serve({ available: true, local: LOCAL, sparks: [STUDIO, ATTIC, CELLAR] });
     await show();
     const { menu } = openMenu();
-    const own = within(menu).getByRole('menuitemradio', { name: 'This Mac' });
+    const own = within(menu).getByRole('menuitemradio', { name: 'This computer' });
     expect(own.getAttribute('aria-checked')).toBe('true');
     expect(document.activeElement).toBe(own);
     const items = within(menu).getAllByRole('menuitem');
@@ -179,7 +195,7 @@ describe('SparkSwitcher', () => {
   });
 
   it('shows a failed open as one visible message', async () => {
-    const message = 'Other Sparks open from the Mac app.';
+    const message = 'Other Sparks open from the Spark Outpost app.';
     const list = { available: true, local: LOCAL, sparks: [STUDIO] };
     vi.stubGlobal(
       'fetch',
@@ -205,7 +221,7 @@ describe('SparkSwitcher', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('closes on Esc and on this Mac without opening anything', async () => {
+  it('closes on Esc and on this computer without opening anything', async () => {
     const calls = serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     await show();
     const first = openMenu();
@@ -214,7 +230,7 @@ describe('SparkSwitcher', () => {
     expect(document.activeElement).toBe(first.button);
     expect(first.button.getAttribute('aria-expanded')).toBe('false');
     const second = openMenu();
-    fireEvent.click(within(second.menu).getByRole('menuitemradio', { name: 'This Mac' }));
+    fireEvent.click(within(second.menu).getByRole('menuitemradio', { name: 'This computer' }));
     expect(screen.queryByRole('menu')).toBeNull();
     expect(calls.filter((call) => call.method !== 'GET')).toHaveLength(0);
   });
@@ -230,7 +246,7 @@ describe('SparkSwitcher', () => {
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 
-  it('shows this Mac’s own name and icon, and each Spark’s icon in the menu', async () => {
+  it('shows this computer’s own name and icon, and each Spark’s icon in the menu', async () => {
     const icon = '/api/remote-sparks/local/icon?v=4';
     const studioIcon = `/api/remote-sparks/${STUDIO.id}/icon?v=1`;
     const name = 'Office in the garden shed';
@@ -244,7 +260,7 @@ describe('SparkSwitcher', () => {
       name: `${name}. 3 requests waiting on other Sparks`,
     });
     expect(button.querySelector('img')?.getAttribute('src')).toBe(icon);
-    expect(button.querySelector('.rs-switch-name')?.textContent).toBe('This Mac');
+    expect(button.querySelector('.rs-switch-name')?.textContent).toBe('Computers');
     expect(button.getAttribute('title')).toBe(name);
     fireEvent.click(button);
     const menu = screen.getByRole('menu', { name: 'Sparks' });
@@ -256,20 +272,20 @@ describe('SparkSwitcher', () => {
     expect(attic!.querySelector('.rs-icon')?.textContent).toBe('A');
   });
 
-  it('shows initials for a named Mac with no icon and the laptop for an unnamed one', async () => {
+  it('shows initials for a named computer with no icon and the laptop for an unnamed one', async () => {
     serve({ available: true, local: { ...LOCAL, name: 'Hazel’s Mac' }, sparks: [STUDIO] });
     await show();
     const named = screen.getByRole('button', {
       name: 'Hazel’s Mac. 2 requests waiting on other Sparks',
     });
     expect(named.querySelector('.rs-icon')?.textContent).toBe('H');
-    expect(named.querySelector('.rs-switch-name')?.textContent).toBe('This Mac');
+    expect(named.querySelector('.rs-switch-name')?.textContent).toBe('Computers');
   });
 
-  it('keeps the laptop and This Mac while this Mac has no name or icon of its own', async () => {
+  it('keeps the laptop and This computer while this computer has no name or icon of its own', async () => {
     serve({ available: true, local: LOCAL, sparks: [CELLAR] });
     await show();
-    const button = screen.getByRole('button', { name: 'This Mac' });
+    const button = screen.getByRole('button', { name: 'This computer' });
     expect(button.querySelector('img')).toBeNull();
     expect(button.querySelector('.rs-icon svg')).toBeTruthy();
   });

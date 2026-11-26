@@ -2,15 +2,14 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LOCAL_SPARK_ID, type LocalSpark } from '@spark-outpost/contracts';
 import { MenuItem } from '../conversations/MenuShell.tsx';
-import { hostWords } from '../desktop/host-words.ts';
 import { ActionsMenu, useActionsButton } from './ActionsMenu.tsx';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
 import {
   CHANGE_ICON_ITEM,
   REMOVE_ICON_ITEM,
   USE_COMPUTER_NAME_ITEM,
-  localSparkNote,
-  thisComputer,
+  LOCAL_SPARK_NOTE,
+  THIS_COMPUTER,
 } from './remote-sparks-copy.ts';
 import { RenameForm } from './RenameForm.tsx';
 import { SparkIcon } from './SparkIcon.tsx';
@@ -20,8 +19,7 @@ import { useSparkIcon } from './use-spark-icon.tsx';
 export function LocalSparkRow({ local }: { local: LocalSpark }) {
   const queryClient = useQueryClient();
   const actions = useActionsButton();
-  const computer = hostWords().computer;
-  const here = thisComputer(computer);
+  const here = THIS_COMPUTER;
   const icon = useSparkIcon(LOCAL_SPARK_ID, here);
   const [renaming, setRenaming] = useState(false);
   const clearName = useMutation({
@@ -52,7 +50,7 @@ export function LocalSparkRow({ local }: { local: LocalSpark }) {
               <b>{name}</b>
               {name !== here && <span className="rs-local-tag">{here}</span>}
             </div>
-            <span className="ph-device-summary">{localSparkNote(computer)}</span>
+            <span className="ph-device-summary">{LOCAL_SPARK_NOTE}</span>
           </>
         )}
       </div>

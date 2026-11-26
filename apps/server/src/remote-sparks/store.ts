@@ -15,7 +15,7 @@ const COLUMNS = `id, name, hostname, created_at, last_opened_at, ${ICON_VERSION}
 
 export class RemoteSparkTakenError extends Error {
   constructor() {
-    super('That Mac is already in your list.');
+    super('That computer is already in your list.');
   }
 }
 

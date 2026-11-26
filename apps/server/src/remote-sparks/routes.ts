@@ -38,8 +38,8 @@ export interface RemoteSparkRouteDeps {
 }
 
 const NO_SPARK = 'That saved Spark was not found.';
-const NO_DESKTOP_APP = 'Open another Mac’s Spark from the Spark Outpost app on this Mac.';
-const FALLBACK_NAME = 'Mac';
+const NO_DESKTOP_APP = 'Open another computer’s Spark from the Spark Outpost app on this computer.';
+const FALLBACK_NAME = 'Computer';
 
 export function macNameOf(hostname: string): string {
   const name = hostname
@@ -62,7 +62,7 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkL
       id: row.id,
       name: row.name,
       hostname: row.hostname,
-      reach: reachOfHostname(row.hostname) ?? 'tailscale',
+      reach: reachOfHostname(row.hostname),
       paired,
       ...link.stateOf(row.id, paired),
       icon: iconPathOf(row.id, row.icon_version),
@@ -108,6 +108,10 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkL
       res
         .status(400)
         .json({ error: SPARK_ADDRESS_PROBLEMS[address.problem], problem: address.problem });
+      return;
+    }
+    if (address.reach === 'custom' && body.trusted !== true) {
+      res.status(400).json({ error: SPARK_ADDRESS_PROBLEMS.untrusted, problem: 'untrusted' });
       return;
     }
     let row: RemoteSparkRow;

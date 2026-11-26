@@ -239,7 +239,7 @@ describe('a test run of a workflow', () => {
     const listed = (await client.get('/api/conversations').expect(200)).body;
     expect(listed.map((chat: { id: string }) => chat.id)).toEqual([real.body.conversationId]);
     const message = await t.db.query<{ content: string }>(
-      `SELECT content FROM messages WHERE role = 'user'`,
+      `SELECT content FROM messages WHERE role = 'user' ORDER BY created_at, id LIMIT 1`,
     );
     expect(message.rows).toEqual([{ content: '@pre-pr for 2.4' }]);
     expect((await copies()).filter((entry) => !entry.removed)).toEqual([]);
