@@ -31,6 +31,7 @@ import {
   type TeammateTag,
   type TokenUsage,
 } from '@spark-outpost/contracts';
+import { WORKFLOW_LANE } from './chat-turns.ts';
 import { toAttention, type PendingApprovalRow } from './attention.ts';
 import { subChatFields, type SubChatSummaryRow } from './sub-chat-facts.ts';
 
@@ -45,12 +46,20 @@ export interface MessageRow {
   created_at: Date;
 }
 
+function onWorkflowLane(row: Pick<RunRow, 'parent_run_id' | 'route'>): boolean {
+  const route = row.route;
+  return (
+    !row.parent_run_id && typeof route === 'object' && route !== null && WORKFLOW_LANE in route
+  );
+}
+
 export interface RunRow {
   id: string;
   conversation_id: string;
   user_message_id: string | null;
   provider: string;
   source?: string | null;
+  route?: unknown;
   from_chat?: string | null;
   todo?: unknown;
   status: RunStatus;
@@ -186,6 +195,7 @@ export function toRun(row: RunRow): Run {
     ...(row.source === 'agent_cycle' ? { agentCycle: true } : {}),
     ...(row.source === 'pr_follow_up' ? { prFollowUp: true } : {}),
     ...(row.source === 'workflow' ? { workflowStarted: true } : {}),
+    ...(onWorkflowLane(row) ? { workflowLane: true } : {}),
     ...(row.source === 'ui' ? { typedByUser: true } : {}),
     ...(row.source === 'chat' ? { fromChat: row.from_chat ?? 'another chat' } : {}),
   };

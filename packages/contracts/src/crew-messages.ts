@@ -40,7 +40,7 @@ export const queuedMessageSchema = z.object({
   continueRunId: z.uuid().nullable(),
   createdAt: z.string(),
   sparkRuleCardId: z.uuid().optional(),
-  origin: z.enum(['voice', 'assistant', 'pages', 'chat']).optional(),
+  origin: z.enum(['voice', 'assistant', 'pages', 'chat', 'workflow']).optional(),
   fromChat: z.string().optional(),
   attachmentIds: z.array(z.uuid()).optional(),
   annotations: z.array(annotationInputSchema).optional(),

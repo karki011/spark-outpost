@@ -107,6 +107,8 @@ interface MayDoCardProps {
   onEdits: (edits: boolean) => void;
   updateBase: boolean;
   onUpdateBase: (updateBase: boolean) => void;
+  quietWhenClean: boolean;
+  onQuietWhenClean: (quietWhenClean: boolean) => void;
 }
 
 export function MayDoCard(props: MayDoCardProps) {
@@ -165,6 +167,22 @@ export function MayDoCard(props: MayDoCardProps) {
           checked={updateBase}
           describedBy={`${ids}-base`}
           onChange={onUpdateBase}
+        />
+      </div>
+      <div className="wf-trigger-head">
+        <span>
+          <b>Tell the chat’s agent only when there are findings</b>
+          <small id={`${ids}-quiet`}>
+            Steps mark what they find as Critical, High, Medium or Low. The chat’s agent gets only
+            those lines, and nothing when a run finishes with none. Off, it gets the last steps’
+            replies after every run.
+          </small>
+        </span>
+        <Switch
+          label="Tell the chat’s agent only when there are findings"
+          checked={props.quietWhenClean}
+          describedBy={`${ids}-quiet`}
+          onChange={props.onQuietWhenClean}
         />
       </div>
       <p className="wf-hint">To change a Spark’s agent, model or mode, open it on the Crew tab.</p>

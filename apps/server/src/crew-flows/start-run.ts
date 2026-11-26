@@ -17,6 +17,7 @@ import { copyChatAgent } from '../persistence/chat-settings.ts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { getWorkflowRun, insertWorkflowRun } from './run-records.ts';
+import { WORKFLOW_LANE } from '../persistence/chat-turns.ts';
 import { runnableWorkflow } from './runnable.ts';
 import { stepSparks, workspaceSparkIds } from './step-sparks.ts';
 import { oneSparkWorkflow, startTestRun } from './test-run.ts';
@@ -142,6 +143,12 @@ export async function startWorkflowRun(deps: StartRunDeps, start: StartRun): Pro
       },
       target,
     );
+    if (start.kind === 'run') {
+      await client.query('UPDATE runs SET route = $2 WHERE id = $1', [
+        sent.run.id,
+        JSON.stringify({ [WORKFLOW_LANE]: true }),
+      ]);
+    }
     await insertWorkflowRun(client, {
       id,
       workspaceId: deps.workspaceId,

@@ -6,12 +6,15 @@ import {
   archivedInactiveLine,
   type ConversationDetail,
   type Project,
+  type Run,
 } from '@spark-outpost/contracts';
 import { useVoice } from '../spark/use-voice.ts';
 import { greeting } from '../spark/voice.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
 import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
+import { RoundGroups } from './automated/RoundGroups.tsx';
+import { roundBlocks } from './automated/round-card-model.ts';
 import { buildTurns } from './turns.ts';
 import { TurnSection } from './TurnSection.tsx';
 import { AssistantTopicDivider, TopicDivider } from './compaction/DividerLine.tsx';
@@ -134,6 +137,29 @@ export const Thread = memo(function Thread({
     );
   }
 
+  const turnOf = (run: Run) => {
+    const index = turns.findIndex((turn) => turn.run.id === run.id);
+    const { userMessage, assistantMessage, laterMessages } = turns[index]!;
+    return (
+      <Fragment key={run.id}>
+        {topics.before.get(run.id)?.map((topic) => (
+          <AssistantTopicDivider key={topic.id} topic={topic} />
+        ))}
+        <TurnSection
+          run={run}
+          userMessage={userMessage}
+          assistantMessage={assistantMessage}
+          laterMessages={laterMessages}
+          previous={turns[index - 1]?.run ?? null}
+          detail={detail}
+          repo={repos[0] ?? null}
+          onOpenChat={onOpenChat}
+          deferred={!turnWindow.mounted.has(run.id)}
+        />
+      </Fragment>
+    );
+  };
+
   return (
     <div className="thread-wrap">
       <div className="thread" ref={scrollerRef}>
@@ -145,24 +171,18 @@ export const Thread = memo(function Thread({
             mountedTurns={turnWindow.mounted.size}
           />
           <CommandDockContext value={remote ? null : detail.conversation.id}>
-            {turns.map(({ run, userMessage, assistantMessage, laterMessages }, index) => (
-              <Fragment key={run.id}>
-                {topics.before.get(run.id)?.map((topic) => (
-                  <AssistantTopicDivider key={topic.id} topic={topic} />
-                ))}
-                <TurnSection
-                  run={run}
-                  userMessage={userMessage}
-                  assistantMessage={assistantMessage}
-                  laterMessages={laterMessages}
-                  previous={turns[index - 1]?.run ?? null}
+            {roundBlocks(turns).map((block) =>
+              block.length < 2 ? (
+                turnOf(block[0]!.run)
+              ) : (
+                <RoundGroups
+                  key={block[0]!.run.id}
                   detail={detail}
-                  repo={repos[0] ?? null}
-                  onOpenChat={onOpenChat}
-                  deferred={!turnWindow.mounted.has(run.id)}
+                  runs={block.map((turn) => turn.run)}
+                  render={turnOf}
                 />
-              </Fragment>
-            ))}
+              ),
+            )}
             {topics.after.map((topic) => (
               <AssistantTopicDivider key={topic.id} topic={topic} />
             ))}

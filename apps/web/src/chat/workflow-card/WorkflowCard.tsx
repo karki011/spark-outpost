@@ -12,7 +12,10 @@ import { BellIcon, WorkflowIcon, XIcon } from '../../ui/icons.tsx';
 import { DockItem } from '../dock/DockItem.tsx';
 import type { QuotesState } from '../quotes/use-quotes.ts';
 import { GROUP_OVER } from '../pull-request/pr-card-model.ts';
+import { agentAnchor } from '../../crew/conversation-crew.ts';
+import { scrollToAnchor } from '../../crew/scroll-to-anchor.ts';
 import { useWorkflowCardFocus } from './card-focus.ts';
+import { revealStep } from './reveal-steps.ts';
 import { WorkflowPanel } from './WorkflowPanel.tsx';
 import {
   cardTurnIds,
@@ -25,6 +28,7 @@ import {
   shownOnCard,
   stays,
   stepMembers,
+  stepsDoing,
   SEVERITY_WORDS,
   type RunFinding,
 } from './workflow-card-model.ts';
@@ -114,7 +118,20 @@ function WorkflowEntry({ entry, detail, nested = false, onFix, onDismiss }: Entr
           </button>
         )
       }
-      panel={<WorkflowPanel run={run} members={members} approvals={approvals} onFix={onFix} />}
+      panel={
+        <WorkflowPanel
+          run={run}
+          members={members}
+          approvals={approvals}
+          doing={stepsDoing(detail, turnRunId)}
+          onFix={onFix}
+          onOpenStep={(runId) => {
+            const anchor = agentAnchor(turnRunId, runId);
+            revealStep(anchor);
+            scrollToAnchor(anchor);
+          }}
+        />
+      }
     />
   );
 }

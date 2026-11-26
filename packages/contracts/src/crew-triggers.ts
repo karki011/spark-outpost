@@ -26,6 +26,7 @@ export const workflowTriggersSchema = z.object({
   debounceMinutes: z.number().int().min(0).max(TRIGGER_DEBOUNCE_MAX).default(0),
   edits: z.boolean().default(false),
   updateBase: z.boolean().default(false),
+  quietWhenClean: z.boolean().default(false),
 });
 export type WorkflowTriggers = z.infer<typeof workflowTriggersSchema>;
 

@@ -83,7 +83,7 @@ function TurnBody({
     ? pickedMembers(sparkLed, workflow ? 'jobs' : 'all').map((member) => member.runId)
     : [];
   const runIds = turnRunIds(detail, run.id);
-  const soloHidden = sparkLed !== null && !mainAgentRan(sparkLed);
+  const soloHidden = run.workflowLane === true || (sparkLed !== null && !mainAgentRan(sparkLed));
   const work = (
     <>
       {run.agentCycle && <p className="on-its-own">Continued on its own</p>}
@@ -100,7 +100,7 @@ function TurnBody({
           placeSteers
         />
       )}
-      {sparkLed && !mainAgentRan(sparkLed) ? null : crew ? (
+      {soloHidden ? null : crew ? (
         <CrewTurn run={run} detail={detail} orchestration={crew} repo={repo} />
       ) : (
         <SoloTurn
@@ -114,9 +114,7 @@ function TurnBody({
           onOpenChat={onOpenChat}
         />
       )}
-      {sparkLed && !mainAgentRan(sparkLed) && (
-        <TurnSteers detail={detail} run={run} placedIn={steersPlacedIn} />
-      )}
+      {soloHidden && <TurnSteers detail={detail} run={run} placedIn={steersPlacedIn} />}
       <StartedLines starts={detail.subChatStarts} runIds={runIds} />
       <AskLines
         asks={detail.asks}
