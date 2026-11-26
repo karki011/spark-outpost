@@ -16,6 +16,7 @@ export const mcpOAuthSecret = (serverId: string): McpOAuthSecretId => `mcp-oauth
 export type ZoomSecretId = `zoom:${string}`;
 export const zoomSecret = (subject: string): ZoomSecretId => `zoom:${subject}`;
 export type ShareSecretId = `share:${string}`;
+export const CLOUDFLARE_UPLOAD_KEY_SECRET = 'cloudflare:upload-key';
 export const shareSecret = (shareId: string): ShareSecretId => `share:${shareId}`;
 export const googleCalendarSecret = (subject: string): GoogleCalendarSecretId =>
   `calendar:google:${subject}`;
@@ -37,6 +38,7 @@ export type SecretId =
   | MicrosoftCalendarSecretId
   | ZoomSecretId
   | ShareSecretId
+  | typeof CLOUDFLARE_UPLOAD_KEY_SECRET
   | RemoteSparkSecretId;
 
 export interface SecretStore {

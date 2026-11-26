@@ -56,6 +56,8 @@ export const WEB_BUILD_ENV = { VITE_SPARK_FEEDBACK_EMAIL: 'beta-feedback@example
 export const PACKAGED = process.env.SPARK_PACKAGED === '1';
 export const TEST_DATA_DIR = path.join(TEST_TMPDIR, 'data');
 export const APP_ORIGIN = `http://127.0.0.1:${PACKAGED ? API_PORT : WEB_PORT}`;
+export const OWN_SHARE_HOST = `localhost:${STUB_PORT}`;
+export const OWN_SHARE_UPLOAD_KEY = 'browser-spec-upload-key-0123456789abcdef';
 export const REJECTED_KEY_MARKER = 'rejected';
 export const X_API_KEY_MODEL = 'x-api-key-only';
 export const FAKE_CODEX_STATE = path.join(TEST_TMPDIR, 'fake-codex-logged-in');

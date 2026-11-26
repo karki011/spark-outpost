@@ -52,9 +52,12 @@ test('the user shares a version with a passcode, copies both, and stops sharing 
     'aria-checked',
     'false',
   );
-  await expect(confirm.getByRole('radio', { name: '7 days' })).toHaveAttribute(
-    'aria-checked',
-    'true',
+  await expect(confirm).toContainText('Shared from');
+  await expect(confirm).toContainText('Spark’s shared service');
+  await expect(confirm).toContainText('Expires in 1 day');
+  await expect(confirm.getByRole('radio')).toHaveCount(0);
+  await expect(confirm).toContainText(
+    'Links from Spark’s shared service last 1 day. Connect your own Cloudflare account for 7 days.',
   );
   await expect(confirm.getByRole('button', { name: 'Cancel' })).toBeFocused();
   for (let step = 0; step < 8; step++) {
@@ -67,7 +70,6 @@ test('the user shares a version with a passcode, copies both, and stops sharing 
 
   await share.click();
   await confirm.getByRole('switch', { name: 'Require a passcode' }).click();
-  await confirm.getByRole('radio', { name: '7 days' }).click();
   const sent = page.waitForRequest(
     (request) => request.method() === 'POST' && request.url().endsWith('/share'),
   );
@@ -120,7 +122,7 @@ test('Share… on a version already shared elsewhere opens its link with a note'
     const response = await fetch(path, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ expiresInDays: 7, passcode: false }),
+      body: JSON.stringify({ expiresInDays: 1, passcode: false }),
     });
     const body = (await response.json()) as { share: { url: string } };
     return { status: response.status, url: body.share.url };
@@ -158,16 +160,30 @@ test('an error from the share service shows in the sheet and makes no link', asy
   await expect(share).toBeFocused();
 });
 
-test('Share… is hidden when the build has no share service, and off for Markdown', async ({
+const NO_SERVICE = { available: false, service: null, host: null, days: [], share: null };
+
+test('Share… asks to connect Cloudflare when nothing can share, and is off for Markdown', async ({
   page,
 }) => {
   await page.route('**/api/artifacts/*/versions/*/share', (route) =>
-    route.fulfill({ json: { available: false, share: null } }),
+    route.fulfill({ json: NO_SERVICE }),
   );
   await publish(page, 'Quiet page');
-  const quiet = pane(page, 'Quiet page');
-  await expect(quiet.getByRole('button', { name: 'Copy' })).toBeVisible();
-  await expect(quiet.getByRole('button', { name: /^Share/ })).toHaveCount(0);
+  const quiet = pane(page, 'Quiet page').getByRole('button', { name: 'Share…' });
+  await quiet.click();
+  const prompt = page.getByRole('dialog', { name: 'Connect Cloudflare to share artifacts' });
+  await expect(prompt.getByRole('button', { name: 'Connect Cloudflare' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(prompt).toHaveCount(0);
+  await expect(quiet).toBeFocused();
+  await quiet.click();
+  await prompt.getByRole('button', { name: 'Connect Cloudflare' }).click();
+  await expect(page.getByRole('tab', { name: 'Connectors' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.getByLabel('Service address')).toBeVisible();
+  await page.keyboard.press('Escape');
 
   await page.unroute('**/api/artifacts/*/versions/*/share');
   await publish(page, 'Notes', 'markdown', '# Plan');
@@ -199,13 +215,12 @@ test('a link made earlier can still be stopped when the build has no share servi
   });
   await page.reload();
   await openPane(page, 'Old link');
-  await expect(old.getByRole('button', { name: 'Share…' })).toHaveCount(0);
   await old.getByRole('button', { name: 'Shared' }).click();
   await expect(shared.getByRole('textbox', { name: 'Link' })).toHaveValue(link);
   await expect(shared).toContainText('Ends ');
   await expect(shared).toContainText('The passcode was shown when the link was made.');
   await expect(shared).not.toContainText('share again.');
-  await expect(shared).toContainText('This build can’t make new links.');
+  await expect(shared).toContainText('Spark can’t make new links now.');
 
   const stopped = page.waitForResponse(
     (response) => response.request().method() === 'DELETE' && SHARE_STATUS.test(response.url()),
@@ -213,8 +228,10 @@ test('a link made earlier can still be stopped when the build has no share servi
   await shared.getByRole('button', { name: 'Stop sharing' }).click();
   expect((await stopped).status()).toBe(204);
   await expect(shared).toHaveCount(0);
-  await expect(old.getByRole('button', { name: /^Share/ })).toHaveCount(0);
-  await expect(old.getByRole('button', { name: 'Copy' })).toBeVisible();
+  await old.getByRole('button', { name: 'Share…' }).click();
+  const prompt = page.getByRole('dialog', { name: 'Connect Cloudflare to share artifacts' });
+  await prompt.getByRole('button', { name: 'Cancel' }).click();
+  await expect(prompt).toHaveCount(0);
 
   await page.unroute('**/api/artifacts/*/versions/*/share');
   await page.reload();
@@ -274,7 +291,9 @@ test('a status check that answers late does not hide the new link or its passcod
   await page.route('**/api/artifacts/*/versions/*/share', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     await held;
-    await route.fulfill({ json: { available: true, share: null } });
+    await route.fulfill({
+      json: { available: true, service: 'hosted', host: null, days: [1], share: null },
+    });
   });
   const recheck = page.waitForRequest(
     (request) => request.method() === 'GET' && SHARE_STATUS.test(request.url()),

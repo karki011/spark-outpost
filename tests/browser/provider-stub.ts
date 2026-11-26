@@ -3,7 +3,14 @@ import { fakeGitHub, type FakePull } from '../../apps/server/test/fake-github.ts
 import type { FakeGitHubApp } from '../../apps/server/test/fake-github-app.ts';
 import type { DevStatusMode, FakeDevelopment } from '../../apps/server/test/fake-jira-dev.ts';
 import { jevAnswers, type StubRequest } from './jev-stub.ts';
-import { REJECTED_KEY_MARKER, STUB_PORT, X_API_KEY_MODEL } from './stub-config.ts';
+import { ARTIFACT_SHARE_SERVICE_PATH } from '../../packages/contracts/src/index.ts';
+import {
+  OWN_SHARE_HOST,
+  OWN_SHARE_UPLOAD_KEY,
+  REJECTED_KEY_MARKER,
+  STUB_PORT,
+  X_API_KEY_MODEL,
+} from './stub-config.ts';
 import { SLACK_LEGACY_USER_SCOPES, fakeSlack } from '../../apps/server/test/fake-slack.ts';
 import { ticketFakes } from './ticket-stub.ts';
 import { handleGoogle, handlesGoogle } from './google-stub.ts';
@@ -65,6 +72,8 @@ shares.answer = (share) =>
   share.received.title.includes(BUSY_TITLE)
     ? { status: 429, body: { error: 'rate_limited' } }
     : null;
+const ownShares = fakeShareService();
+ownShares.uploadKey = OWN_SHARE_UPLOAD_KEY;
 
 async function updatePull(req: IncomingMessage, res: ServerResponse, number: number) {
   let text = '';
@@ -211,7 +220,10 @@ const server = createServer((req, res) => {
     return send(res, 200, { ok: true });
   }
   if (path && tickets.handles(path)) return void tickets.handle(req, res, path);
-  if (path?.startsWith('/v1/shares')) return void shares.handle(req, res);
+  if (path?.startsWith('/v1/shares') || path === ARTIFACT_SHARE_SERVICE_PATH) {
+    const service = req.headers.host === OWN_SHARE_HOST ? ownShares : shares;
+    return void service.handle(req, res);
+  }
   if (credential(req).includes(REJECTED_KEY_MARKER))
     return send(res, 401, { error: 'invalid key' });
   if (path === '/anthropic/v1/models') return send(res, 200, anthropicModels);

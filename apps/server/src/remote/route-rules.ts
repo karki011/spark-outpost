@@ -252,6 +252,11 @@ GET /api/zoom/status
 POST /api/zoom/sign-in
 DELETE /api/zoom/sign-in
 DELETE /api/zoom/account
+GET /api/cloudflare
+PUT /api/cloudflare
+PATCH /api/cloudflare
+POST /api/cloudflare/check
+DELETE /api/cloudflare
 GET /api/island/requests
 POST /api/island/requests/:id/claim
 GET /api/remote/access

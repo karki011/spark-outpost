@@ -13,6 +13,7 @@ import {
 import type { ShareEnv } from './env.ts';
 import { recordEvent } from './events.ts';
 import { emptyResponse, jsonError, jsonResponse } from './responses.ts';
+import { maxExpiryDays, mayUpload, unauthorized } from './service.ts';
 import {
   discardShare,
   existingShare,
@@ -60,7 +61,7 @@ function validTitle(value: unknown): value is string {
   return [...value].length <= MAX_TITLE_CHARS;
 }
 
-function parseCreate(text: string): Parsed {
+function parseCreate(text: string, maxDays: number): Parsed {
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -83,6 +84,7 @@ function parseCreate(text: string): Parsed {
   if (typeof expiresInDays !== 'number' || !EXPIRY_DAYS.includes(expiresInDays)) {
     return 'invalid_request';
   }
+  if (expiresInDays > maxDays) return 'invalid_request';
   if (passcode !== undefined && (typeof passcode !== 'string' || !PASSCODE.test(passcode))) {
     return 'invalid_request';
   }
@@ -153,6 +155,10 @@ export async function createShare(request: Request, env: ShareEnv, now: number) 
     recordEvent(env, 'create_rate_limited');
     return jsonError(429, 'rate_limited');
   }
+  if (!mayUpload(request, env)) {
+    recordEvent(env, 'create_unauthorized');
+    return unauthorized();
+  }
   const answer = await storeCreate(request, env, now);
   if (answer.status === 400 || answer.status === 413) recordEvent(env, 'create_rejected');
   return answer;
@@ -166,7 +172,7 @@ async function storeCreate(request: Request, env: ShareEnv, now: number) {
       ? jsonError(413, 'too_large')
       : jsonError(400, 'invalid_request');
   }
-  const parsed = parseCreate(body.text);
+  const parsed = parseCreate(body.text, maxExpiryDays(env));
   if (parsed === 'too_large') return jsonError(413, 'too_large');
   if (parsed === 'invalid_request') return jsonError(400, 'invalid_request');
   if (!(await ownsId(parsed.deleteToken, parsed.id))) return jsonError(400, 'invalid_request');

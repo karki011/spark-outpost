@@ -1,11 +1,11 @@
 import './artifact-share.css';
 import { useId, useState, type ReactNode } from 'react';
 import {
-  ARTIFACT_SHARE_DAYS,
   ARTIFACT_SHARE_DEFAULT_DAYS,
   displayPasscode,
   type ArtifactShare,
   type ArtifactShareDays,
+  type ArtifactShareService,
 } from '@spark-outpost/contracts';
 import { formatBytes } from '../../api/attachments.ts';
 import { Switch } from '../../ui/Switch.tsx';
@@ -40,21 +40,34 @@ interface ConfirmSheetProps {
   title: string;
   version: number;
   bytes: number;
+  service: ArtifactShareService | null;
+  host: string | null;
+  days: readonly number[];
   busy: boolean;
   failure: string | null;
   onCancel: () => void;
+  onConnect: () => void;
   onCreate: (choice: { expiresInDays: ArtifactShareDays; passcode: boolean }) => void;
 }
 
-const DAY_OPTIONS = ARTIFACT_SHARE_DAYS.map((days) => ({
-  id: String(days),
-  label: days === 1 ? '1 day' : `${days} days`,
-}));
+function dayCount(days: number): string {
+  return days === 1 ? '1 day' : `${days} days`;
+}
+
+function firstChoice(days: readonly number[]): number {
+  if (days.includes(ARTIFACT_SHARE_DEFAULT_DAYS)) return ARTIFACT_SHARE_DEFAULT_DAYS;
+  return days.at(-1) ?? ARTIFACT_SHARE_DEFAULT_DAYS;
+}
+
+export const HOSTED_LIMIT_LINE =
+  'Links from Spark’s shared service last 1 day. Connect your own Cloudflare account for 7 days.';
 
 export function ShareConfirmSheet(props: ConfirmSheetProps) {
   const ids = useId();
   const [passcode, setPasscode] = useState(false);
-  const [days, setDays] = useState<ArtifactShareDays>(ARTIFACT_SHARE_DEFAULT_DAYS);
+  const [chosen, setDays] = useState(() => firstChoice(props.days));
+  const days = props.days.includes(chosen) ? chosen : firstChoice(props.days);
+  const own = props.service === 'own';
   return (
     <ModalFrame
       className="ashare"
@@ -70,7 +83,7 @@ export function ShareConfirmSheet(props: ConfirmSheetProps) {
           <SheetButton
             className="btn primary sm"
             busy={props.busy}
-            onClick={() => props.onCreate({ expiresInDays: days, passcode })}
+            onClick={() => props.onCreate({ expiresInDays: days as ArtifactShareDays, passcode })}
           >
             {props.busy ? 'Creating link…' : 'Create link'}
           </SheetButton>
@@ -80,9 +93,16 @@ export function ShareConfirmSheet(props: ConfirmSheetProps) {
     >
       <h2 id={`${ids}title`}>Share “{props.title}”?</h2>
       <p className="ashare-lede">
-        This uploads version {props.version} ({formatBytes(props.bytes)}) to Spark’s share service.
-        Anyone with the link can open it.
+        This uploads version {props.version} ({formatBytes(props.bytes)}). Anyone with the link can
+        open it.
       </p>
+      <div className="ashare-row">
+        <b className="ashare-label">Shared from</b>
+        <span className="ashare-label ashare-from">
+          <b>{own ? 'Your Cloudflare account' : 'Spark’s shared service'}</b>
+          {own && props.host && <small>{props.host}</small>}
+        </span>
+      </div>
       <div className="ashare-row">
         <span className="ashare-label">
           <b>Require a passcode</b>
@@ -99,15 +119,27 @@ export function ShareConfirmSheet(props: ConfirmSheetProps) {
           onChange={setPasscode}
         />
       </div>
-      <div className="ashare-row">
-        <b className="ashare-label">Link ends after</b>
-        <Segmented
-          ariaLabel="Link ends after"
-          options={DAY_OPTIONS}
-          value={String(days)}
-          onChange={(id) => setDays(Number(id) as ArtifactShareDays)}
-        />
-      </div>
+      {props.days.length > 1 ? (
+        <div className="ashare-row">
+          <b className="ashare-label">Link ends after</b>
+          <Segmented
+            ariaLabel="Link ends after"
+            options={props.days.map((count) => ({ id: String(count), label: dayCount(count) }))}
+            value={String(days)}
+            onChange={(id) => setDays(Number(id))}
+          />
+        </div>
+      ) : (
+        <p className="ashare-row ashare-ends">Expires in {dayCount(days)}</p>
+      )}
+      {!own && (
+        <div className="ashare-row ashare-upsell">
+          <p className="ashare-note">{HOSTED_LIMIT_LINE}</p>
+          <SheetButton className="btn line sm" busy={props.busy} onClick={props.onConnect}>
+            Connect Cloudflare
+          </SheetButton>
+        </div>
+      )}
     </ModalFrame>
   );
 }
@@ -214,13 +246,47 @@ export function SharedSheet({
       )}
       {!canShareAgain && (
         <p className="ashare-note">
-          This build can’t make new links. After you stop sharing, this version can’t be shared
-          again from here.
+          Spark can’t make new links now. After you stop sharing, connect Cloudflare to share this
+          version again.
         </p>
       )}
       <p className="ashare-note">
         Ends {endDate(share.expiresAt)}
         {share.hasPasscode && ' · 5 wrong codes lock the link for 15 minutes'}
+      </p>
+    </ModalFrame>
+  );
+}
+
+interface ConnectSheetProps {
+  onCancel: () => void;
+  onConnect: () => void;
+}
+
+export function ShareConnectSheet({ onCancel, onConnect }: ConnectSheetProps) {
+  const ids = useId();
+  return (
+    <ModalFrame
+      className="ashare"
+      labelledBy={`${ids}title`}
+      describedBy={`${ids}text`}
+      footClassName="ashare-foot"
+      foot={
+        <>
+          <button type="button" className="btn line sm" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className="btn primary sm" data-autofocus onClick={onConnect}>
+            Connect Cloudflare
+          </button>
+        </>
+      }
+      onClose={onCancel}
+    >
+      <h2 id={`${ids}title`}>Connect Cloudflare to share artifacts</h2>
+      <p id={`${ids}text`} className="ashare-lede">
+        Shared pages are stored in your own Cloudflare account and served from your address. Set it
+        up in Settings → Connectors.
       </p>
     </ModalFrame>
   );

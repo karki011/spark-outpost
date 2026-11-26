@@ -1,0 +1,2 @@
+UPLOAD_KEY= # The key Spark Outpost sends to upload a page: openssl rand -hex 32
+SIGNING_KEY= # Signs page frames and unlock cookies, 32 characters or more: openssl rand -base64 48

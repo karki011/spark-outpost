@@ -1,14 +1,16 @@
 import { Router, type Request, type Response } from 'express';
 import {
+  artifactShareDaysFor,
   createArtifactShareRequestSchema,
   type ArtifactShareStatus,
 } from '@spark-outpost/contracts';
-import { parseBody } from '../api/validation.ts';
+import { BadRequestError, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import { ShareDocumentError } from './share-document.ts';
 import { ShareServiceError, type ShareService } from './share-service.ts';
 import { liveShare } from './share-store.ts';
+import { shareTarget, storedUploadKey, type ShareTarget } from './share-target.ts';
 import { shownVersion } from './routes.ts';
 import {
   AlreadySharedError,
@@ -29,6 +31,10 @@ export interface ArtifactShareRouteDeps {
 }
 
 const UNAVAILABLE = 'Sharing is not set up in this build of Spark.';
+const HOSTED_DAYS =
+  'Links from Spark’s shared service last 1 day. Connect your own Cloudflare account for 7 days.';
+const NO_UPLOAD_KEY =
+  'Spark can’t read your share service’s upload key from the keychain. Connect Cloudflare again in Settings.';
 
 function failed(res: Response, error: unknown): void {
   if (error instanceof AlreadySharedError) {
@@ -51,10 +57,9 @@ export function artifactShareRoutes({
 }: ArtifactShareRouteDeps): Router {
   const router = Router();
   const stopDeps: StopDeps | null = shareService ? { db, secrets, service: shareService } : null;
-  const deps: ShareDeps | null =
-    stopDeps && shareService?.origin && chatFolders
-      ? { ...stopDeps, origin: shareService.origin, chatFolders }
-      : null;
+
+  const target = async (): Promise<ShareTarget | null> =>
+    stopDeps && chatFolders ? shareTarget(db, workspaceId, stopDeps.service.origin) : null;
 
   const shown = async (req: Request, res: Response): Promise<StoredVersion | null> => {
     const stored = await shownVersion(db, workspaceId, req);
@@ -62,24 +67,15 @@ export function artifactShareRoutes({
     return stored;
   };
 
-  const sharing = async <Deps>(
-    deps: Deps | null,
-    req: Request,
-    res: Response,
-  ): Promise<{ deps: Deps; stored: StoredVersion } | null> => {
-    if (!deps) {
-      res.status(503).json({ error: UNAVAILABLE });
-      return null;
-    }
-    const stored = await shown(req, res);
-    return stored ? { deps, stored } : null;
-  };
-
   router.get('/artifacts/:id/versions/:version/share', async (req, res) => {
     const stored = await shown(req, res);
     if (!stored) return;
+    const to = await target();
     const status: ArtifactShareStatus = {
-      available: deps !== null,
+      available: to !== null,
+      service: to?.service ?? null,
+      host: to ? new URL(to.origin).host : null,
+      days: to ? [...artifactShareDaysFor(to.service)] : [],
       share: await liveShare(db, stored.artifactId, stored.version),
     };
     res.set('Cache-Control', 'no-store').json(status);
@@ -87,10 +83,24 @@ export function artifactShareRoutes({
 
   router.post('/artifacts/:id/versions/:version/share', async (req, res) => {
     const choice = parseBody(createArtifactShareRequestSchema, req);
-    const target = await sharing(deps, req, res);
-    if (!target) return;
+    const to = await target();
+    if (!to || !stopDeps || !chatFolders) {
+      res.status(503).json({ error: UNAVAILABLE });
+      return;
+    }
+    const stored = await shown(req, res);
+    if (!stored) return;
+    if (!artifactShareDaysFor(to.service).includes(choice.expiresInDays)) {
+      throw new BadRequestError(HOSTED_DAYS);
+    }
+    const uploadKey = to.service === 'own' ? await storedUploadKey(secrets) : null;
+    if (to.service === 'own' && !uploadKey) {
+      res.status(409).json({ error: NO_UPLOAD_KEY });
+      return;
+    }
+    const deps: ShareDeps = { ...stopDeps, origin: to.origin, uploadKey, chatFolders };
     try {
-      const created = await createShare(target.deps, target.stored, choice);
+      const created = await createShare(deps, stored, choice);
       res.set('Cache-Control', 'no-store').status(201).json(created);
     } catch (error) {
       failed(res, error);
@@ -98,10 +108,14 @@ export function artifactShareRoutes({
   });
 
   router.delete('/artifacts/:id/versions/:version/share', async (req, res) => {
-    const target = await sharing(stopDeps, req, res);
-    if (!target) return;
+    if (!stopDeps) {
+      res.status(503).json({ error: UNAVAILABLE });
+      return;
+    }
+    const stored = await shown(req, res);
+    if (!stored) return;
     try {
-      await stopShare(target.deps, target.stored);
+      await stopShare(stopDeps, stored);
       res.status(204).end();
     } catch (error) {
       failed(res, error);

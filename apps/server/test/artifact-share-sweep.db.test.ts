@@ -19,7 +19,7 @@ async function shared(): Promise<{ id: string; shareId: string }> {
   const id = await s.publish('html', HTML);
   const made = await s
     .client()
-    .send('post', sharePath(id), { expiresInDays: 7, passcode: false })
+    .send('post', sharePath(id), { expiresInDays: 1, passcode: false })
     .expect(201);
   return { id, shareId: made.body.share.shareId as string };
 }

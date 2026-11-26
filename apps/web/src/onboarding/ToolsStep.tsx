@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { ConnectorId } from '../brand/ConnectorMark.tsx';
-import { takeCalendarCardRequest, useCalendarCardRequests } from '../calendar/calendar-open.ts';
 import { CalendarCard } from '../calendar/CalendarCard.tsx';
-import { CALENDAR_PATH, ChevronIcon, VideoIcon } from '../ui/icons.tsx';
+import { CloudflareCard } from '../cloudflare/CloudflareCard.tsx';
+import {
+  takeConnectorCardRequest,
+  useConnectorCardRequests,
+} from '../connectors/connector-open.ts';
+import { CALENDAR_PATH, ChevronIcon, CloudIcon, VideoIcon } from '../ui/icons.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { SLACK_DESCRIPTION, SlackCard } from '../slack/SlackCard.tsx';
 import { ATLASSIAN_DESCRIPTION, AtlassianCard } from '../tickets/AtlassianCard.tsx';
@@ -104,12 +108,10 @@ const CALENDAR_ICON = (
 );
 
 export function ConnectorGrid({ paged = false }: { paged?: boolean }) {
-  const [openId, setOpenId] = useState<string | null>(() =>
-    takeCalendarCardRequest() ? 'calendar' : null,
-  );
+  const [openId, setOpenId] = useState<string | null>(takeConnectorCardRequest);
   const [returnTo, setReturnTo] = useState<{ id: string } | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  useCalendarCardRequests(useCallback(() => setOpenId('calendar'), []));
+  useConnectorCardRequests(useCallback((id: ConnectorId) => setOpenId(id), []));
   useEffect(() => {
     if (!returnTo) return;
     listRef.current
@@ -202,6 +204,11 @@ function ConnectorList({ listRef, paged, openId, toggle }: ConnectorListProps) {
         onToggle={() => toggle('calendar')}
       />
       <ZoomCard icon={<VideoIcon />} open={openId === 'zoom'} onToggle={() => toggle('zoom')} />
+      <CloudflareCard
+        icon={<CloudIcon />}
+        open={openId === 'cloudflare'}
+        onToggle={() => toggle('cloudflare')}
+      />
     </ul>
   );
 }

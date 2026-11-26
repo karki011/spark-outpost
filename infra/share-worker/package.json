@@ -1,0 +1,29 @@
+{
+  "name": "spark-outpost-share",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hosts the pages people share from Spark Outpost.",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "4.168.0"
+  },
+  "cloudflare": {
+    "label": "Spark Outpost share service",
+    "products": [
+      "Workers",
+      "R2",
+      "Durable Objects"
+    ],
+    "bindings": {
+      "UPLOAD_KEY": {
+        "description": "The key Spark Outpost must send to upload a page: 32 to 128 letters, digits, - or _, for example from `openssl rand -hex 32`. Paste the same value into Spark Outpost."
+      },
+      "SIGNING_KEY": {
+        "description": "A random value of at least 32 characters that signs page frames and unlock cookies, for example from `openssl rand -base64 48`. Nothing else needs it."
+      }
+    }
+  }
+}

@@ -35,17 +35,20 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     const client = s.client();
     expect((await client.get(sharePath(id)).expect(200)).body).toEqual({
       available: true,
+      service: 'hosted',
+      host: new URL(s.origin).host,
+      days: [1],
       share: null,
     });
 
     const created = await client
-      .send('post', sharePath(id), { expiresInDays: 7, passcode: false })
+      .send('post', sharePath(id), { expiresInDays: 1, passcode: false })
       .expect(201);
 
     expect(created.headers['cache-control']).toBe('no-store');
     expect(created.body.passcode).toBeNull();
     const [sent] = s.fake.posts;
-    expect(sent).toMatchObject({ title: 'Deploy failures', html: HTML, expiresInDays: 7 });
+    expect(sent).toMatchObject({ title: 'Deploy failures', html: HTML, expiresInDays: 1 });
     expect(sent!.keys).toEqual(['deleteToken', 'expiresInDays', 'html', 'id', 'title']);
     expect(sent!.id).toMatch(ARTIFACT_SHARE_ID_PATTERN);
     expect(sent!.deleteToken).toMatch(ARTIFACT_SHARE_DELETE_TOKEN_PATTERN);
@@ -56,8 +59,8 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     expect(share).toMatchObject({ shareId: sent!.id, version: 1, hasPasscode: false });
     expect(share.url).toBe(`${s.origin}/a/${share.shareId}`);
     const days = (Date.parse(share.expiresAt) - Date.now()) / 86_400_000;
-    expect(days).toBeGreaterThan(6.9);
-    expect(days).toBeLessThanOrEqual(7);
+    expect(days).toBeGreaterThan(0.9);
+    expect(days).toBeLessThanOrEqual(1);
 
     expect((await client.get(sharePath(id)).expect(200)).body.share).toEqual(share);
     const [audit] = await auditEntries('spark/artifact_share');
@@ -98,7 +101,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
 
     await client
       .send('post', sharePath(id), {
-        expiresInDays: 7,
+        expiresInDays: 1,
         passcode: false,
         theme: { ...theme, accent: 'url(https://example.com)' },
       })
@@ -106,7 +109,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     expect(s.fake.posts).toHaveLength(0);
 
     await client
-      .send('post', sharePath(id), { expiresInDays: 7, passcode: false, theme })
+      .send('post', sharePath(id), { expiresInDays: 1, passcode: false, theme })
       .expect(201);
     expect((s.fake.posts[0] as unknown as { theme: unknown }).theme).toEqual(theme);
   });
@@ -115,7 +118,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     const id = await s.publish('html', HTML);
     const client = s.client();
     const created = await client
-      .send('post', sharePath(id), { expiresInDays: 7, passcode: true })
+      .send('post', sharePath(id), { expiresInDays: 1, passcode: true })
       .expect(201);
 
     const code = created.body.passcode as string;
@@ -129,7 +132,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     expect(await s.rows('run_events')).not.toContain(code);
 
     const again = await client
-      .send('post', sharePath(id), { expiresInDays: 7, passcode: true })
+      .send('post', sharePath(id), { expiresInDays: 1, passcode: true })
       .expect(409);
     expect(again.body).toEqual({
       error:
@@ -143,7 +146,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     const id = await s.publish('html', HTML);
     const client = s.client();
     const first = await client
-      .send('post', sharePath(id), { expiresInDays: 7, passcode: false })
+      .send('post', sharePath(id), { expiresInDays: 1, passcode: false })
       .expect(201);
     const second = await client
       .send('post', sharePath(id), { expiresInDays: 1, passcode: true })
@@ -177,7 +180,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
   it('uploads once when two identical creates arrive together, and both succeed', async () => {
     const id = await s.publish('html', HTML);
     const client = s.client();
-    const body = { expiresInDays: 7, passcode: true };
+    const body = { expiresInDays: 1, passcode: true };
     s.fake.uploadMs = 300;
     const [first, second] = await Promise.all([
       client.send('post', sharePath(id), body),
@@ -192,6 +195,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
 
   it('answers a different create that arrives during the upload with the new link', async () => {
     const id = await s.publish('html', HTML);
+    await s.connectOwn();
     const client = s.client();
     s.fake.uploadMs = 300;
     const answers = await Promise.all([
@@ -228,7 +232,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
   it('stops sharing with the delete token, and still forgets a link the service lost', async () => {
     const id = await s.publish('html', HTML);
     const client = s.client();
-    const made = await client.send('post', sharePath(id), { expiresInDays: 7, passcode: false });
+    const made = await client.send('post', sharePath(id), { expiresInDays: 1, passcode: false });
     const { shareId } = made.body.share;
     const token = s.fake.shares.get(shareId)!.deleteToken;
 
@@ -241,7 +245,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
     expect(audit).toMatchObject({ artifactId: id, version: 1, shareId });
     expect(JSON.stringify(audit)).not.toContain(token);
 
-    const again = await client.send('post', sharePath(id), { expiresInDays: 7, passcode: false });
+    const again = await client.send('post', sharePath(id), { expiresInDays: 1, passcode: false });
     s.fake.shares.clear();
     await client.send('delete', sharePath(id)).expect(204);
     expect(s.fake.deletes.at(-1)!.id).toBe(again.body.share.shareId);
@@ -273,7 +277,7 @@ describe('sharing an artifact', { timeout: 30_000 }, () => {
   it('takes the shared page down when its chat is deleted', async () => {
     const id = await s.publish('html', HTML);
     const client = s.client();
-    const made = await client.send('post', sharePath(id), { expiresInDays: 7, passcode: false });
+    const made = await client.send('post', sharePath(id), { expiresInDays: 1, passcode: false });
     const { shareId } = made.body.share;
 
     await client

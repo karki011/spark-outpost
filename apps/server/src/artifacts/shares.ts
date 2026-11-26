@@ -43,6 +43,7 @@ export interface StopDeps {
 
 export interface ShareDeps extends StopDeps {
   origin: string;
+  uploadKey: string | null;
   chatFolders: string;
 }
 
@@ -227,15 +228,20 @@ async function upload(
     throw error;
   });
   try {
-    const expiresAt = await uploadShare(deps.service, deps.origin, {
-      id,
-      deleteToken,
-      title: stored.title,
-      html,
-      expiresInDays: choice.expiresInDays,
-      passcode,
-      theme: choice.theme ?? null,
-    });
+    const expiresAt = await uploadShare(
+      deps.service,
+      deps.origin,
+      {
+        id,
+        deleteToken,
+        title: stored.title,
+        html,
+        expiresInDays: choice.expiresInDays,
+        passcode,
+        theme: choice.theme ?? null,
+      },
+      deps.uploadKey,
+    );
     const share = await withTransaction(deps.db, async (client) => {
       const live = await markShareLive(client, id, expiresAt);
       if (!live) throw new ShareRefusedError(NOT_SAVED);

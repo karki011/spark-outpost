@@ -11,7 +11,8 @@ export type ShareEvent =
   | 'report_filed'
   | 'create_rate_limited'
   | 'create_global_limited'
-  | 'create_rejected';
+  | 'create_rejected'
+  | 'create_unauthorized';
 
 export interface EventPoint {
   indexes: string[];

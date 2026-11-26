@@ -101,7 +101,13 @@ class FakeStorage implements CounterStorage {
 }
 
 export function fakeEnv(
-  options: { signingKey?: string | null; pageSize?: number; events?: EventDataset } = {},
+  options: {
+    signingKey?: string | null;
+    pageSize?: number;
+    events?: EventDataset;
+    uploadKey?: string;
+    maxExpiryDays?: string;
+  } = {},
 ) {
   const bucket = new FakeBucket(options.pageSize ?? 1000);
   const storages = new Map<string, FakeStorage>();
@@ -134,6 +140,8 @@ export function fakeEnv(
     },
     ...(signingKey === null ? {} : { SIGNING_KEY: signingKey }),
     ...(options.events ? { EVENTS: options.events } : {}),
+    ...(options.uploadKey === undefined ? {} : { UPLOAD_KEY: options.uploadKey }),
+    ...(options.maxExpiryDays === undefined ? {} : { MAX_EXPIRY_DAYS: options.maxExpiryDays }),
   };
   const alarm = async (name: string) => counters.get(name)?.alarm();
   return { env, bucket, storages, alarm };
