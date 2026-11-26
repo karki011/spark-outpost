@@ -147,9 +147,9 @@ describe('SparkSwitcher', () => {
     expect(document.activeElement).toBe(own);
     const items = within(menu).getAllByRole('menuitem');
     expect(items.map((item) => item.textContent)).toEqual([
-      'Studio MacOnline2 waiting',
-      'Attic MacOffline1 waiting',
-      'Cellar MacNot paired yet',
+      'SStudio MacOnline2 waiting',
+      'AAttic MacOffline1 waiting',
+      'CCellar MacNot paired yet',
       'Add a Spark…',
       'Manage Sparks…',
     ]);
@@ -217,7 +217,8 @@ describe('SparkSwitcher', () => {
       name: `${name}. 3 requests waiting on other Sparks`,
     });
     expect(button.querySelector('img')?.getAttribute('src')).toBe(icon);
-    expect(button.querySelector('.rs-switch-name')?.textContent).toBe(name);
+    expect(button.querySelector('.rs-switch-name')?.textContent).toBe('This Mac');
+    expect(button.getAttribute('title')).toBe(name);
     fireEvent.click(button);
     const menu = screen.getByRole('menu', { name: 'Sparks' });
     const own = within(menu).getByRole('menuitemradio', { name });
@@ -225,7 +226,17 @@ describe('SparkSwitcher', () => {
     const [studio, attic] = within(menu).getAllByRole('menuitem');
     expect(studio!.querySelector('img')?.getAttribute('src')).toBe(studioIcon);
     expect(attic!.querySelector('img')).toBeNull();
-    expect(attic!.querySelector('.rs-icon svg')).toBeTruthy();
+    expect(attic!.querySelector('.rs-icon')?.textContent).toBe('A');
+  });
+
+  it('shows initials for a named Mac with no icon and the laptop for an unnamed one', async () => {
+    serve({ available: true, local: { ...LOCAL, name: 'Hazel’s Mac' }, sparks: [STUDIO] });
+    await show();
+    const named = screen.getByRole('button', {
+      name: 'Hazel’s Mac. 2 requests waiting on other Sparks',
+    });
+    expect(named.querySelector('.rs-icon')?.textContent).toBe('H');
+    expect(named.querySelector('.rs-switch-name')?.textContent).toBe('This Mac');
   });
 
   it('keeps the laptop and This Mac while this Mac has no name or icon of its own', async () => {

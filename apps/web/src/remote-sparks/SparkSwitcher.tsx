@@ -74,8 +74,8 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
         title={own.name ?? undefined}
         onClick={() => (anchor ? closeMenu() : openMenu())}
       >
-        <SparkIcon icon={own.icon} size={BUTTON_ICON_SIZE} />
-        <span className="rs-switch-name">{name}</span>
+        <SparkIcon icon={own.icon} size={BUTTON_ICON_SIZE} name={own.name} />
+        <span className="rs-switch-name">{thisComputer(hostWords().computer)}</span>
         {total > 0 && (
           <i className="rbadge" aria-hidden="true">
             {total}
@@ -96,7 +96,7 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
           onClose={closeMenu}
         >
           <MenuItem
-            icon={<SparkIcon icon={own.icon} size={MENU_ICON_SIZE} />}
+            icon={<SparkIcon icon={own.icon} size={MENU_ICON_SIZE} name={own.name} />}
             label={name}
             checked
             onSelect={closeMenu}
@@ -104,7 +104,7 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
           {sparks.map((spark) => (
             <MenuItem
               key={spark.id}
-              icon={<SparkIcon icon={spark.icon} size={MENU_ICON_SIZE} />}
+              icon={<SparkIcon icon={spark.icon} size={MENU_ICON_SIZE} name={spark.name} />}
               label={spark.name}
               trailing={<SparkStatus spark={spark} />}
               onSelect={() => {

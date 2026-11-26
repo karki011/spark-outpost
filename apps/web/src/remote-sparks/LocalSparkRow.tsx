@@ -36,7 +36,7 @@ export function LocalSparkRow({ local }: { local: LocalSpark }) {
   const problem = clearName.error?.message ?? icon.problem;
   return (
     <li className="rs-row">
-      <SparkIcon icon={local.icon} size={ROW_ICON_SIZE} />
+      <SparkIcon icon={local.icon} size={ROW_ICON_SIZE} name={local.name} />
       <div className="ph-device-body rs-body">
         {renaming ? (
           <RenameForm

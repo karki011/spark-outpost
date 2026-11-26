@@ -34,7 +34,7 @@ export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
   const problem = open.error?.message ?? icon.problem;
   return (
     <li className="rs-row">
-      <SparkIcon icon={spark.icon} size={ROW_ICON_SIZE} />
+      <SparkIcon icon={spark.icon} size={ROW_ICON_SIZE} name={spark.name} />
       <div className="ph-device-body rs-body">
         {renaming ? (
           <RenameForm
