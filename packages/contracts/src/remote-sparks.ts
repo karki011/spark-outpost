@@ -1,10 +1,14 @@
 import { z } from 'zod';
 import { REMOTE_DEVICE_NAME_MAX, remoteHostnameSchema, type RemoteDeviceKind } from './remote.ts';
 import { parseUrl } from './url.ts';
+import type { AttentionList } from './attention-items.ts';
 
 export const REMOTE_SPARK_NAME_MAX = 60;
 export const REMOTE_SPARK_COOKIE_MAX = 512;
 export const REMOTE_SPARK_PARTITION_PREFIX = 'spark-remote-';
+export const REMOTE_SPARK_WATCH_MS = 60_000;
+export const REMOTE_SPARK_NEEDS_YOU_MAX = 999;
+export const REMOTE_SPARKS_MAX = 50;
 
 export const remoteReachSchema = z.enum(['tailscale']);
 export type RemoteReach = z.infer<typeof remoteReachSchema>;
@@ -33,12 +37,33 @@ export const REMOTE_DEVICE_KIND_LABELS: Record<RemoteDeviceKind, string> = {
 const sparkName = z.string().trim().min(1).max(REMOTE_SPARK_NAME_MAX);
 const pairingCode = z.string().regex(/^[0-9A-Za-z-]{1,40}$/);
 
+export const remoteSparkStatusSchema = z.enum(['not-paired', 'checking', 'online', 'offline']);
+export type RemoteSparkStatus = z.infer<typeof remoteSparkStatusSchema>;
+
+export const REMOTE_SPARK_STATUS_LABELS: Record<RemoteSparkStatus, string> = {
+  'not-paired': 'Not paired yet',
+  checking: 'Checking',
+  online: 'Online',
+  offline: 'Offline',
+};
+
+const needsYou = z.number().int().min(0).max(REMOTE_SPARK_NEEDS_YOU_MAX);
+
+export function remoteNeedsYou(list: AttentionList): number {
+  const waiting = list.items.filter(
+    (item) => item.blocking && !item.readAt && !item.setAsideAt && !item.dismissedAt,
+  ).length;
+  return Math.min(waiting, REMOTE_SPARK_NEEDS_YOU_MAX);
+}
+
 export const remoteSparkSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   hostname: z.string(),
   reach: remoteReachSchema,
   paired: z.boolean(),
+  status: remoteSparkStatusSchema,
+  needsYou,
   createdAt: z.string(),
   lastOpenedAt: z.string().nullable(),
 });
@@ -148,6 +173,12 @@ export const remoteSparkBridgeToHostSchema = z.discriminatedUnion('kind', [
     cookie: cookieValue.nullable(),
   }),
   z.object({ kind: z.literal('remote-spark:close'), id: z.uuid() }),
+  z.object({
+    kind: z.literal('remote-spark:watch'),
+    sparks: z
+      .array(z.object({ id: z.uuid(), hostname: remoteHostnameSchema, cookie: cookieValue }))
+      .max(REMOTE_SPARKS_MAX),
+  }),
 ]);
 export type RemoteSparkBridgeToHost = z.infer<typeof remoteSparkBridgeToHostSchema>;
 
@@ -159,5 +190,11 @@ export const remoteSparkBridgeFromHostSchema = z.discriminatedUnion('kind', [
     value: cookieValue,
   }),
   z.object({ kind: z.literal('remote-spark:signed-out'), id: z.uuid() }),
+  z.object({
+    kind: z.literal('remote-spark:status'),
+    id: z.uuid(),
+    status: z.enum(['online', 'offline']),
+    needsYou,
+  }),
 ]);
 export type RemoteSparkBridgeFromHost = z.infer<typeof remoteSparkBridgeFromHostSchema>;

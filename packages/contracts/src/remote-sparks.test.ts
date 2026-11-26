@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   fragmentValue,
   parseSparkAddress,
+  remoteNeedsYou,
   reachOfHostname,
   remoteSparkBridgeFromHostSchema,
   remoteSparkBridgeToHostSchema,
@@ -123,6 +124,63 @@ describe('bridge messages', () => {
     expect(remoteSparkBridgeFromHostSchema.safeParse({ ...cookie, value: '' }).success).toBe(false);
     expect(
       remoteSparkBridgeFromHostSchema.safeParse({ ...cookie, value: 'v'.repeat(513) }).success,
+    ).toBe(false);
+  });
+});
+
+describe('remoteNeedsYou', () => {
+  const item = (over: Record<string, unknown>) => ({
+    key: 'approval:1',
+    kind: 'approval' as const,
+    blocking: true,
+    conversationId: null,
+    detail: null,
+    at: '2026-11-25T00:00:00.000Z',
+    readAt: null,
+    setAsideAt: null,
+    dismissedAt: null,
+    ...over,
+  });
+
+  it('counts waiting cards and Terminal waits, never updates or handled items', () => {
+    const list = {
+      items: [
+        item({}),
+        item({ kind: 'terminal' }),
+        item({ kind: 'run-done', blocking: false }),
+        item({ readAt: '2026-11-25T00:01:00.000Z' }),
+        item({ setAsideAt: '2026-11-25T00:01:00.000Z' }),
+        item({ dismissedAt: '2026-11-25T00:01:00.000Z' }),
+      ],
+    };
+    expect(remoteNeedsYou(list)).toBe(2);
+  });
+
+  it('stops at the largest count a status can carry', () => {
+    expect(remoteNeedsYou({ items: Array.from({ length: 1200 }, () => item({})) })).toBe(999);
+  });
+});
+
+describe('watch and status messages', () => {
+  it('accepts a watch list of paired Sparks and a status for one', () => {
+    const spark = { id: ID, hostname: 'studio.tail1234.ts.net', cookie: 'abc' };
+    expect(
+      remoteSparkBridgeToHostSchema.safeParse({ kind: 'remote-spark:watch', sparks: [spark] })
+        .success,
+    ).toBe(true);
+    expect(
+      remoteSparkBridgeToHostSchema.safeParse({
+        kind: 'remote-spark:watch',
+        sparks: [{ ...spark, cookie: '' }],
+      }).success,
+    ).toBe(false);
+    const status = { kind: 'remote-spark:status', id: ID, status: 'online', needsYou: 3 };
+    expect(remoteSparkBridgeFromHostSchema.safeParse(status).success).toBe(true);
+    expect(remoteSparkBridgeFromHostSchema.safeParse({ ...status, needsYou: -1 }).success).toBe(
+      false,
+    );
+    expect(
+      remoteSparkBridgeFromHostSchema.safeParse({ ...status, status: 'signed-out' }).success,
     ).toBe(false);
   });
 });
