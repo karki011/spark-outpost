@@ -8,6 +8,11 @@ export const saveMapNoteActionSchema = z.object({
   area: z.string(),
   text: z.string(),
   sources: z.array(
-    z.object({ path: z.string(), startLine: z.number().int(), endLine: z.number().int() }),
+    z.object({
+      path: z.string(),
+      startLine: z.number().int().min(1),
+      endLine: z.number().int().min(1),
+      hash: z.string(),
+    }),
   ),
 });

@@ -2,7 +2,7 @@ import { rm } from 'node:fs/promises';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SPARK_ACTION_OPTION } from '@spark-outpost/contracts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
-import { AreaNoteError, readAreaNote, saveAreaNote } from '../src/map/area-notes.ts';
+import { AreaNoteError, checkAreaNote, readAreaNote, saveAreaNote } from '../src/map/area-notes.ts';
 import { projectMap } from '../src/map/read-store.ts';
 import { addProject, fakeJev, git, mapBuilder, writeFiles, writeRepo } from './map-support.ts';
 import {
@@ -98,6 +98,20 @@ describe('area explanations', () => {
     expect(later?.changedSince).toEqual(['server/orders.ts']);
   });
 
+  it('refuses a source whose file changed after the explanation was written', async () => {
+    const areaId = await areaHolding('server/orders.ts');
+    const source = { path: 'server/orders.ts', startLine: 1, endLine: 1 };
+    const written = await checkAreaNote(t.db, note(areaId, [source]));
+    await writeFiles(root, { 'server/orders.ts': 'export const orders = 2;\n' });
+    git(root, 'commit', '-qam', 'change orders');
+    await build();
+
+    await expect(
+      saveAreaNote(t.db, note(areaId, [{ ...source, hash: written.sources[0]!.hash }])),
+    ).rejects.toThrow(/changed after this explanation was written/);
+    expect(await readAreaNote(t.db, root, areaId)).toBeNull();
+  });
+
   it('replaces the earlier explanation for the same area', async () => {
     const areaId = await areaHolding('server/orders.ts');
     const source = [{ path: 'server/orders.ts', startLine: 1, endLine: 1 }];
@@ -123,6 +137,9 @@ describe('area explanations', () => {
     );
     await expect(save([{ path: 'store/db.ts', startLine: 1, endLine: 1 }])).rejects.toThrow(
       /from this area/,
+    );
+    await expect(save([{ path: 'server/orders.ts', startLine: 0, endLine: 1 }])).rejects.toThrow(
+      /outside it/,
     );
     await expect(save([{ path: '../outside.ts', startLine: 1, endLine: 1 }])).rejects.toThrow(
       /outside the project/,
@@ -220,6 +237,18 @@ describe('spark_map_note', { timeout: 60_000 }, () => {
     });
     expect(card.payload.sparkResult).toMatchObject({ state: 'done' });
     expect((await readAreaNote(t.db, root, areaId))?.text).toBe(args.text);
+  });
+
+  it('keeps a secret in the text out of the card', async () => {
+    const areaId = await areaHolding('server/orders.ts');
+    const harness = await openInChat();
+    const token = `ghp_${'a1B2c3D4e5F6'.repeat(3)}`;
+
+    await harness.call('spark_map_note', { ...args, area: areaId, text: `Uses ${token} to list.` });
+
+    const cards = await t.db.query<{ payload: unknown }>('SELECT payload FROM approvals');
+    expect(cards.rowCount).toBe(1);
+    expect(JSON.stringify(cards.rows[0]!.payload)).not.toContain(token);
   });
 
   it('saves nothing when the user declines', async () => {

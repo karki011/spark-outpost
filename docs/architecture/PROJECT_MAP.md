@@ -209,7 +209,9 @@ runs at once or waits on a card showing the project, area, text and cited lines;
 to read-only turns. Sources are checked before any card and again when it is saved
 (`map/area-notes.ts`): each path is normalised and must stay inside the project, be a file on the
 map with a line range inside it, and not be a secret or `.sparkignore` path; at least one must be
-in the area. Saving replaces the area's earlier explanation. On read, a source whose file's
+in the area. The card carries the redacted text and each source's `content_hash` as read
+(line counts and hashes both come from the `code_index_files` row); a source whose file changed
+before the save is refused. Saving replaces the area's earlier explanation. On read, a source whose file's
 `content_hash` differs from the saved one (or is gone) is listed as changed, and the result says
 the explanation is out of date and that the code is the authority. The explanation is returned
 inside an untrusted `<map_explanation>` block (`untrustedEvidence`), and the server instructions

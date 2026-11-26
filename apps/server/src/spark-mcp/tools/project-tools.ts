@@ -216,27 +216,31 @@ async function saveNote(
 ) {
   const project = await findProject(context, args.project);
   const { area } = await findArea(context, project, args.area);
-  try {
-    await checkAreaNote(context.deps.db, {
-      root: project.rootPath,
-      areaId: area.id,
-      text: args.text,
-      sources: args.sources,
-      ignore: await readIgnore(project.rootPath),
-      conversationId: context.scope.conversationId,
-    });
-  } catch (error) {
-    if (error instanceof AreaNoteError) throw new SparkToolError(error.message);
-    throw error;
-  }
+  const checked = await checkAreaNote(context.deps.db, {
+    root: project.rootPath,
+    areaId: area.id,
+    text: args.text,
+    sources: args.sources,
+    ignore: await readIgnore(project.rootPath),
+    conversationId: context.scope.conversationId,
+  }).catch((error: unknown) => {
+    throw error instanceof AreaNoteError
+      ? new SparkToolError(error.message, { cause: error })
+      : error;
+  });
   return proposeAction(context, {
     action: 'save_map_note',
     projectId: project.id,
     project: project.name,
     areaId: area.id,
     area: area.name,
-    text: args.text,
-    sources: args.sources,
+    text: checked.body,
+    sources: checked.sources.map(({ path, startLine, endLine, hash }) => ({
+      path,
+      startLine,
+      endLine,
+      hash,
+    })),
   });
 }
 

@@ -10,6 +10,7 @@ export interface NoteSourceInput {
   path: string;
   startLine: number;
   endLine: number;
+  hash?: string | undefined;
 }
 
 export interface NoteSource extends NoteSourceInput {
@@ -18,7 +19,7 @@ export interface NoteSource extends NoteSourceInput {
 
 export interface AreaNote {
   text: string;
-  sources: NoteSourceInput[];
+  sources: { path: string; startLine: number; endLine: number }[];
   writtenAt: string;
   changedSince: string[];
 }
@@ -28,7 +29,7 @@ export class AreaNoteError extends Error {}
 interface IndexedRow {
   path: string;
   area_id: string;
-  lines: number;
+  lines: number | null;
   content_hash: string | null;
 }
 
@@ -38,11 +39,12 @@ async function indexedFiles(
   paths: readonly string[],
 ): Promise<Map<string, IndexedRow>> {
   const { rows } = await db.query<IndexedRow>(
-    `SELECT m.path, m.area_id, m.lines,
-       (SELECT f.content_hash FROM code_index_files f
-          JOIN code_index_projects p ON p.id = f.project_id
-         WHERE p.root_path = r.root_path AND f.path = m.path LIMIT 1) AS content_hash
+    `SELECT m.path, m.area_id, i.lines, i.content_hash
      FROM map_files m JOIN map_repos r ON r.id = m.repo_id
+     LEFT JOIN LATERAL (
+       SELECT f.lines, f.content_hash FROM code_index_files f
+         JOIN code_index_projects p ON p.id = f.project_id
+        WHERE p.root_path = r.root_path AND f.path = m.path LIMIT 1) i ON true
      WHERE r.root_path = $1 AND m.path = ANY($2::text[])`,
     [root, paths],
   );
@@ -65,14 +67,25 @@ function checkSource(
   if (isSecretPath(source.path, ignore)) {
     throw new AreaNoteError(`${source.path} is a secret file and can't be cited.`);
   }
-  if (!file || !file.content_hash) {
+  if (!file || !file.content_hash || file.lines === null) {
     throw new AreaNoteError(
       `${source.path} is not on the map. Cite paths relative to the project folder.`,
     );
   }
-  if (source.endLine < source.startLine || source.endLine > file.lines) {
+  const inside =
+    Number.isInteger(source.startLine) &&
+    Number.isInteger(source.endLine) &&
+    source.startLine >= 1 &&
+    source.endLine >= source.startLine &&
+    source.endLine <= file.lines;
+  if (!inside) {
     throw new AreaNoteError(
       `${source.path} has ${file.lines} lines; ${source.startLine}-${source.endLine} is outside it.`,
+    );
+  }
+  if (source.hash !== undefined && source.hash !== file.content_hash) {
+    throw new AreaNoteError(
+      `${source.path} changed after this explanation was written. Read it again and save a new one.`,
     );
   }
   return file.content_hash;
@@ -87,7 +100,7 @@ export interface SaveAreaNote {
   conversationId: string | null;
 }
 
-interface CheckedNote {
+export interface CheckedNote {
   body: string;
   sources: NoteSource[];
 }
