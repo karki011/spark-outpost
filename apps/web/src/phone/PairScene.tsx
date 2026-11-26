@@ -1,7 +1,12 @@
 import './pair-scene.css';
 import './pair-motion.css';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { pairingLink, PAIRING_TTL_MS, type PendingPairing } from '@spark-outpost/contracts';
+import {
+  pairingLink,
+  PAIRING_TTL_MS,
+  REMOTE_DEVICE_KIND_LABELS,
+  type PendingPairing,
+} from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import {
   countdownText,
@@ -12,6 +17,7 @@ import {
   type PairStage,
 } from './pair-flow.ts';
 import { QrCode } from './QrCode.tsx';
+import { useCopyFeedback, type CopyState } from '../ui/use-copy-feedback.ts';
 
 interface PairSceneProps {
   stage: PairStage;
@@ -96,6 +102,14 @@ function useOnScreen(target: RefObject<HTMLElement | null>): boolean {
   return onScreen;
 }
 
+export const COPY_PAIRING_LINK = 'Copy pairing link';
+
+function copyLinkText(state: CopyState): string {
+  if (state === 'copied') return 'Copied';
+  if (state === 'failed') return 'Copy failed';
+  return COPY_PAIRING_LINK;
+}
+
 function sceneClass(stage: PairStage): string {
   const expiring = stage.kind === 'code' && stage.expiring;
   return ['ph-scene', stage.kind, expiring ? 'expiring' : ''].filter(Boolean).join(' ');
@@ -115,6 +129,7 @@ export function PairScene({
   const primary = useRef<HTMLButtonElement>(null);
   usePrimaryFocus(stage.kind, primary);
   const onScreen = useOnScreen(scene);
+  const link = useCopyFeedback();
   const motion = stageMotion(stage, activation);
   const line = stageLine(stage, activation);
   const meetsPhone = stage.kind === 'found' || stage.kind === 'paired';
@@ -163,6 +178,13 @@ export function PairScene({
             <output className="ph-code-text" aria-labelledby="ph-code-label">
               {stage.pairing.code}
             </output>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => link.copy(pairingLink(hostname, stage.pairing.code))}
+            >
+              {copyLinkText(link.state)}
+            </button>
             <CountdownRing remainingMs={stage.remainingMs} expiring={stage.expiring} />
             <button
               ref={primary}
@@ -180,6 +202,9 @@ export function PairScene({
       {stage.kind === 'found' && (
         <div className="ph-found">
           <span className="ph-found-name">{stage.request.deviceName}</span>
+          {stage.request.kind === 'spark' && (
+            <span className="ph-found-kind">{REMOTE_DEVICE_KIND_LABELS.spark}</span>
+          )}
           <output className="ph-match" aria-label={`Matching code ${stage.request.matchCode}`}>
             {stage.request.matchCode}
           </output>

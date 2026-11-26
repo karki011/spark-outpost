@@ -1,9 +1,14 @@
 import '../conversations/chat-menu.css';
 import { useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { REMOTE_DEVICE_NAME_MAX, type RemoteDevice } from '@spark-outpost/contracts';
+import {
+  REMOTE_DEVICE_KIND_LABELS,
+  REMOTE_DEVICE_NAME_MAX,
+  type RemoteDevice,
+} from '@spark-outpost/contracts';
+import { BlobScout } from '../brand/BlobScout.tsx';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
-import { CheckIcon, DotsIcon, LaptopIcon, WarnIcon } from '../ui/icons.tsx';
+import { CheckIcon, DotsIcon, GlobeIcon, WarnIcon } from '../ui/icons.tsx';
 import {
   daysUntilUnused,
   deviceSummary,
@@ -141,7 +146,7 @@ export function DeviceRow({ device, fresh, now }: DeviceRowProps) {
   return (
     <li className={fresh ? 'ph-device fresh' : 'ph-device'}>
       <span className="ph-device-icon" aria-hidden="true">
-        <LaptopIcon />
+        {device.kind === 'spark' ? <BlobScout size={20} /> : <GlobeIcon />}
       </span>
       <div className="ph-device-body">
         {renaming ? (
@@ -150,6 +155,9 @@ export function DeviceRow({ device, fresh, now }: DeviceRowProps) {
           <>
             <div className="ph-device-line">
               <b>{device.name}</b>
+              {device.kind === 'spark' && (
+                <span className="ph-device-kind">{REMOTE_DEVICE_KIND_LABELS.spark}</span>
+              )}
               <DeviceState device={device} now={now} />
             </div>
             <span className="ph-device-summary">{deviceSummary(device)}</span>

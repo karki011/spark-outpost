@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { REMOTE_DEVICE_NAME_MAX, remoteHostnameSchema, type RemoteDeviceKind } from './remote.ts';
+import { parseUrl } from './url.ts';
 
 export const REMOTE_SPARK_NAME_MAX = 60;
 export const REMOTE_SPARK_COOKIE_MAX = 512;
@@ -77,17 +78,26 @@ function refused(problem: SparkAddressProblem): ParsedSparkAddress {
   return { ok: false, problem };
 }
 
+export function fragmentValue(hash: string, key: string): string | null {
+  for (const part of hash.replace(/^#/, '').split('&')) {
+    const [name, ...rest] = part.split('=');
+    if (name !== key) continue;
+    try {
+      return decodeURIComponent(rest.join('=').replace(/\+/g, ' '));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export function parseSparkAddress(input: string, ownHostname: string | null): ParsedSparkAddress {
   const text = input.trim();
   if (text === '') return refused('empty');
   const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(text);
   if (hasScheme && !/^https:\/\//i.test(text)) return refused('scheme');
-  let url: URL;
-  try {
-    url = new URL(hasScheme ? text : `https://${text}`);
-  } catch {
-    return refused('shape');
-  }
+  const url = parseUrl(hasScheme ? text : `https://${text}`);
+  if (!url) return refused('shape');
   if (url.username !== '' || url.password !== '' || url.port !== '' || url.search !== '')
     return refused('shape');
   if (url.pathname !== '/' && url.pathname !== '') return refused('shape');
@@ -96,8 +106,7 @@ export function parseSparkAddress(input: string, ownHostname: string | null): Pa
   const reach = reachOfHostname(hostname);
   if (!reach) return refused('reach');
   if (ownHostname !== null && hostname === ownHostname.toLowerCase()) return refused('own');
-  const fromLink = new URLSearchParams(url.hash.slice(1)).get('code');
-  const code = pairingCode.safeParse(fromLink);
+  const code = pairingCode.safeParse(fragmentValue(url.hash, 'code'));
   return { ok: true, hostname, reach, code: code.success ? code.data : null };
 }
 
@@ -106,11 +115,12 @@ export function sparkPairingEntry(
   deviceName: string,
   code: string | null,
 ): string {
-  const params = new URLSearchParams();
-  if (code) params.set('code', code);
-  params.set('name', deviceName.slice(0, REMOTE_DEVICE_NAME_MAX));
-  params.set('kind', 'spark' satisfies RemoteDeviceKind);
-  return `https://${hostname}/#${params.toString()}`;
+  const params = [
+    ...(code ? [['code', code]] : []),
+    ['name', deviceName.slice(0, REMOTE_DEVICE_NAME_MAX)],
+    ['kind', 'spark' satisfies RemoteDeviceKind],
+  ].map(([key, value]) => `${key}=${encodeURIComponent(value!)}`);
+  return `https://${hostname}/#${params.join('&')}`;
 }
 
 export function remoteSparkOrigin(hostname: string): string {

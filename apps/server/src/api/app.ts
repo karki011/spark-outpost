@@ -41,6 +41,7 @@ import { resetRoutes } from './reset-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard, requireLaunchToken } from './security.ts';
 import { remoteAccessParts } from '../remote/access.ts';
+import { remoteSparkRoutes, type RemoteSparkRouteDeps } from '../remote-sparks/routes.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
@@ -100,7 +101,8 @@ export interface AppOptions
     Pick<CloneRouteDeps, 'clones' | 'cloneTest' | 'reservedFolders'>,
     Pick<ChatShareRouteDeps, 'linkScheme'>,
     ChatPortRouteDeps,
-    Pick<GithubReviewRouteDeps, 'nudgeReviews'> {
+    Pick<GithubReviewRouteDeps, 'nudgeReviews'>,
+    Pick<RemoteSparkRouteDeps, 'remoteSparkPort' | 'thisMacName'> {
   terminals: TerminalSessions;
   nativeTerminals?: NativeRuntime;
   previews: PreviewServers;
@@ -222,6 +224,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', chatPortRoutes(options));
   app.use('/api', agentConnectorRoutes(options));
   app.use('/api', signInRoutes(options));
+  app.use('/api', remoteSparkRoutes(options));
   app.use(
     '/api',
     resetRoutes({

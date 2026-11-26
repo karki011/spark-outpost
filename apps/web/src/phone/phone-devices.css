@@ -110,3 +110,8 @@
     animation: none;
   }
 }
+.ph-device-kind {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}

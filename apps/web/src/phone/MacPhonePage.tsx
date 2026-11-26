@@ -16,6 +16,7 @@ import { PhoneSwitches } from './PhoneSwitches.tsx';
 import { PhoneCardAnswering } from './PhoneCardAnswering.tsx';
 import { PushContact } from './PushContact.tsx';
 import { setupSteps } from './setup-steps.ts';
+import { OtherSparks } from '../remote-sparks/OtherSparks.tsx';
 
 const STATE_POLL_MS = 10_000;
 const LIST_POLL_MS = 5000;
@@ -121,6 +122,7 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
             </QueryWait>
           }
         />
+        <OtherSparks ownHostname={state.hostname} />
         <PhoneSwitches
           switches={session.switches}
           notificationsExtra={<PushContact poll={hidden ? false : LIST_POLL_MS} />}

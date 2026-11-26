@@ -19,6 +19,9 @@ export type ShareSecretId = `share:${string}`;
 export const shareSecret = (shareId: string): ShareSecretId => `share:${shareId}`;
 export const googleCalendarSecret = (subject: string): GoogleCalendarSecretId =>
   `calendar:google:${subject}`;
+export type RemoteSparkSecretId = `remote-spark:${string}`;
+export const remoteSparkSecret = (sparkId: string): RemoteSparkSecretId =>
+  `remote-spark:${sparkId}`;
 export type SecretId =
   | ConnectableId
   | 'github'
@@ -33,7 +36,8 @@ export type SecretId =
   | GoogleCalendarSecretId
   | MicrosoftCalendarSecretId
   | ZoomSecretId
-  | ShareSecretId;
+  | ShareSecretId
+  | RemoteSparkSecretId;
 
 export interface SecretStore {
   set(provider: SecretId, secret: string): Promise<void>;
@@ -47,6 +51,7 @@ export const DEFAULT_KEYCHAIN_SERVICE = 'Spark Outpost';
 
 function account(provider: SecretId): string {
   if (provider.startsWith('mcp:') || provider.startsWith('signin:')) return provider;
+  if (provider.startsWith('remote-spark:')) return provider;
   if (provider.startsWith('mcp-oauth:')) return `${provider}:sign-in`;
   if (provider.startsWith('calendar:google:') || provider.startsWith('calendar:microsoft:')) {
     return `${provider}:refresh`;

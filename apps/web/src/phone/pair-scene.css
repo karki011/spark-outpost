@@ -190,6 +190,10 @@
   color: var(--text);
   overflow-wrap: anywhere;
 }
+.ph-found-kind {
+  color: var(--muted);
+  font-size: 13px;
+}
 .ph-match {
   font:
     500 40px/1.1 'Geist Mono',

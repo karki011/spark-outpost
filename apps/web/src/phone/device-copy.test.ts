@@ -9,6 +9,7 @@ function device(change: Partial<RemoteDevice>): RemoteDevice {
   return {
     id: '11111111-1111-4111-8111-111111111111',
     name: 'Kitchen phone',
+    kind: 'browser',
     createdAt: '2026-09-01T10:00:00Z',
     lastSeenAt: new Date(NOW - DAY).toISOString(),
     revokedAt: null,
@@ -61,6 +62,7 @@ describe('device lines', () => {
 
   it('summarises the date added and the passkeys', () => {
     expect(deviceSummary(device({}))).toMatch(/^Added .* · No passkey$/);
+    expect(deviceSummary(device({ kind: 'spark' }))).toMatch(/^Added [^·]*$/);
     expect(
       deviceSummary(
         device({

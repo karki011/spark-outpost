@@ -12,6 +12,7 @@ import {
   type PendingPairingList,
   type RemoteAuditList,
   type RemoteDevice,
+  type RemoteDeviceKind,
   remoteHostOf,
   type RemoteDeviceList,
   type RemoteSession,
@@ -90,6 +91,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
   ): RemoteDevice => ({
     id: row.id,
     name: row.name,
+    kind: row.kind,
     createdAt: row.created_at.toISOString(),
     lastSeenAt: row.last_seen_at.toISOString(),
     revokedAt: row.revoked_at?.toISOString() ?? null,
@@ -119,13 +121,18 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
     };
   };
 
-  const pairClaimed = async (req: Request, pairingId: string, name: string, tokenHash: string) => {
+  const pairClaimed = async (
+    req: Request,
+    pairing: { id: string; deviceName: string; kind: RemoteDeviceKind },
+    tokenHash: string,
+  ) => {
+    const { id: pairingId, deviceName: name, kind } = pairing;
     const carried = deviceTokenOf(req.headers.cookie);
     const carriedHash = carried ? secretHash(carried) : null;
     const known = carriedHash ? await deviceByTokenHash(db, workspaceId, carriedHash) : null;
     const same =
       known && carriedHash
-        ? await repairDevice(db, workspaceId, known.id, { name, tokenHash, carriedHash })
+        ? await repairDevice(db, workspaceId, known.id, { name, kind, tokenHash, carriedHash })
         : null;
     if (same) {
       await audit({
@@ -135,7 +142,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
       });
       return;
     }
-    const device = await addDevice(db, workspaceId, { name, tokenHash });
+    const device = await addDevice(db, workspaceId, { name, kind, tokenHash });
     if (known) {
       await markDeviceReplaced(db, workspaceId, known.id, device.id);
       streams.close(known.id);
@@ -164,9 +171,9 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
 
   router.post('/remote/pair', async (req, res) => {
     if (!remoteOnly(res)) return;
-    const { code, deviceName } = parseBody(pairingSubmitRequestSchema, req);
+    const { code, deviceName, kind } = parseBody(pairingSubmitRequestSchema, req);
     await limited(res, async () => {
-      const submitted = pairings.submit(code, deviceName);
+      const submitted = pairings.submit(code, deviceName, kind);
       if (!submitted) {
         await audit({ action: 'pairing_failed', detail: { reason: 'code' } });
         res.status(403).json({ error: BAD_CODE });
@@ -199,7 +206,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
       return;
     }
     const token = newSecret();
-    await pairClaimed(req, result.id, result.deviceName, secretHash(token));
+    await pairClaimed(req, result, secretHash(token));
     res
       .set('Set-Cookie', deviceCookie(token))
       .json({ status: 'paired' } satisfies PairingClaimResponse);

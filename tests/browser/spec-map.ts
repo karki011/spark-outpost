@@ -288,6 +288,7 @@ export const SPEC_GROUPS = {
     'phone-pair-again',
     'phone-passkey',
   ],
+  'remote-sparks': ['remote-sparks'],
   'docs-help': ['docs', 'help'],
 } as const satisfies Record<string, readonly string[]>;
 
@@ -383,6 +384,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/web/src/models/', groups: ['settings-providers'] },
   { prefix: 'apps/web/src/onboarding/', groups: ['settings-providers', 'island-desktop'] },
   { prefix: 'apps/web/src/phone/', groups: ['phone'] },
+  { prefix: 'apps/web/src/remote-sparks/', groups: ['phone', 'remote-sparks'] },
   { prefix: 'apps/web/src/providers/', groups: ['settings-providers', 'approvals'] },
   { prefix: 'apps/web/src/setup-drafts/', groups: ['settings-providers', 'approvals'] },
   { prefix: 'apps/web/src/reset/', groups: ['settings-providers'] },
@@ -454,6 +456,7 @@ export const PATH_RULES: readonly { prefix: string; groups: readonly SpecGroup[]
   { prefix: 'apps/server/src/preview/', groups: ['terminal-preview-browser'] },
   { prefix: 'apps/server/src/projects/', groups: ['sidebar-projects', 'ship-pr', 'approvals'] },
   { prefix: 'apps/server/src/remote/', groups: ['phone'] },
+  { prefix: 'apps/server/src/remote-sparks/', groups: ['phone', 'remote-sparks'] },
   { prefix: 'apps/server/src/reset/', groups: ['settings-providers'] },
   { prefix: 'apps/server/src/setup/', groups: ['settings-providers'] },
   { prefix: 'apps/server/src/ship/', groups: ['ship-pr', 'tickets'] },

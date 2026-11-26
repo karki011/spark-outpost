@@ -270,6 +270,11 @@ POST /api/remote/pairings
 POST /api/remote/pairings/:id/confirm
 POST /api/remote/pairings/:id/deny
 GET /api/remote/audit
+GET /api/remote-sparks
+POST /api/remote-sparks
+PATCH /api/remote-sparks/:id
+DELETE /api/remote-sparks/:id
+POST /api/remote-sparks/:id/open
 GET /api/remote/tailscale
 POST /api/remote/tailscale/on
 POST /api/remote/tailscale/off

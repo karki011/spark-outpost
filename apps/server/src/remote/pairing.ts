@@ -4,6 +4,7 @@ import {
   PAIRING_TTL_MS,
   type PairingStart,
   type PendingPairing,
+  type RemoteDeviceKind,
 } from '@spark-outpost/contracts';
 import { AttemptWindow, RateLimitError } from './attempt-window.ts';
 import { newSecret, secretHash } from './session.ts';
@@ -25,6 +26,7 @@ interface Entry {
   codeHash: string;
   claimHash: string | null;
   deviceName: string;
+  kind: RemoteDeviceKind;
   matchCode: string;
   expiresAt: number;
 }
@@ -37,7 +39,9 @@ export interface SubmittedPairing {
 }
 
 export type ClaimResult =
-  { status: 'waiting' } | { status: 'confirmed'; id: string; deviceName: string } | null;
+  | { status: 'waiting' }
+  | { status: 'confirmed'; id: string; deviceName: string; kind: RemoteDeviceKind }
+  | null;
 
 function newCode(): string {
   let code = '';
@@ -87,6 +91,7 @@ export class Pairings {
       codeHash: secretHash(code),
       claimHash: null,
       deviceName: '',
+      kind: 'browser',
       matchCode: '',
       expiresAt: this.now() + PAIRING_TTL_MS,
     };
@@ -94,7 +99,11 @@ export class Pairings {
     return { id: entry.id, code: grouped(code), expiresAt: this.isoExpiry(entry) };
   }
 
-  submit(code: string, deviceName: string): SubmittedPairing | null {
+  submit(
+    code: string,
+    deviceName: string,
+    kind: RemoteDeviceKind = 'browser',
+  ): SubmittedPairing | null {
     this.submits.take();
     this.dropExpired();
     const codeHash = secretHash(normalized(code));
@@ -106,6 +115,7 @@ export class Pairings {
     entry.state = 'submitted';
     entry.claimHash = secretHash(claim);
     entry.deviceName = deviceName;
+    entry.kind = kind;
     entry.matchCode = newMatchCode();
     entry.expiresAt = this.now() + PAIRING_TTL_MS;
     return {
@@ -145,7 +155,7 @@ export class Pairings {
     if (!entry) return null;
     if (entry.state !== 'confirmed') return { status: 'waiting' };
     this.entries.delete(entry.id);
-    return { status: 'confirmed', id: entry.id, deviceName: entry.deviceName };
+    return { status: 'confirmed', id: entry.id, deviceName: entry.deviceName, kind: entry.kind };
   }
 
   private submitted(id: string): Entry | null {
@@ -158,6 +168,7 @@ export class Pairings {
     return {
       id: entry.id,
       deviceName: entry.deviceName,
+      kind: entry.kind,
       matchCode: entry.matchCode,
       expiresAt: this.isoExpiry(entry),
     };

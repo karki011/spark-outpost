@@ -1,6 +1,6 @@
 # Remote control: rename, and Spark to Spark
 
-Status: Part 1 (the rename) is built, without lane R6; the guide page keeps the file name `use-your-phone.md` because no redirect file exists. Part 2 is design only. Written 2026-10-09 on `spark/remote-control`.
+Status: Part 1 (the rename) is built, without lane R6; the guide page keeps the file name `use-your-phone.md` because no redirect file exists. Part 2, option (a), is built on `spark/spark-to-spark` (2026-11-25): migration `0282_remote_sparks.sql`, `apps/server/src/remote-sparks/`, `apps/desktop/src/remote-spark/`, `apps/web/src/remote-sparks/`. Differences from the text below: there is no `keychain_ref` column (the keychain key is `remote-spark:<id>`); the cookie moves between the API process and main, not the worker; the address rule is `parseSparkAddress` over `reachOfHostname` in `packages/contracts/src/remote-sparks.ts`, where Tailscale is the only reach today and another reach is added in that one place; the title bar is not tinted, the fixed window title is the only mark; a failed load shows Electron's default page; decision 6 (a device ending its own session) is not built. Not yet tried on two real Macs. Written 2026-10-09 on `spark/remote-control`.
 
 The owner asked for two things:
 

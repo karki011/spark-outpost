@@ -69,7 +69,7 @@ import { openSparkWindow, type SparkWindow } from './spark-window.ts';
 import { startStorageSync, type StorageSync } from './storage-sync.ts';
 import { listenForTheme } from './theme-listener.ts';
 import { webStorageFile } from './web-storage.ts';
-import { attachApiToken } from './window.ts';
+import { attachApiToken, openExternal } from './window.ts';
 
 const config = channelConfig(resolveChannel(app.isPackaged));
 const paths = channelPaths(process.env.SPARK_APP_DATA ?? app.getPath('appData'), config);
@@ -317,6 +317,7 @@ async function launch(): Promise<void> {
     },
     { helperPath: layout.macControlBin, origin: () => origin, preload, trusted, log: log('mac') },
     { helperPath: layout.calendarBin, seedPath: layout.calendarSeedBin, log: log('calendar') },
+    { openExternal, log: log('remote-spark') },
   );
   browser = browserHost;
   setLinkOpening(focusingLinks(browserHost.links, () => spark?.focus()));

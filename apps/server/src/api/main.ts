@@ -62,6 +62,7 @@ import { chatPortWatcher, type ChatPortWatcher } from '../terminal/chat-port-wat
 import { postgresPort } from '../terminal/chat-ports.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { startPushServices } from '../remote/push-services.ts';
+import { connectRemoteSparkPort } from '../remote-sparks/bridge.ts';
 import { connectDesktopCalendar } from '../calendar/host-client.ts';
 import { startCalendarTicker, type CalendarTicker } from '../calendar/ticker.ts';
 import { connectDesktopMeetings } from '../meetings/desktop-source.ts';
@@ -361,6 +362,7 @@ const { app, reconcileRemote } = createAppParts({
   slackSocket,
   pushKeys: remotePushKeys,
   pushTest: (deviceId) => pushNotifier.test(deviceId),
+  remoteSparkPort: connectRemoteSparkPort(process.env, process),
   calendarHost: desktopCalendar,
   googleCalendar,
   zoom: clouds?.zoom ?? null,

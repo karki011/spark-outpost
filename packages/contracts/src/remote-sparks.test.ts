@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  fragmentValue,
   parseSparkAddress,
   reachOfHostname,
   remoteSparkBridgeFromHostSchema,
@@ -72,22 +73,19 @@ describe('reachOfHostname', () => {
 
 describe('sparkPairingEntry', () => {
   it('carries the code, this Mac’s name and the kind in the fragment', () => {
-    const entry = new URL(
-      sparkPairingEntry('studio.tail1234.ts.net', 'Ann’s MacBook & co', 'AB12'),
-    );
-    expect(entry.origin).toBe('https://studio.tail1234.ts.net');
-    expect(entry.search).toBe('');
-    const params = new URLSearchParams(entry.hash.slice(1));
-    expect(params.get('code')).toBe('AB12');
-    expect(params.get('name')).toBe('Ann’s MacBook & co');
-    expect(params.get('kind')).toBe('spark');
+    const entry = sparkPairingEntry('studio.tail1234.ts.net', 'Ann’s MacBook & co', 'AB12');
+    const [address, hash] = entry.split('#');
+    expect(address).toBe('https://studio.tail1234.ts.net/');
+    expect(fragmentValue(hash!, 'code')).toBe('AB12');
+    expect(fragmentValue(hash!, 'name')).toBe('Ann’s MacBook & co');
+    expect(fragmentValue(hash!, 'kind')).toBe('spark');
+    expect(parseSparkAddress(entry, OWN)).toMatchObject({ ok: true, code: 'AB12' });
   });
 
   it('leaves the code out when there is none and bounds the name', () => {
-    const entry = new URL(sparkPairingEntry('studio.tail1234.ts.net', 'x'.repeat(200), null));
-    const params = new URLSearchParams(entry.hash.slice(1));
-    expect(params.has('code')).toBe(false);
-    expect(params.get('name')).toHaveLength(60);
+    const hash = sparkPairingEntry('studio.tail1234.ts.net', 'x'.repeat(200), null).split('#')[1]!;
+    expect(fragmentValue(hash, 'code')).toBeNull();
+    expect(fragmentValue(hash, 'name')).toHaveLength(60);
   });
 });
 
