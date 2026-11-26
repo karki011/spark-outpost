@@ -30,6 +30,7 @@ export async function startAgentHosts(
   const presence = startMacPresence(powerMonitor);
   const remoteSparks = startRemoteSparkHost({
     ...remoteSparkOptions,
+    power: powerMonitor,
     blockedPorts: () => browser.blockedPorts(),
   });
   return {

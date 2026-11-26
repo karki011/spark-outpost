@@ -54,7 +54,7 @@ export function lastOpenedLine(spark: Pick<RemoteSpark, 'lastOpenedAt'>, now: nu
 export function removeCopy(name: string): DisconnectCopy {
   return {
     title: `Remove ${name}?`,
-    text: `This deletes this Mac’s saved sign-in for ${name}. Also revoke this Mac on ${name}: removing it here does not end its access there.`,
+    text: `Removing deletes this Mac’s saved sign-in for ${name}. Spark also asks ${name} to end this Mac’s access. If that Mac is asleep or offline, revoke this Mac there.`,
   };
 }
 

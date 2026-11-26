@@ -6,7 +6,7 @@ order: 418
 summary: Add another Mac's Spark Outpost and open it in its own window.
 ---
 
-Open another of your Macs' Spark from this one. About 5 minutes. Needs Tailscale on both, on one tailnet.
+Open another of your Macs' Spark from this one. About 5 minutes. Needs Tailscale on both.
 
 On the other Mac:
 
@@ -39,7 +39,7 @@ The window now shows the other Mac's Spark. Later, **Open** on its row signs in 
 | Other Mac asleep or off    | The window says it did not load; select **Try again**                                                    |
 | Not available              | Downloads, notifications, and adding a Spark from a paired device                                        |
 
-**Remove…** in its **Actions** menu deletes this Mac's saved sign-in only. To end its access, select **Revoke** on the other Mac's **Devices** list.
+**Remove…** in its **Actions** deletes this Mac's saved sign-in and asks the other Mac to end its access. If that Mac is offline, **Revoke** it there under **Devices**.
 
 Never type a password or key into that window.
 

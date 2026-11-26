@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BaseWindow, WebContentsView } from 'electron';
 import {
   remoteSparkOrigin,
   remoteSparkWindowTitle,
@@ -11,6 +11,7 @@ import { watchDeviceCookie, type CookieJar, type DeviceCookieEvents } from './co
 import { answerFailed, isNotLoadedPage, loadFailed, notLoadedPage } from './load-state.ts';
 import { guardRemoteNavigation } from './navigation.ts';
 import { remoteSparkSession, type RemoteSparkGuards } from './partition.ts';
+import { stripLayout, stripPage, stripSession } from './strip.ts';
 
 export type RemoteSparkOpen = Extract<RemoteSparkBridgeToHost, { kind: 'remote-spark:open' }>;
 
@@ -27,6 +28,12 @@ export interface RemoteSparkWindow {
 }
 
 const WINDOW_SIZE = { width: 1280, height: 860, minWidth: 720, minHeight: 520 } as const;
+const GUARDED = {
+  sandbox: true,
+  contextIsolation: true,
+  nodeIntegration: false,
+  devTools: false,
+} as const;
 
 export function openRemoteSparkWindow(
   spark: RemoteSparkOpen,
@@ -35,27 +42,35 @@ export function openRemoteSparkWindow(
   const { hostname } = spark;
   const target = remoteSparkSession(spark.id, hostname, hooks.guards);
   const title = remoteSparkWindowTitle(spark.name, hostname);
-  const window = new BrowserWindow({
-    ...WINDOW_SIZE,
-    title,
-    autoHideMenuBar: true,
-    webPreferences: {
-      session: target,
-      sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
-      devTools: false,
-    },
+  const window = new BaseWindow({ ...WINDOW_SIZE, title, autoHideMenuBar: true });
+  const strip = new WebContentsView({
+    webPreferences: { ...GUARDED, session: stripSession(), javascript: false },
   });
-  window.on('page-title-updated', (event) => {
-    event.preventDefault();
-    window.setTitle(title);
+  const remote = new WebContentsView({ webPreferences: { ...GUARDED, session: target } });
+  const views = [strip, remote];
+  const layOut = () => {
+    const [width = 0, height = 0] = window.getContentSize();
+    const bounds = stripLayout(width, height);
+    strip.setBounds(bounds.strip);
+    remote.setBounds(bounds.remote);
+  };
+  for (const view of views) window.contentView.addChildView(view);
+  layOut();
+  window.on('resize', layOut);
+  window.on('focus', () => {
+    if (!remote.webContents.isDestroyed()) remote.webContents.focus();
   });
-  guardRemoteNavigation(window.webContents, hostname, hooks.openExternal);
+  strip.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  strip.webContents.on('will-navigate', (event) => event.preventDefault());
+  void strip.webContents.loadURL(stripPage(spark.name, hostname)).catch(() => undefined);
+  guardRemoteNavigation(remote.webContents, hostname, hooks.openExternal);
   hideWhileLocked(window, hooks.gate);
   const watch = watchDeviceCookie(target.cookies as CookieJar, hostname, hooks);
   window.on('closed', () => {
     watch.stop();
+    for (const view of views) {
+      if (!view.webContents.isDestroyed()) view.webContents.close();
+    }
     hooks.closed();
   });
 
@@ -63,8 +78,8 @@ export function openRemoteSparkWindow(
   const pairingEntry = (code: string | null) => sparkPairingEntry(hostname, spark.deviceName, code);
   let entry = `${origin}/`;
   const load = async (url: string) => {
-    if (window.isDestroyed()) return;
-    await window.loadURL(url).catch(() => undefined);
+    if (window.isDestroyed() || remote.webContents.isDestroyed()) return;
+    await remote.webContents.loadURL(url).catch(() => undefined);
   };
   const showNotLoaded = () => void load(notLoadedPage(spark.name, hostname, entry));
   const checkSignIn = async () => {
@@ -78,10 +93,10 @@ export function openRemoteSparkWindow(
     entry = pairingEntry(null);
     await load(entry);
   };
-  window.webContents.on('did-fail-load', (_event, code, _text, url, isMainFrame) => {
+  remote.webContents.on('did-fail-load', (_event, code, _text, url, isMainFrame) => {
     if (isMainFrame && loadFailed(code) && !isNotLoadedPage(url)) showNotLoaded();
   });
-  window.webContents.on('did-navigate', (_event, url, httpCode) => {
+  remote.webContents.on('did-navigate', (_event, url, httpCode) => {
     if (!url.startsWith(`${origin}/`)) return;
     if (answerFailed(httpCode)) showNotLoaded();
     else void checkSignIn();

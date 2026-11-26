@@ -118,7 +118,11 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
   await renamed.getByRole('button', { name: 'Actions for Garage Mac' }).click();
   await page.getByRole('menuitem', { name: 'Remove…' }).click();
   const confirm = page.getByRole('alertdialog', { name: 'Remove Garage Mac?' });
-  await expect(confirm.getByText(/Also revoke this Mac on Garage Mac/)).toBeVisible();
+  await expect(
+    confirm.getByText(
+      'Removing deletes this Mac’s saved sign-in for Garage Mac. Spark also asks Garage Mac to end this Mac’s access. If that Mac is asleep or offline, revoke this Mac there.',
+    ),
+  ).toBeVisible();
   await confirm.getByRole('button', { name: 'Remove' }).click();
   await expect(card.getByText('No other Spark is saved yet.')).toBeVisible();
 });

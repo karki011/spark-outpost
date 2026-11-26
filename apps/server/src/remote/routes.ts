@@ -74,6 +74,7 @@ const PAIRING_GONE = 'This pairing ended. Start again on your Mac.';
 const NO_PAIRING = 'That pairing request is no longer waiting.';
 const NO_DEVICE = 'Device not found.';
 const MAC_ONLY = 'This is only available on your Mac.';
+const NOT_FOUND = 'Not found.';
 
 function sameNameKey(name: string): string {
   return name.trim().toLowerCase();
@@ -165,7 +166,7 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
 
   const remoteOnly = (res: Response): boolean => {
     if (isRemote(res)) return true;
-    res.status(404).json({ error: 'Not found.' });
+    res.status(404).json({ error: NOT_FOUND });
     return false;
   };
 
@@ -244,6 +245,22 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
       passkey: passkeys.length > 0,
     };
     res.json(session);
+  });
+
+  router.post('/remote/session/end', async (_req, res) => {
+    const caller = remoteDeviceOf(res);
+    const device = caller ? await revokeDevice(db, workspaceId, caller.id) : null;
+    if (!device) {
+      res.status(404).json({ error: NOT_FOUND });
+      return;
+    }
+    streams.close(device.id);
+    await audit({
+      action: 'device_revoked',
+      device: { id: device.id, name: device.name },
+      detail: { by: 'device' },
+    });
+    res.status(204).end();
   });
 
   router.use('/remote', (_req: Request, res: Response, next) => {
