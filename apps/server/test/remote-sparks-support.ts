@@ -9,17 +9,26 @@ export const THIS_MAC = 'Desk Mac';
 export const STUDIO = 'studio.tail1234.ts.net';
 export const STUDIO_COOKIE = `studio-device-cookie-${'c'.repeat(43)}`;
 
+type WatchMessage = Extract<RemoteSparkBridgeToHost, { kind: 'remote-spark:watch' }>;
+type WindowMessage = Exclude<RemoteSparkBridgeToHost, WatchMessage>;
+
 export interface FakeDesktop extends RemoteSparkPort {
-  posted: RemoteSparkBridgeToHost[];
+  posted: WindowMessage[];
+  watched: WatchMessage['sparks'][];
   send(message: unknown): void;
 }
 
 export function fakeDesktop(): FakeDesktop {
   const listeners: ((message: unknown) => void)[] = [];
-  const posted: RemoteSparkBridgeToHost[] = [];
+  const posted: WindowMessage[] = [];
+  const watched: WatchMessage['sparks'][] = [];
   return {
     posted,
-    post: (message) => posted.push(message),
+    watched,
+    post: (message) => {
+      if (message.kind === 'remote-spark:watch') watched.push(message.sparks);
+      else posted.push(message);
+    },
     subscribe: (listener) => listeners.push(listener),
     send: (message) => listeners.forEach((listener) => listener(message)),
   };
@@ -43,4 +52,19 @@ export async function everyRow(t: TestDb): Promise<string> {
             (SELECT coalesce(json_agg(a), '[]')::text FROM remote_audit a) AS dump`,
   );
   return rows[0]!.dump;
+}
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+export function pngBytes(width: number, height: number, filler = 0): Buffer {
+  const header = Buffer.alloc(16);
+  header.writeUInt32BE(13, 0);
+  header.write('IHDR', 4, 'latin1');
+  header.writeUInt32BE(width, 8);
+  header.writeUInt32BE(height, 12);
+  return Buffer.concat([Buffer.from(PNG_SIGNATURE), header, Buffer.alloc(32, filler)]);
+}
+
+export function iconBody(bytes: Buffer): { png: string } {
+  return { png: bytes.toString('base64') };
 }

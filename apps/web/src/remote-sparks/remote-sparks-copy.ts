@@ -14,8 +14,35 @@ export const OTHER_SPARKS_UNAVAILABLE = 'Other Sparks open from the Mac app.';
 export const OTHER_SPARKS_EMPTY = 'No other Spark is saved yet.';
 export const NAME_PROBLEM = 'Give this Spark a name.';
 
-export function pairedWord(spark: Pick<RemoteSpark, 'paired'>): string {
-  return spark.paired ? 'Paired' : 'Not paired yet';
+export const CHANGE_ICON_ITEM = 'Change icon…';
+export const REMOVE_ICON_ITEM = 'Remove icon';
+export const USE_COMPUTER_NAME_ITEM = 'Use computer name';
+export const ICON_PROBLEM = 'That image could not be used. Pick a PNG, JPEG, WebP or GIF.';
+
+export function localSparkNote(computer: string): string {
+  return `The other ${computer} sees this name when this one pairs. Icons stay on this ${computer}.`;
+}
+
+export const SWITCHER_MENU = 'Sparks';
+export const ADD_SPARK_ITEM = 'Add a Spark…';
+export const MANAGE_SPARKS_ITEM = 'Manage Sparks…';
+
+export function thisComputer(computer: string): string {
+  return `This ${computer}`;
+}
+
+export function waitingWord(count: number): string {
+  return `${count} waiting`;
+}
+
+export function waitingTotal(sparks: readonly Pick<RemoteSpark, 'needsYou'>[]): number {
+  return sparks.reduce((total, spark) => total + spark.needsYou, 0);
+}
+
+export function switcherName(name: string, total: number): string {
+  if (total === 0) return name;
+  const requests = total === 1 ? '1 request' : `${total} requests`;
+  return `${name}. ${requests} waiting on other Sparks`;
 }
 
 export function lastOpenedLine(spark: Pick<RemoteSpark, 'lastOpenedAt'>, now: number): string {

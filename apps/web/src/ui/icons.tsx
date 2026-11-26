@@ -398,6 +398,12 @@ export function LaptopIcon() {
   return <StrokeIcon path="M5 6h14v10H5zM3 19h18" />;
 }
 
+export function OfflineIcon() {
+  return (
+    <StrokeIcon path="M7 18a4 4 0 0 1-.6-8 5.5 5.5 0 0 1 10.6-1.5A4.5 4.5 0 0 1 17 18zM4 4l16 16" />
+  );
+}
+
 export function CloudIcon() {
   return <StrokeIcon path="M7 18a4 4 0 0 1-.6-8 5.5 5.5 0 0 1 10.6-1.5A4.5 4.5 0 0 1 17 18z" />;
 }

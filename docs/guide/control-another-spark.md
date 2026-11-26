@@ -6,7 +6,7 @@ order: 418
 summary: Add another Mac's Spark Outpost and open it in its own window.
 ---
 
-Open the Spark on another of your Macs from this one. About 5 minutes. Needs Tailscale on both Macs, signed in to the same tailnet.
+Open another of your Macs' Spark from this one. About 5 minutes. Needs Tailscale on both, on one tailnet.
 
 On the other Mac:
 
@@ -25,18 +25,22 @@ On the other Mac:
 
 The window now shows the other Mac's Spark. Later, **Open** on its row signs in again.
 
-| Fact                       | Detail                                                                            |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| Where work runs            | On the other Mac, with its folders, its AI sign-ins and its rules                 |
-| What this Mac may do there | What any [paired device](answer-remotely.md) may, set by the other Mac's switches |
-| Sign-in                    | Kept in this Mac's keychain only; **Not paired yet** means there is none          |
-| Agents here                | Can't see or use the window                                                       |
-| Addresses                  | `https` Tailscale addresses ending in `.ts.net`, never this Mac's own             |
-| Other Mac asleep or off    | The window says it did not load; select **Try again**                             |
-| Not available              | Downloads, notifications, and adding a Spark from a paired device                 |
+**This Mac** then appears atop the left bar: its menu lists each Spark's status and waiting requests; choose one to open it.
 
-**Remove…** in its **Actions** menu deletes this Mac's saved sign-in only. To end its access, select **Revoke** on the other Mac's **Devices** list. A Spark not opened for 30 days pairs again.
+| Fact                       | Detail                                                                                                   |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Where work runs            | On the other Mac, with its folders, its AI sign-ins and its rules                                        |
+| What this Mac may do there | What any [paired device](answer-remotely.md) may, set by the other Mac's switches                        |
+| Sign-in                    | Kept in this Mac's keychain only; **Not paired yet** means there is none                                 |
+| Agents here                | Can't use the window                                                                                     |
+| Status and counts          | Checked each minute; counts cards and Terminal waits                                                     |
+| Names and icons            | **Rename** and **Change icon…** in each row's **Actions**, **This Mac** included; icons stay on this Mac |
+| Addresses                  | `https` Tailscale addresses ending in `.ts.net`, never this Mac's own                                    |
+| Other Mac asleep or off    | The window says it did not load; select **Try again**                                                    |
+| Not available              | Downloads, notifications, and adding a Spark from a paired device                                        |
 
-The window is the other Mac's page: never type a password or key into it.
+**Remove…** in its **Actions** menu deletes this Mac's saved sign-in only. To end its access, select **Revoke** on the other Mac's **Devices** list.
+
+Never type a password or key into that window.
 
 **Next:** [Control Spark from another device](use-your-phone.md)

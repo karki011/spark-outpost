@@ -14,13 +14,15 @@ import { paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { remoteAccess } from '../remote/store.ts';
 import type { SecretStore } from '../setup/secrets.ts';
-import { captureRemoteSparkCookies, type RemoteSparkPort } from './bridge.ts';
+import type { RemoteSparkLink, RemoteSparkPort } from './bridge.ts';
+import { iconPathOf, sparkIconRoutes, toLocalSpark } from './icon-routes.ts';
 import { forgetSparkCookie, savedSparkCookie } from './secrets.ts';
 import {
   RemoteSparkTakenError,
   addRemoteSpark,
   deleteRemoteSpark,
   listRemoteSparks,
+  localSpark,
   markRemoteSparkOpened,
   remoteSpark,
   renameRemoteSpark,
@@ -48,22 +50,26 @@ export function macNameOf(hostname: string): string {
   return name === '' ? FALLBACK_NAME : name;
 }
 
-export function remoteSparkRoutes(deps: RemoteSparkRouteDeps): Router {
+export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkLink): Router {
   const { db, workspaceId, secrets } = deps;
-  const port = deps.remoteSparkPort ?? null;
-  const deviceName = macNameOf(deps.thisMacName ?? computerHostname());
+  const port = link.port;
+  const defaultName = macNameOf(deps.thisMacName ?? computerHostname());
   const router = Router();
-  if (port) captureRemoteSparkCookies({ db, workspaceId, secrets }, port);
 
-  const toSpark = async (row: RemoteSparkRow): Promise<RemoteSpark> => ({
-    id: row.id,
-    name: row.name,
-    hostname: row.hostname,
-    reach: reachOfHostname(row.hostname) ?? 'tailscale',
-    paired: (await savedSparkCookie(secrets, row.id)) !== null,
-    createdAt: row.created_at.toISOString(),
-    lastOpenedAt: row.last_opened_at?.toISOString() ?? null,
-  });
+  const toSpark = async (row: RemoteSparkRow): Promise<RemoteSpark> => {
+    const paired = (await savedSparkCookie(secrets, row.id)) !== null;
+    return {
+      id: row.id,
+      name: row.name,
+      hostname: row.hostname,
+      reach: reachOfHostname(row.hostname) ?? 'tailscale',
+      paired,
+      ...link.stateOf(row.id, paired),
+      icon: iconPathOf(row.id, row.icon_version),
+      createdAt: row.created_at.toISOString(),
+      lastOpenedAt: row.last_opened_at?.toISOString() ?? null,
+    };
+  };
 
   const open = async (
     openPort: RemoteSparkPort,
@@ -75,17 +81,20 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps): Router {
       id: row.id,
       name: row.name,
       hostname: row.hostname,
-      deviceName,
+      deviceName: (await localSpark(db, workspaceId)).name ?? defaultName,
       code,
       cookie: await savedSparkCookie(secrets, row.id),
     });
     return (await markRemoteSparkOpened(db, workspaceId, row.id)) ?? row;
   };
 
+  router.use(sparkIconRoutes({ db, workspaceId, defaultName, noSpark: NO_SPARK, toSpark }));
+
   router.get('/remote-sparks', async (_req, res) => {
     const rows = await listRemoteSparks(db, workspaceId);
     const list: RemoteSparkList = {
       available: port !== null,
+      local: toLocalSpark(await localSpark(db, workspaceId), defaultName),
       sparks: await Promise.all(rows.map(toSpark)),
     };
     res.json(list);
@@ -132,6 +141,7 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps): Router {
     await forgetSparkCookie(secrets, id);
     await deleteRemoteSpark(db, workspaceId, id);
     port?.post({ kind: 'remote-spark:close', id });
+    await link.forget(id);
     res.status(204).end();
   });
 

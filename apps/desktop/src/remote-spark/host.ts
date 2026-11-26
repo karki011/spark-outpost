@@ -6,6 +6,7 @@ import {
 import type { AppLockGate } from '../app-lock-gate.ts';
 import type { BridgePort, WorkerBridge } from '../browser/bridge.ts';
 import { clearRemoteSparkSession, type RemoteSparkGuards } from './partition.ts';
+import { startRemoteSparkWatcher } from './watcher.ts';
 import { openRemoteSparkWindow, type RemoteSparkOpen, type RemoteSparkWindow } from './window.ts';
 
 export interface RemoteSparkHostOptions extends RemoteSparkGuards {
@@ -26,6 +27,13 @@ export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSpa
     if (!remoteSparkBridgeFromHostSchema.safeParse(message).success) return;
     for (const port of ports) port.post(message);
   };
+
+  const watcher = startRemoteSparkWatcher({
+    guards: options,
+    status: (id, reach) => tell({ kind: 'remote-spark:status', id, ...reach }),
+    signedOut: (id) => tell({ kind: 'remote-spark:signed-out', id }),
+  });
+  let watchPort: BridgePort | null = null;
 
   const open = (spark: RemoteSparkOpen) => {
     const existing = windows.get(spark.id);
@@ -48,6 +56,7 @@ export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSpa
   };
 
   const close = (id: string) => {
+    watcher.forget(id);
     windows.get(id)?.close();
     windows.delete(id);
     clearRemoteSparkSession(id).catch(() =>
@@ -64,15 +73,25 @@ export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSpa
           ports.add(port);
           try {
             if (parsed.data.kind === 'remote-spark:open') open(parsed.data);
-            else close(parsed.data.id);
+            else if (parsed.data.kind === 'remote-spark:close') close(parsed.data.id);
+            else {
+              watchPort = port;
+              watcher.watch(parsed.data.sparks);
+            }
           } catch (error) {
             options.log(`A remote Spark window did not open: ${(error as Error).message}`);
           }
         },
-        close: () => void ports.delete(port),
+        close() {
+          ports.delete(port);
+          if (watchPort !== port) return;
+          watchPort = null;
+          watcher.stop();
+        },
       };
     },
     dispose() {
+      watcher.stop();
       for (const window of windows.values()) window.close();
       windows.clear();
       ports.clear();

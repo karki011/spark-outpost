@@ -8,16 +8,30 @@ export interface JarCookie {
 
 type CookieChange = (event: unknown, cookie: JarCookie, cause: string, removed: boolean) => void;
 
+export interface DeviceCookie {
+  url: string;
+  name: string;
+  value: string;
+  path: string;
+  secure: boolean;
+  httpOnly: boolean;
+  sameSite: 'strict';
+}
+
+export function deviceCookie(hostname: string, value: string): DeviceCookie {
+  return {
+    url: remoteSparkOrigin(hostname),
+    name: REMOTE_DEVICE_COOKIE,
+    value,
+    path: '/',
+    secure: true,
+    httpOnly: true,
+    sameSite: 'strict',
+  };
+}
+
 export interface CookieJar {
-  set(details: {
-    url: string;
-    name: string;
-    value: string;
-    path: string;
-    secure: boolean;
-    httpOnly: boolean;
-    sameSite: 'strict';
-  }): Promise<void>;
+  set(details: DeviceCookie): Promise<void>;
   remove(url: string, name: string): Promise<void>;
   on(event: 'changed', listener: CookieChange): unknown;
   off(event: 'changed', listener: CookieChange): unknown;
@@ -61,15 +75,7 @@ export function watchDeviceCookie(
   return {
     async place(value) {
       known = value;
-      await jar.set({
-        url: remoteSparkOrigin(hostname),
-        name: REMOTE_DEVICE_COOKIE,
-        value,
-        path: '/',
-        secure: true,
-        httpOnly: true,
-        sameSite: 'strict',
-      });
+      await jar.set(deviceCookie(hostname, value));
     },
     holds: () => known !== null,
     async forget() {

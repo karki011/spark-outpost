@@ -71,6 +71,13 @@ describe('remote policy', () => {
       'PATCH /api/remote-sparks/:id',
       'DELETE /api/remote-sparks/:id',
       'POST /api/remote-sparks/:id/open',
+      'PUT /api/remote-sparks/local',
+      'GET /api/remote-sparks/local/icon',
+      'PUT /api/remote-sparks/local/icon',
+      'DELETE /api/remote-sparks/local/icon',
+      'GET /api/remote-sparks/:id/icon',
+      'PUT /api/remote-sparks/:id/icon',
+      'DELETE /api/remote-sparks/:id/icon',
     ];
     for (const route of routes) {
       expect([route, ROUTE_RULES.get(route)]).toEqual([route, 'never']);

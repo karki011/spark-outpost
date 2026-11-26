@@ -1,6 +1,10 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import type { RemoteSparkList } from '../../packages/contracts/src/remote-sparks.ts';
+import {
+  REMOTE_SPARK_ICON_SIZE,
+  type RemoteSpark,
+  type RemoteSparkList,
+} from '../../packages/contracts/src/remote-sparks.ts';
 import { openTestDb } from './database.ts';
 import { asPairedPhone } from './paired-phone.ts';
 import {
@@ -17,19 +21,23 @@ import {
 } from './phone-support.ts';
 
 const STUDIO = 'studio.tail1234.ts.net';
+const ONE_PIXEL_PNG =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 test.describe.configure({ timeout: 120_000 });
 
 async function forgetSavedSparks(): Promise<void> {
   const db = openTestDb();
   try {
-    await db.query('TRUNCATE remote_sparks');
+    await db.query('TRUNCATE remote_sparks, local_spark');
   } finally {
     await db.end();
   }
 }
 
-async function asMacApp(page: Page): Promise<void> {
+type Seen = Pick<RemoteSpark, 'status' | 'needsYou'>;
+
+async function asMacApp(page: Page, seen: Record<string, Seen> = {}): Promise<void> {
   await page.route('**/api/remote-sparks', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
@@ -37,7 +45,8 @@ async function asMacApp(page: Page): Promise<void> {
     }
     const response = await route.fetch();
     const list = (await response.json()) as RemoteSparkList;
-    await route.fulfill({ response, json: { ...list, available: true } });
+    const sparks = list.sparks.map((spark) => ({ ...spark, ...seen[spark.name] }));
+    await route.fulfill({ response, json: { ...list, sparks, available: true } });
   });
 }
 
@@ -58,6 +67,9 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
   await expand(main, 'Other Sparks');
   const card = main.getByRole('region', { name: 'Other Sparks' });
   await expect(card.getByText('No other Spark is saved yet.')).toBeVisible();
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^This Mac/ }),
+  ).toHaveCount(0);
 
   const add = card.getByRole('button', { name: 'Add a Spark' });
   await add.click();
@@ -109,6 +121,137 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
   await expect(confirm.getByText(/Also revoke this Mac on Garage Mac/)).toBeVisible();
   await confirm.getByRole('button', { name: 'Remove' }).click();
   await expect(card.getByText('No other Spark is saved yet.')).toBeVisible();
+});
+
+test('saved Sparks show their status, what waits there, and open from their row', async ({
+  page,
+}) => {
+  await asMacApp(page, {
+    'Studio Mac': { status: 'online', needsYou: 2 },
+    'Attic Mac': { status: 'offline', needsYou: 0 },
+  });
+  const opened: string[] = [];
+  await page.route('**/api/remote-sparks/*/open', async (route) => {
+    opened.push(new URL(route.request().url()).pathname);
+    await route.fulfill({ json: {} });
+  });
+  const main = await openPhone(page);
+  await expand(main, 'Other Sparks');
+  const card = main.getByRole('region', { name: 'Other Sparks' });
+  const dialog = page.getByRole('dialog', { name: 'Add a Spark' });
+  for (const [name, host] of [
+    ['Studio Mac', STUDIO],
+    ['Attic Mac', 'attic.tail1234.ts.net'],
+  ] as const) {
+    await card.getByRole('button', { name: 'Add a Spark' }).click();
+    await dialog.getByLabel('Address or pairing link').fill(host);
+    await dialog.getByLabel('Name').fill(name);
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+  }
+
+  const studio = card.getByRole('listitem').filter({ hasText: 'Studio Mac' });
+  await expect(studio.getByText('Online')).toBeVisible();
+  await expect(studio.getByText('2 waiting')).toBeVisible();
+  const attic = card.getByRole('listitem').filter({ hasText: 'Attic Mac' });
+  await expect(attic.getByText('Offline')).toBeVisible();
+  await expect(attic.getByText(/waiting$/)).toHaveCount(0);
+
+  const axe = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .include('.rs-list')
+    .analyze();
+  expect(axe.violations).toEqual([]);
+
+  await studio.getByRole('button', { name: 'Open Studio Mac' }).click();
+  await expect.poll(() => opened).toHaveLength(1);
+  expect(opened[0]).toMatch(/^\/api\/remote-sparks\/[0-9a-f-]{36}\/open$/);
+
+  const rail = page.getByRole('navigation', { name: 'Main' });
+  const switcher = rail.getByRole('button', {
+    name: 'This Mac. 2 requests waiting on other Sparks',
+  });
+  await expect(rail.getByRole('button').nth(1)).toHaveAccessibleName(/^This Mac/);
+  await switcher.click();
+  const menu = page.getByRole('menu', { name: 'Sparks' });
+  await expect(menu.getByRole('menuitemradio', { name: /This Mac/ })).toBeChecked();
+  await expect(menu.getByRole('menuitem', { name: /Studio Mac/ })).toContainText('Online');
+  await expect(menu.getByRole('menuitem', { name: /Studio Mac/ })).toContainText('2 waiting');
+  await expect(menu.getByRole('menuitem', { name: /Attic Mac/ })).toContainText('Offline');
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(switcher).toBeFocused();
+
+  await switcher.click();
+  await menu.getByRole('menuitem', { name: /Attic Mac/ }).click();
+  await expect.poll(() => opened).toHaveLength(2);
+  await expect(menu).toBeHidden();
+});
+
+test('this Mac and a saved Spark get a name and an icon of their own', async ({ page }) => {
+  await asMacApp(page);
+  const main = await openPhone(page);
+  await expand(main, 'Other Sparks');
+  const card = main.getByRole('region', { name: 'Other Sparks' });
+  const own = card.getByRole('listitem').first();
+  await expect(own.getByText('This Mac', { exact: true })).toBeVisible();
+  await expect(own.getByText(/sees this name when this one pairs/)).toBeVisible();
+  await expect(own.getByRole('button', { name: /^Open/ })).toHaveCount(0);
+
+  await card.getByRole('button', { name: 'Add a Spark' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add a Spark' });
+  await dialog.getByLabel('Address or pairing link').fill(STUDIO);
+  await dialog.getByLabel('Name').fill('Studio Mac');
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeHidden();
+  const rail = page.getByRole('navigation', { name: 'Main' });
+  await expect(rail.getByRole('button', { name: 'This Mac', exact: true })).toBeVisible();
+
+  const ownActions = own.getByRole('button', { name: 'Actions for This Mac' });
+  await ownActions.click();
+  await page.getByRole('menuitem', { name: 'Rename' }).click();
+  await page.getByLabel('New name for This Mac').fill('Office');
+  await page.keyboard.press('Enter');
+  await expect(own.getByText('Office', { exact: true })).toBeVisible();
+  await expect(ownActions).toBeFocused();
+  const switcher = rail.getByRole('button', { name: 'Office', exact: true });
+  await expect(switcher).toBeVisible();
+
+  const studio = card.getByRole('listitem').filter({ hasText: 'Studio Mac' });
+  await expect(studio.locator('img')).toHaveCount(0);
+  await studio.locator('input[type="file"]').setInputFiles({
+    name: 'logo.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(ONE_PIXEL_PNG, 'base64'),
+  });
+  const image = studio.locator('img');
+  await expect(image).toBeVisible();
+  await expect
+    .poll(() => image.evaluate((node: HTMLImageElement) => node.naturalWidth))
+    .toBe(REMOTE_SPARK_ICON_SIZE);
+  const axe = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .include('.rs-list')
+    .analyze();
+  expect(axe.violations).toEqual([]);
+
+  await switcher.click();
+  const menu = page.getByRole('menu', { name: 'Sparks' });
+  await expect(menu.getByRole('menuitemradio', { name: 'Office' })).toBeChecked();
+  await expect(menu.getByRole('menuitem', { name: /Studio Mac/ }).locator('img')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+
+  await studio.getByRole('button', { name: 'Actions for Studio Mac' }).click();
+  await page.getByRole('menuitem', { name: 'Remove icon' }).click();
+  await expect(studio.locator('img')).toHaveCount(0);
+  await studio.getByRole('button', { name: 'Actions for Studio Mac' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Remove icon' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await ownActions.click();
+  await page.getByRole('menuitem', { name: 'Use computer name' }).click();
+  await expect(rail.getByRole('button', { name: 'This Mac', exact: true })).toBeVisible();
 });
 
 test('outside the Mac app the card only says where other Sparks open', async ({ page }) => {

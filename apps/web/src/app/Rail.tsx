@@ -21,6 +21,7 @@ import { MAC, shortcutText } from '../ui/shortcuts.ts';
 import { onWindows } from '../desktop/desktop-bridge.ts';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import { PlanRing } from './PlanRing.tsx';
+import { SparkSwitcher } from '../remote-sparks/SparkSwitcher.tsx';
 import './rail.css';
 
 export type AppView =
@@ -229,7 +230,12 @@ function useIndicator(view: AppView) {
     };
     measure();
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    const items = new MutationObserver(measure);
+    if (railRef.current) items.observe(railRef.current, { childList: true });
+    return () => {
+      window.removeEventListener('resize', measure);
+      items.disconnect();
+    };
   }, [view]);
   return { railRef, box };
 }
@@ -324,6 +330,7 @@ export const Rail = memo(function Rail({
       >
         <UserAvatar displayName={name} size={40} />
       </button>
+      {!phone && <SparkSwitcher onManage={() => onView('phone')} />}
       <span
         className="rail-ind"
         aria-hidden="true"

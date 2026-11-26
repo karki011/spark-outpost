@@ -25,6 +25,21 @@ export const remoteSparksApi = {
   remove: async (id: string): Promise<void> => {
     await request(z.unknown(), `/remote-sparks/${id}`, { method: 'DELETE' });
   },
+  renameLocal: async (name: string | null): Promise<void> => {
+    await request(z.unknown(), '/remote-sparks/local', {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    });
+  },
+  setIcon: async (id: string, png: string): Promise<void> => {
+    await request(z.unknown(), `/remote-sparks/${id}/icon`, {
+      method: 'PUT',
+      body: JSON.stringify({ png }),
+    });
+  },
+  removeIcon: async (id: string): Promise<void> => {
+    await request(z.unknown(), `/remote-sparks/${id}/icon`, { method: 'DELETE' });
+  },
   open: async (id: string): Promise<void> => {
     await request(z.unknown(), `/remote-sparks/${id}/open`, { method: 'POST', body: '{}' });
   },

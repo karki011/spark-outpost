@@ -275,6 +275,13 @@ POST /api/remote-sparks
 PATCH /api/remote-sparks/:id
 DELETE /api/remote-sparks/:id
 POST /api/remote-sparks/:id/open
+PUT /api/remote-sparks/local
+GET /api/remote-sparks/local/icon
+PUT /api/remote-sparks/local/icon
+DELETE /api/remote-sparks/local/icon
+GET /api/remote-sparks/:id/icon
+PUT /api/remote-sparks/:id/icon
+DELETE /api/remote-sparks/:id/icon
 GET /api/remote/tailscale
 POST /api/remote/tailscale/on
 POST /api/remote/tailscale/off

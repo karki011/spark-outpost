@@ -8,22 +8,11 @@
 .rs-row + .rs-row {
   border-top: 1px solid var(--line);
 }
-.rs-row .ph-device-icon {
-  flex: 0 0 22px;
-}
 .rs-body {
   flex: 1 1 220px;
 }
 .rs-body .ph-device-summary {
   overflow-wrap: anywhere;
-}
-.rs-waiting {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
 }
 .rs-actions {
   display: flex;
