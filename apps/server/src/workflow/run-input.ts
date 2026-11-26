@@ -57,6 +57,7 @@ export interface RunInput {
   modelSwitch?: ModelSwitch | null;
   followUpRound?: boolean;
   followUpLane?: boolean;
+  workflowLane?: boolean;
   sparkRuleRetry?: boolean;
   assistantSent?: boolean;
   workflowStarted?: boolean;
@@ -106,6 +107,7 @@ interface RunRow {
   run_level: InvolvementLevel | null;
   follow_up_round: boolean | null;
   follow_up_lane: boolean | null;
+  workflow_lane: boolean | null;
   spark_rule_retry: boolean | null;
   assistant_sent: boolean | null;
   workflow_started?: boolean | null;
@@ -213,6 +215,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
               IN ('assistant', 'workflow', 'chat') OR COALESCE(r.role = 'spark', false)
               OR COALESCE((r.route->'spark') ? 'step', false)) AS assistant_sent,
             (r.parent_run_id IS NULL AND r.source = 'workflow') AS workflow_started,
+            (r.parent_run_id IS NULL AND COALESCE(r.route ? 'workflowLane', false)) AS workflow_lane,
             COALESCE((r.route->'spark') ? 'step', false) AS workflow_step,
             COALESCE((r.route->'spark'->>'test')::boolean, false) AS test_run,
             COALESCE((r.route->'spark'->>'edits')::boolean, false) AS step_edits,
@@ -315,6 +318,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     sparkRuleRetry: row.spark_rule_retry === true,
     assistantSent: row.assistant_sent === true,
     workflowStarted: row.workflow_started === true,
+    workflowLane: row.workflow_lane === true,
     chatAsk: await askTurnFacts(db, row.user_message_id),
     turnTimes: {
       startedAt: row.started_at.toISOString(),

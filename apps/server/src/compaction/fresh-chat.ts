@@ -1,7 +1,8 @@
+import { moveReportToTurn } from '../crew-flows/run-records.ts';
 import { RENAMED_TITLE_MAX_LENGTH, clipAtWord } from '@spark-outpost/contracts';
 import { resolveRunTarget } from '../api/run-target.ts';
 import { insertCompaction } from '../persistence/compactions.ts';
-import { sendUserMessage } from '../persistence/conversations.ts';
+import { sendInTransaction } from '../persistence/conversations.ts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import type { ContextReading } from '../persistence/provider-sessions.ts';
@@ -18,7 +19,7 @@ export function continuedTitle(title: string): string {
 
 export async function startFreshChat(
   db: Db,
-  input: Pick<RunInput, 'identity' | 'workspaceId' | 'userRequest'>,
+  input: Pick<RunInput, 'identity' | 'workspaceId' | 'userRequest' | 'workflowStarted'>,
   summary: string,
   reading: ContextReading | null,
 ): Promise<FreshChat> {
@@ -58,7 +59,20 @@ export async function startFreshChat(
     return { title: named, compactionId: inserted };
   });
   const target = await resolveRunTarget({ db, workspaceId: input.workspaceId }, id);
-  const sent = await sendUserMessage(db, id, { id: newId(), content: input.userRequest }, target);
+  const messageId = newId();
+  const sent = await withTransaction(db, async (client) => {
+    if (input.workflowStarted) await moveReportToTurn(client, input.identity.runId, messageId);
+    return sendInTransaction(
+      client,
+      id,
+      {
+        id: messageId,
+        content: input.userRequest,
+        ...(input.workflowStarted ? { source: 'workflow' as const } : {}),
+      },
+      target,
+    );
+  });
   await db.query('UPDATE compactions SET run_id = $2 WHERE id = $1', [compactionId, sent.run.id]);
   return { id, title };
 }

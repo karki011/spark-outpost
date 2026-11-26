@@ -80,6 +80,7 @@ export const runSchema = z.object({
   errorDetails: z.string().nullable().optional(),
   agentCycle: z.boolean().optional(),
   prFollowUp: z.boolean().optional(),
+  workflowLane: z.boolean().optional(),
   workflowStarted: z.boolean().optional(),
   typedByUser: z.boolean().optional(),
   fromChat: z.string().optional(),

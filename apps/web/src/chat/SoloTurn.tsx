@@ -49,6 +49,8 @@ import { retryableMessage } from './retry-turn.ts';
 import { providerName } from './provider-name.ts';
 import { useLiveReport, useOutputAt } from './status/status-context.ts';
 import { TurnActivity } from './turn/TurnActivity.tsx';
+import { useWorkflowCardFocus } from './workflow-card/card-focus.ts';
+import { isWorkflowTurn } from './workflow-card/workflow-card-model.ts';
 import { leadStep } from './turn/live-label.ts';
 import { workingSparks } from '../crew/conversation-crew.ts';
 import { useReportLeadStep } from '../crew/lead-steps.ts';
@@ -210,6 +212,11 @@ export function SoloTurn({
     sparks: workingSparks(detail.orchestrations?.[run.id]),
     outputAt,
   });
+  const cardFocus = useWorkflowCardFocus();
+  const viewSparks =
+    cardFocus && !cardFocus.dismissed.has(run.id) && isWorkflowTurn(detail, run)
+      ? () => cardFocus.setOpenTurn(run.id)
+      : undefined;
   useReportLeadStep(run.id, working && !waiting ? lead : null);
   const unstarted = steps.length === 0 && text === '';
   useLiveReport(
@@ -435,6 +442,7 @@ export function SoloTurn({
         waiting={waiting}
         background={stream.subagents.background}
         lead={lead}
+        onViewSparks={viewSparks}
       />
       {finished && (
         <TurnMeta>

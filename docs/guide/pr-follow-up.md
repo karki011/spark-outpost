@@ -6,17 +6,17 @@ order: 322
 summary: Have the chat fix failing checks and answer review comments on its pull requests, pushing the fix by itself or after a confirm card.
 ---
 
-You'll let Spark handle checks and reviews on a chat's PRs. About 2 minutes.
+Let Spark handle checks and reviews on a chat's PRs. About 2 minutes.
 
 1. Read the PR row's eye: **Watching**, **Agent is on it**, **Paused**, **Stopped** or **Follow-up off**.
-2. Click it for checks, reviews and **items gathered**.
+2. Click it for checks, reviews, **items gathered**.
 
    ![The opened PR row, with the items Spark gathered](images/pr-follow-up-row-light.png)
 
-3. When checks fail, feedback arrives or the PR falls behind, Spark messages the chat once idle, as a **PR #7 · round 1** card. Your message opens **Agent steps**.
+3. When checks fail, feedback arrives or the PR lags, Spark messages the idle chat as a **PR #7 · round 1** card; rounds in a row fold into one. Your message opens **Agent steps**.
 4. A separate agent fixes, pushes back, merges, pushes; Spark replies. Your messages start normal turns; ask to stop.
 
-To approve pushes, turn on **Ask before pushing and replying** in **Settings → GitHub**.
+To approve pushes, turn on **Ask before pushing and replying** (**Settings → GitHub**).
 
 ![The Address PR feedback? card with the push and a reply checked](images/pr-follow-up-card-light.png)
 
@@ -29,11 +29,11 @@ To approve pushes, turn on **Ask before pushing and replying** in **Settings →
 | Anyone else's comments, other bots   | Shows them as **Not acted on** |
 | A disagreement                       | Always goes to you             |
 
-An item closes when its thread resolves, its check passes or its reviewer reviews again.
+An item closes when its thread resolves, its check passes or it's reviewed again.
 
 ## Review bots
 
-On your Mac, add bot logins (`coderabbitai[bot]`) to **Review bots to act on**; their new comments count as reviews.
+On your Mac, add bot logins (`coderabbitai[bot]`) to **Review bots to act on**; their comments count as reviews.
 
 ## Limits
 

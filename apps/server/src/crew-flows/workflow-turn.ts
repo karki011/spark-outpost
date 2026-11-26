@@ -2,14 +2,24 @@ import { findSparkMentions } from '@spark-outpost/contracts';
 import { hasProject, publishOrchestration, type Handoff } from '../orchestration/spark-child.ts';
 import { typedOnTheMac } from '../orchestration/typed-on-mac.ts';
 import { userText } from '../sub-chats/user-asked.ts';
+import { addToQueue } from '../persistence/chat-queue.ts';
+import { withTransaction } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { insertOrchestration, updateOrchestration } from '../persistence/orchestrations.ts';
 import { reviewOptions, settleReviewOfWorkflowRun } from '../github-inbox/review/settle.ts';
 import { closeMessage } from '../workflow/execute-run.ts';
 import { planNote } from '../workflow/plan-recorder.ts';
 import { runEvents } from '../workflow/run-events.ts';
+import { keepChatFiles } from '../workflow/chat-folder.ts';
+import { chatTarget, drainQueue } from '../workflow/queue-drain.ts';
 import type { RunInput } from '../workflow/run-input.ts';
-import { insertWorkflowRun, workflowRunForTurn, type TurnWorkflowRun } from './run-records.ts';
+import {
+  insertWorkflowRun,
+  recordReport,
+  reportNoteOfTurn,
+  workflowRunForTurn,
+  type TurnWorkflowRun,
+} from './run-records.ts';
 import { runWorkflow, type WorkflowEnd } from './run-workflow.ts';
 import { runnableWorkflow } from './runnable.ts';
 import {
@@ -24,7 +34,14 @@ import { finishWorkflowRun, settleStep } from './run-records.ts';
 import { keepStepEdits, prepareStepEdits } from './step-edits.ts';
 import { runPull } from './step-place-gather.ts';
 import { runPullLine } from './step-place.ts';
-import { workflowNote } from './step-prompt.ts';
+import {
+  WORKFLOW_REPORT_MESSAGE,
+  backgroundReport,
+  laneLine,
+  workflowNote,
+  type WorkflowNote,
+} from './step-prompt.ts';
+import { getTriggers } from './trigger-records.ts';
 import { workspaceSparkIds } from './step-sparks.ts';
 import { workflowStore } from './workflow-store.ts';
 
@@ -138,6 +155,58 @@ async function stopUnstarted(h: Handoff, turn: TurnWorkflowRun, line: string): P
   });
 }
 
+async function quietWhenClean(h: Handoff, workflowId: string): Promise<boolean> {
+  if (!h.input.workflowLane) return false;
+  const stored = await getTriggers(h.deps.db, h.input.workspaceId, workflowId);
+  return stored?.triggers.quietWhenClean === true;
+}
+
+async function queueReport(h: Handoff, turn: TurnWorkflowRun, note: string): Promise<boolean> {
+  const chatId = h.input.identity.threadId;
+  const messageId = newId();
+  try {
+    return await withTransaction(h.deps.db, async (client) => {
+      if (!(await recordReport(client, turn.run.id, { messageId, note }))) return false;
+      const content = WORKFLOW_REPORT_MESSAGE(turn.workflow.name);
+      await addToQueue(client, chatId, { id: messageId, content, origin: 'workflow' });
+      return true;
+    });
+  } catch (error) {
+    console.error('A workflow report could not be queued for its chat', error);
+    return false;
+  }
+}
+
+async function finishLane(
+  h: Handoff,
+  turn: TurnWorkflowRun,
+  end: WorkflowEnd,
+  facts: Pick<WorkflowNote, 'about' | 'checkout'>,
+  quiet: boolean,
+): Promise<void> {
+  const note = turn.continues
+    ? backgroundReport(
+        { ...end, ...facts, workflowName: turn.workflow.name, continues: true },
+        quiet,
+      )
+    : null;
+  const sent = note !== null && (await queueReport(h, turn, note));
+  const clean = quiet && note === null && end.status === 'succeeded';
+  const line = laneLine(turn.workflow.name, end.status, sent ? 'sent' : clean ? 'clean' : 'none');
+  await finishTurn(h, end, line);
+  if (!sent) return;
+  const chatId = h.input.identity.threadId;
+  await drainQueue(h.deps.db, chatId, chatTarget(h.deps.db)).catch((error: unknown) =>
+    console.error('A workflow report waits in its chat’s queue', error),
+  );
+}
+
+export async function withWorkflowReport(h: Handoff): Promise<RunInput> {
+  if (!h.input.workflowStarted || h.input.workflowLane) return h.input;
+  const report = await reportNoteOfTurn(h.deps.db, h.lease.runId);
+  return report === null ? h.input : { ...h.input, prompt: `${h.input.prompt}\n\n${report}` };
+}
+
 export async function workflowTurn(
   h: Handoff,
   sparkMentioned: boolean,
@@ -158,7 +227,11 @@ export async function workflowTurn(
     turn.run.kind === 'review'
       ? await reviewOptions(deps.db, input.workspaceId, turn.run.id)
       : undefined;
-  const placed = await runOnPlace(h, prepared, review === undefined ? {} : { review });
+  const quiet = await quietWhenClean(h, turn.workflow.id);
+  const placed = await runOnPlace(h, prepared, {
+    ...(review === undefined ? {} : { review }),
+    ...(quiet ? { findings: true } : {}),
+  });
   if (placed.end === 'blocked') {
     await stopUnstarted(h, turn, placed.line);
     return 'finished';
@@ -167,14 +240,22 @@ export async function workflowTurn(
   if (end === 'lease_lost') return 'finished';
   if (review !== undefined) await settleReviewOfWorkflowRun(deps.db, turn.run.id);
   await keepStepEdits(h, prepared);
-  const continues = turn.continues && end.status !== 'cancelled';
+  const continues = !input.workflowLane && turn.continues && end.status !== 'cancelled';
   const target = await runPull(deps.db, turn).catch(() => null);
+  const about = target ? runPullLine(target) : null;
+  if (input.workflowLane) {
+    await updateOrchestration(deps.db, lease.runId, { phase: 'finished' });
+    await publishOrchestration(h);
+    await keepChatFiles(deps.db, deps.chatFolders, input, lease);
+    await finishLane(h, turn, end, { about, checkout }, quiet);
+    return 'finished';
+  }
   const note = workflowNote({
     ...end,
     workflowName: turn.workflow.name,
     continues,
     fromUser: turn.run.source === 'mention',
-    about: target ? runPullLine(target) : null,
+    about,
     checkout,
   });
   if (!continues) {

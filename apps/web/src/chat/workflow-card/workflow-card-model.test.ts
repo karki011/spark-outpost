@@ -17,6 +17,7 @@ import {
   runFindings,
   severityCounts,
   shownOnCard,
+  stepsDoing,
 } from './workflow-card-model.ts';
 
 const member = (runId: string, step?: string): CrewMember =>
@@ -132,5 +133,21 @@ describe('the running step and waiting cards', () => {
     const members = [member('r2', 'security')];
     expect(pendingApprovals([card, { ...card, runId: 'x' }], members)).toEqual([card]);
     expect(pendingApprovals([{ ...card, status: 'allowed' } as Approval], members)).toEqual([]);
+  });
+});
+
+describe('what each running step is doing', () => {
+  it('names the open step of a working Spark and leaves finished and plain jobs out', () => {
+    const working = { ...member('a', 'review'), status: 'running', toolCalls: 2 } as CrewMember;
+    const finished = { ...member('b', 'tests'), status: 'succeeded' } as CrewMember;
+    const job = { ...member('c'), status: 'running', toolCalls: 1 } as CrewMember;
+    const turn = {
+      ...detail([{ id: 't' }], { t: orchestration([working, finished, job]) }),
+      activity: { a: [{ name: 'Read `a.ts`', done: false }] },
+    } as unknown as ConversationDetail;
+    const doing = stepsDoing(turn, 't');
+    expect([...doing.keys()]).toEqual(['a']);
+    expect(doing.get('a')).toContain('a.ts');
+    expect(stepsDoing(turn, 'other').size).toBe(0);
   });
 });

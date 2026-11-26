@@ -12,8 +12,26 @@ import { clickSettings } from './rail-menu.ts';
 
 const BEFORE_HAIKU_RETIRES = new Date('2026-09-29T12:00:00Z');
 
-test.beforeEach(async () => {
+async function checkedToday(page: Page) {
+  await page.route('**/api/model-cards', async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as ModelCardsResponse;
+    for (const provider of body.providers) {
+      for (const view of provider.models) {
+        Object.assign(view.staleness, {
+          checkedDaysAgo: 0,
+          checkStale: false,
+          factsExpired: false,
+        });
+      }
+    }
+    await route.fulfill({ response, json: body });
+  });
+}
+
+test.beforeEach(async ({ page }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], catalog: true });
+  await checkedToday(page);
 });
 
 async function openModels(page: Page) {
@@ -232,7 +250,7 @@ test('a model the agent offers without a card is a row marked No details yet', a
 });
 
 test('at 375px the table scrolls inside its own box and the page does not', async ({ browser }) => {
-  const page = await openTouch(browser, { width: 375, height: 812 }, 'chats');
+  const page = await openTouch(browser, { width: 375, height: 812 }, 'chats', checkedToday);
   const settings = await openSettings(page, true);
   await settings.getByRole('tab', { name: 'AI providers' }).click();
   await page.getByRole('radio', { name: 'Models' }).click();

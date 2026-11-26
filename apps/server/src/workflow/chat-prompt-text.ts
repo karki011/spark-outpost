@@ -81,3 +81,7 @@ export function oneLine(value: string): string {
 export function roundRunningNote(round: { number: number; round: number; doing: string }): string {
   return `A separate follow-up agent is working in this folder right now on PR #${round.number} (round ${round.round}; ${oneLine(round.doing)}). It has its own session and does not see this conversation. Answer the user as usual. Before you or the user change the work it is doing, or edit files it may be editing, stop it with spark_pr_follow_up_round (action "stop"), or tell it to wait or what changed with action "message". Don't commit or push its unfinished edits.`;
 }
+
+export function workflowRunningNote(name: string): string {
+  return `The workflow "${oneLine(name)}" is running in the background in this chat. Its steps are separate Sparks with their own context: they do not see this conversation, and you are not waiting on them. Answer the user as usual. If it has something to report, Spark sends it to you as a later message. Stop it with spark_workflow (action "stop") only when the user asks.`;
+}

@@ -76,6 +76,16 @@
   color: var(--muted);
   opacity: 0;
   transition: opacity 0.15s var(--out);
+  position: relative;
+}
+
+.turn-meta .run-usage {
+  position: static;
+}
+
+.turn-meta .usage-tip {
+  left: 6px;
+  max-width: min(400px, calc(100% - 6px));
 }
 
 .col > section:hover .turn-meta,

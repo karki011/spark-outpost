@@ -74,7 +74,15 @@ function useFocusKeptOnLine(hasThought: boolean, headRef: ReturnType<typeof useL
   return { setLine, track };
 }
 
-export function WorkingLine({ run, step }: { run: Run; step: LeadStep }) {
+export function WorkingLine({
+  run,
+  step,
+  onViewSparks,
+}: {
+  run: Run;
+  step: LeadStep;
+  onViewSparks?: (() => void) | undefined;
+}) {
   const headRef = useLiveHead(run.id);
   const now = useNow(true);
   const [showThought, setShowThought] = useState(false);
@@ -108,6 +116,16 @@ export function WorkingLine({ run, step }: { run: Run; step: LeadStep }) {
           {turnClock && <> · Turn {turnClock}</>}
           {tokens !== null && tokens > 0 && <> · {formatTokens(tokens)} tokens</>}
         </span>
+        {step.onSparks && onViewSparks && (
+          <button
+            type="button"
+            className="btn ghost sm"
+            aria-label="View what the Sparks are doing"
+            onClick={onViewSparks}
+          >
+            View
+          </button>
+        )}
         <span className="turn-working-stop">
           <kbd>Esc</kbd> to stop
         </span>

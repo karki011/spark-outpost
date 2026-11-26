@@ -188,6 +188,44 @@ describe('workflowNote', () => {
     expect(text).not.toContain('If the user’s message asks');
   });
 
+  it('hands the main agent only the last steps’ replies, as a subagent’s result', () => {
+    const text = workflowNote({
+      workflowName: 'PR review',
+      status: 'failed',
+      stoppedBy: null,
+      continues: true,
+      fromUser: false,
+      steps: [
+        { ...note('read', 'succeeded', 'pages of notes'), last: false },
+        { ...note('lint', 'failed', 'eslint crashed'), last: false },
+        { ...note('verdict', 'succeeded', '[High] a bug'), last: true },
+      ],
+    });
+
+    expect(text).not.toContain('pages of notes');
+    expect(text).toContain('read (Pip · Code reviewer) finished; a later step used its reply');
+    expect(text).toContain('could not finish: eslint crashed');
+    expect(text).toContain('[High] a bug');
+    expect(text).toContain('Only the last steps’ replies are here');
+    expect(text).toContain('spark_chat');
+  });
+
+  it('keeps every reply in the note that ends a turn the main agent does not run in', () => {
+    const text = workflowNote({
+      workflowName: 'PR review',
+      status: 'succeeded',
+      stoppedBy: null,
+      continues: false,
+      steps: [
+        { ...note('read', 'succeeded', 'short notes'), last: false },
+        { ...note('verdict', 'succeeded', 'fine'), last: true },
+      ],
+    });
+
+    expect(text).toContain('short notes');
+    expect(text).not.toContain('Only the last steps');
+  });
+
   it('shortens only replies over the report limit and says so', () => {
     const text = workflowNote({
       workflowName: 'PR review',

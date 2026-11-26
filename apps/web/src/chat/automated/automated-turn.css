@@ -221,3 +221,19 @@
   gap: 8px 16px;
   margin: 0;
 }
+
+.round-group-body {
+  padding-left: 20px;
+}
+
+.round-group-body[hidden] {
+  display: none;
+}
+
+.round-group-body .auto-turn {
+  margin: 0;
+}
+
+.round-group-body .auto-turn[data-open='false'] .auto-turn-toggle .chev {
+  transform: none;
+}
