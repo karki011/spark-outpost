@@ -24,7 +24,8 @@
   color: var(--danger);
 }
 
-.run-cmd.interrupted .run-cmd-mark {
+.run-cmd.interrupted .run-cmd-mark,
+.run-cmd.blocked .run-cmd-mark {
   color: var(--muted);
 }
 
