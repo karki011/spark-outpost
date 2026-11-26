@@ -136,6 +136,22 @@ describe('the Cloudflare connection', { timeout: 30_000 }, () => {
     }
   });
 
+  it('offers only the days the connected service allows, and follows a later check', async () => {
+    const client = s.client();
+    const capped = { service: 'spark-share', maxDays: 1, uploadKey: 'required' };
+    own.fake.info = capped;
+    await connect(client, { address: own.origin, uploadKey: UPLOAD_KEY }).expect(200);
+    const id = await s.publish('html', HTML);
+    expect((await client.get(sharePath(id)).expect(200)).body).toMatchObject({
+      service: 'own',
+      days: [1],
+    });
+
+    own.fake.info = { ...capped, maxDays: 7 };
+    await client.send('post', '/api/cloudflare/check').expect(200);
+    expect((await client.get(sharePath(id)).expect(200)).body.days).toEqual([1, 7]);
+  });
+
   it('turns sharing through it off and on', async () => {
     const client = s.client();
     await client.send('patch', '/api/cloudflare', { shareArtifacts: false }).expect(400);

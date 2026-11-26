@@ -1,4 +1,6 @@
 import {
+  ARTIFACT_SHARE_DAYS,
+  ARTIFACT_SHARE_HOSTED_DAYS,
   ARTIFACT_SHARE_UPLOAD_KEY_PATTERN,
   shareServiceOrigin,
   type ArtifactShareService,
@@ -10,6 +12,7 @@ import { CLOUDFLARE_UPLOAD_KEY_SECRET, type SecretStore } from '../setup/secrets
 export interface ShareTarget {
   service: ArtifactShareService;
   origin: string;
+  days: readonly number[];
 }
 
 export async function shareTarget(
@@ -19,8 +22,13 @@ export async function shareTarget(
 ): Promise<ShareTarget | null> {
   const own = await cloudflareRow(db, workspaceId);
   const ownOrigin = own?.shareArtifacts ? shareServiceOrigin(own.origin) : null;
-  if (ownOrigin) return { service: 'own', origin: ownOrigin };
-  return hostedOrigin ? { service: 'hosted', origin: hostedOrigin } : null;
+  if (own && ownOrigin) {
+    const days = ARTIFACT_SHARE_DAYS.filter((count) => count <= own.maxDays);
+    return { service: 'own', origin: ownOrigin, days };
+  }
+  return hostedOrigin
+    ? { service: 'hosted', origin: hostedOrigin, days: ARTIFACT_SHARE_HOSTED_DAYS }
+    : null;
 }
 
 export async function storedUploadKey(secrets: SecretStore): Promise<string | null> {

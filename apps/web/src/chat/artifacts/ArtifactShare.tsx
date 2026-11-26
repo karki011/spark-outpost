@@ -120,7 +120,12 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
       try {
         const created = await request(createdArtifactShareSchema, path, {
           method: 'POST',
-          body: JSON.stringify({ ...choice, theme: currentShareTheme() ?? undefined }),
+          body: JSON.stringify({
+            ...choice,
+            service: current.service ?? undefined,
+            host: current.host ?? undefined,
+            theme: currentShareTheme() ?? undefined,
+          }),
         });
         await settle(created.share);
         setPasscode(created.passcode);
@@ -129,7 +134,10 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
         const already = alreadySharedSchema.safeParse(
           error instanceof ApiError ? error.body : null,
         );
-        if (!already.success) throw error;
+        if (!already.success) {
+          void client.invalidateQueries({ queryKey });
+          throw error;
+        }
         await settle(already.data.share);
         setPasscode(null);
         setNotice(already.data.error);
@@ -180,7 +188,7 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
           onCreate={(choice) => void create(choice)}
         />
       )}
-      {sheet === 'connect' && !available && !share && (
+      {(sheet === 'connect' || sheet === 'confirm') && !available && !share && (
         <ShareConnectSheet onCancel={close} onConnect={connect} />
       )}
       {sheet === 'shared' && share && (

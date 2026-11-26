@@ -29,6 +29,11 @@ function Connected({ connection }: { connection: CloudflareConnection }) {
   const { update, check, disconnect } = useCloudflareActions();
   const busy = update.isPending || check.isPending || disconnect.isPending;
   const error = update.error ?? check.error ?? disconnect.error;
+  const clear = () => {
+    update.reset();
+    check.reset();
+    disconnect.reset();
+  };
   const sharing = update.isPending ? update.variables.shareArtifacts : connection.shareArtifacts;
   return (
     <div className="cx-body cf-body">
@@ -58,7 +63,10 @@ function Connected({ connection }: { connection: CloudflareConnection }) {
               type="button"
               className="btn line sm"
               disabled={busy}
-              onClick={() => check.mutate()}
+              onClick={() => {
+                clear();
+                check.mutate();
+              }}
             >
               Check again
             </button>
@@ -84,7 +92,10 @@ function Connected({ connection }: { connection: CloudflareConnection }) {
           checked={sharing}
           describedBy={hintId}
           disabled={busy}
-          onChange={(shareArtifacts) => update.mutate({ shareArtifacts })}
+          onChange={(shareArtifacts) => {
+            clear();
+            update.mutate({ shareArtifacts });
+          }}
         />
       </SettingRow>
       {error && (
@@ -115,6 +126,7 @@ function Connected({ connection }: { connection: CloudflareConnection }) {
           }}
           onConfirm={() => {
             setConfirming(false);
+            clear();
             disconnect.mutate();
           }}
         />

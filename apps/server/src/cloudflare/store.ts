@@ -3,6 +3,7 @@ import type { Queryable } from '../persistence/db.ts';
 export interface CloudflareRow {
   origin: string;
   shareArtifacts: boolean;
+  maxDays: number;
   checkedAt: Date | null;
   problem: string | null;
 }
@@ -10,17 +11,19 @@ export interface CloudflareRow {
 interface StoredRow {
   origin: string;
   share_artifacts: boolean;
+  max_days: number;
   checked_at: Date | null;
   problem: string | null;
 }
 
-const COLUMNS = 'origin, share_artifacts, checked_at, problem';
+const COLUMNS = 'origin, share_artifacts, max_days, checked_at, problem';
 
 function toRow(row: StoredRow | undefined): CloudflareRow | null {
   if (!row) return null;
   return {
     origin: row.origin,
     shareArtifacts: row.share_artifacts,
+    maxDays: row.max_days,
     checkedAt: row.checked_at,
     problem: row.problem,
   };
@@ -41,13 +44,15 @@ export async function saveCloudflare(
   db: Queryable,
   workspaceId: string,
   origin: string,
+  maxDays: number,
 ): Promise<void> {
   await db.query(
-    `INSERT INTO cloudflare_connections (workspace_id, origin, checked_at)
-     VALUES ($1, $2, now())
+    `INSERT INTO cloudflare_connections (workspace_id, origin, max_days, checked_at)
+     VALUES ($1, $2, $3, now())
      ON CONFLICT (workspace_id) DO UPDATE
-       SET origin = EXCLUDED.origin, checked_at = now(), problem = NULL`,
-    [workspaceId, origin],
+       SET origin = EXCLUDED.origin, max_days = EXCLUDED.max_days,
+           checked_at = now(), problem = NULL`,
+    [workspaceId, origin, maxDays],
   );
 }
 
@@ -68,11 +73,13 @@ export async function recordCloudflareCheck(
   workspaceId: string,
   origin: string,
   problem: string | null,
+  maxDays: number | null,
 ): Promise<void> {
   await db.query(
-    `UPDATE cloudflare_connections SET checked_at = now(), problem = $3
+    `UPDATE cloudflare_connections
+     SET checked_at = now(), problem = $3, max_days = COALESCE($4, max_days)
      WHERE workspace_id = $1 AND origin = $2`,
-    [workspaceId, origin, problem],
+    [workspaceId, origin, problem, maxDays],
   );
 }
 

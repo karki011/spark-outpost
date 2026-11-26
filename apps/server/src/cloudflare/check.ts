@@ -11,11 +11,14 @@ export interface ServiceCheck {
   timeoutMs: number;
 }
 
+export type ServiceCheckResult =
+  { problem: CloudflareProblem } | { problem: null; maxDays: number };
+
 export async function checkShareService(
   check: ServiceCheck,
   origin: string,
   uploadKey: string,
-): Promise<CloudflareProblem | null> {
+): Promise<ServiceCheckResult> {
   let response: Response;
   try {
     response = await check.fetch(`${origin}${ARTIFACT_SHARE_SERVICE_PATH}`, {
@@ -25,17 +28,18 @@ export async function checkShareService(
       signal: AbortSignal.timeout(check.timeoutMs),
     });
   } catch {
-    return 'unreachable';
+    return { problem: 'unreachable' };
   }
   if (response.status === 401) {
     await response.body?.cancel().catch(() => undefined);
-    return 'refused';
+    return { problem: 'refused' };
   }
   if (response.status !== 200) {
     await response.body?.cancel().catch(() => undefined);
-    return 'notService';
+    return { problem: 'notService' };
   }
   const info = shareServiceInfoSchema.safeParse(await response.json().catch(() => null));
-  if (!info.success) return 'notService';
-  return info.data.uploadKey === 'none' ? 'open' : null;
+  if (!info.success) return { problem: 'notService' };
+  if (info.data.uploadKey === 'none') return { problem: 'open' };
+  return { problem: null, maxDays: info.data.maxDays };
 }

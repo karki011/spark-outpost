@@ -12,7 +12,8 @@ export function useCloudflareConnection(enabled: boolean) {
 
 export function useCloudflareSaved() {
   const queryClient = useQueryClient();
-  return (connection: CloudflareConnection) => {
+  return async (connection: CloudflareConnection) => {
+    await queryClient.cancelQueries({ queryKey: cloudflareKeys.connection });
     queryClient.setQueryData(cloudflareKeys.connection, connection);
     void queryClient.invalidateQueries({ queryKey: ARTIFACT_SHARE_KEY });
   };

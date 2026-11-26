@@ -1,10 +1,9 @@
 import { Router, type Request, type Response } from 'express';
 import {
-  artifactShareDaysFor,
   createArtifactShareRequestSchema,
   type ArtifactShareStatus,
 } from '@spark-outpost/contracts';
-import { BadRequestError, parseBody } from '../api/validation.ts';
+import { parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import { ShareDocumentError } from './share-document.ts';
@@ -33,6 +32,8 @@ export interface ArtifactShareRouteDeps {
 const UNAVAILABLE = 'Sharing is not set up in this build of Spark.';
 const HOSTED_DAYS =
   'Links from Spark’s shared service last 1 day. Connect your own Cloudflare account for 7 days.';
+const DAYS_REFUSED = 'This share service doesn’t allow a link that long. Pick a shorter time.';
+const TARGET_CHANGED = 'Where this page is shared from has changed. Check it and try again.';
 const NO_UPLOAD_KEY =
   'Spark can’t read your share service’s upload key from the keychain. Connect Cloudflare again in Settings.';
 
@@ -75,7 +76,7 @@ export function artifactShareRoutes({
       available: to !== null,
       service: to?.service ?? null,
       host: to ? new URL(to.origin).host : null,
-      days: to ? [...artifactShareDaysFor(to.service)] : [],
+      days: to ? [...to.days] : [],
       share: await liveShare(db, stored.artifactId, stored.version),
     };
     res.set('Cache-Control', 'no-store').json(status);
@@ -90,8 +91,17 @@ export function artifactShareRoutes({
     }
     const stored = await shown(req, res);
     if (!stored) return;
-    if (!artifactShareDaysFor(to.service).includes(choice.expiresInDays)) {
-      throw new BadRequestError(HOSTED_DAYS);
+    const host = new URL(to.origin).host;
+    const moved =
+      (choice.service !== undefined && choice.service !== to.service) ||
+      (choice.host !== undefined && choice.host !== host);
+    if (moved) {
+      res.status(409).json({ error: TARGET_CHANGED });
+      return;
+    }
+    if (!to.days.includes(choice.expiresInDays)) {
+      res.status(400).json({ error: to.service === 'hosted' ? HOSTED_DAYS : DAYS_REFUSED });
+      return;
     }
     const uploadKey = to.service === 'own' ? await storedUploadKey(secrets) : null;
     if (to.service === 'own' && !uploadKey) {
@@ -99,8 +109,9 @@ export function artifactShareRoutes({
       return;
     }
     const deps: ShareDeps = { ...stopDeps, origin: to.origin, uploadKey, chatFolders };
+    const { expiresInDays, passcode, theme } = choice;
     try {
-      const created = await createShare(deps, stored, choice);
+      const created = await createShare(deps, stored, { expiresInDays, passcode, theme });
       res.set('Cache-Control', 'no-store').status(201).json(created);
     } catch (error) {
       failed(res, error);

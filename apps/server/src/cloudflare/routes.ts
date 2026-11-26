@@ -12,7 +12,12 @@ import { storedUploadKey } from '../artifacts/share-target.ts';
 import { BadRequestError, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { CLOUDFLARE_UPLOAD_KEY_SECRET, type SecretStore } from '../setup/secrets.ts';
-import { checkShareService, CLOUDFLARE_CHECK_TIMEOUT_MS, type ServiceCheck } from './check.ts';
+import {
+  checkShareService,
+  CLOUDFLARE_CHECK_TIMEOUT_MS,
+  type ServiceCheck,
+  type ServiceCheckResult,
+} from './check.ts';
 import {
   cloudflareRow,
   deleteCloudflare,
@@ -51,6 +56,20 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
   const { db, workspaceId, secrets } = deps;
   const check = deps.cloudflareCheck ?? { fetch, timeoutMs: CLOUDFLARE_CHECK_TIMEOUT_MS };
   const router = Router();
+  let turn: Promise<unknown> = Promise.resolve();
+
+  const inTurn = <T>(work: () => Promise<T>): Promise<T> => {
+    const next = turn.then(work, work);
+    turn = next.catch(() => undefined);
+    return next;
+  };
+
+  const restoreKey = async (previous: string | null) => {
+    const restore = previous
+      ? secrets.set(CLOUDFLARE_UPLOAD_KEY_SECRET, previous)
+      : secrets.delete(CLOUDFLARE_UPLOAD_KEY_SECRET);
+    await restore.catch(() => undefined);
+  };
 
   const connection = async (): Promise<CloudflareConnection> => {
     const row = await cloudflareRow(db, workspaceId);
@@ -87,18 +106,30 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
       refuse(res, 'address');
       return;
     }
-    const problem = await checkShareService(check, origin, parsed.data.uploadKey);
-    if (problem) {
-      refuse(res, problem);
+    const checked = await checkShareService(check, origin, parsed.data.uploadKey);
+    if (checked.problem) {
+      refuse(res, checked.problem);
       return;
     }
-    try {
-      await secrets.set(CLOUDFLARE_UPLOAD_KEY_SECRET, parsed.data.uploadKey);
-    } catch {
+    const saved = await inTurn(async () => {
+      const previous = await secrets.get(CLOUDFLARE_UPLOAD_KEY_SECRET).catch(() => null);
+      try {
+        await secrets.set(CLOUDFLARE_UPLOAD_KEY_SECRET, parsed.data.uploadKey);
+      } catch {
+        return false;
+      }
+      try {
+        await saveCloudflare(db, workspaceId, origin, checked.maxDays);
+      } catch (error) {
+        await restoreKey(previous);
+        throw error;
+      }
+      return true;
+    });
+    if (!saved) {
       res.status(500).json({ error: KEY_NOT_SAVED });
       return;
     }
-    await saveCloudflare(db, workspaceId, origin);
     await answer(res);
   });
 
@@ -115,18 +146,21 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
     if (!row) throw new BadRequestError(NOT_CONNECTED);
     const origin = shareServiceOrigin(row.origin);
     const key = await storedUploadKey(secrets);
-    const problem = !origin
-      ? 'address'
+    const checked: ServiceCheckResult = !origin
+      ? { problem: 'address' }
       : !key
-        ? 'key'
+        ? { problem: 'key' }
         : await checkShareService(check, origin, key);
-    await recordCloudflareCheck(db, workspaceId, row.origin, problem);
+    const maxDays = checked.problem === null ? checked.maxDays : null;
+    await recordCloudflareCheck(db, workspaceId, row.origin, checked.problem, maxDays);
     await answer(res);
   });
 
   router.delete('/cloudflare', async (_req, res) => {
-    await secrets.delete(CLOUDFLARE_UPLOAD_KEY_SECRET);
-    await deleteCloudflare(db, workspaceId);
+    await inTurn(async () => {
+      await secrets.delete(CLOUDFLARE_UPLOAD_KEY_SECRET);
+      await deleteCloudflare(db, workspaceId);
+    });
     res.status(204).end();
   });
 

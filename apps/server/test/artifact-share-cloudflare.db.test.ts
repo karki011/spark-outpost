@@ -83,6 +83,49 @@ describe('which share service an artifact goes to', { timeout: 30_000 }, () => {
     expect(own.fake.shares.size).toBe(0);
   });
 
+  it('offers and accepts only the days a capped own service allows', async () => {
+    await s.connectOwn(own, 1);
+    const id = await s.publish('html', HTML);
+    const client = s.client();
+
+    expect((await client.get(sharePath(id)).expect(200)).body.days).toEqual([1]);
+    const refused = await client
+      .send('post', sharePath(id), { expiresInDays: 7, passcode: false })
+      .expect(400);
+    expect(refused.body.error).toBe(
+      'This share service doesn’t allow a link that long. Pick a shorter time.',
+    );
+    expect(own.fake.posts).toHaveLength(0);
+    await client.send('post', sharePath(id), { expiresInDays: 1, passcode: false }).expect(201);
+  });
+
+  it('uploads nothing when the service the user confirmed is no longer the target', async () => {
+    const id = await s.publish('html', HTML);
+    const client = s.client();
+    const confirmed = { service: 'own', host: new URL(own.origin).host };
+
+    const moved = await client
+      .send('post', sharePath(id), { expiresInDays: 1, passcode: false, ...confirmed })
+      .expect(409);
+    expect(moved.body.error).toBe(
+      'Where this page is shared from has changed. Check it and try again.',
+    );
+    expect(s.fake.posts).toHaveLength(0);
+    expect(await s.states()).toEqual([]);
+
+    await s.connectOwn(own);
+    await client
+      .send('post', sharePath(id), { expiresInDays: 1, passcode: false, ...confirmed })
+      .expect(201);
+    expect(own.fake.posts[0]!.keys).toEqual([
+      'deleteToken',
+      'expiresInDays',
+      'html',
+      'id',
+      'title',
+    ]);
+  });
+
   it('uploads to the hosted service with no key, and refuses 7 days there', async () => {
     const id = await s.publish('html', HTML);
     const client = s.client();

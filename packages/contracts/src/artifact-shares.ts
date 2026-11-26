@@ -13,10 +13,6 @@ export const ARTIFACT_SHARE_UPLOAD_KEY_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
 export const artifactShareServiceSchema = z.enum(['own', 'hosted']);
 export type ArtifactShareService = z.infer<typeof artifactShareServiceSchema>;
 
-export function artifactShareDaysFor(service: ArtifactShareService): readonly number[] {
-  return service === 'own' ? ARTIFACT_SHARE_DAYS : ARTIFACT_SHARE_HOSTED_DAYS;
-}
-
 export const shareServiceInfoSchema = z.object({
   service: z.literal(ARTIFACT_SHARE_SERVICE_NAME),
   maxDays: z.number().int().min(1).max(7),
@@ -103,6 +99,8 @@ export type ArtifactShareTheme = z.infer<typeof artifactShareThemeSchema>;
 export const createArtifactShareRequestSchema = z.object({
   expiresInDays: artifactShareDaysSchema,
   passcode: z.boolean(),
+  service: artifactShareServiceSchema.optional(),
+  host: z.string().max(300).optional(),
   theme: artifactShareThemeSchema.optional(),
 });
 export type CreateArtifactShareRequest = z.infer<typeof createArtifactShareRequestSchema>;

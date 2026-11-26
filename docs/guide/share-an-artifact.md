@@ -11,11 +11,11 @@ Give someone a page an agent made. About 1 minute.
 1. Open the artifact from its card in the chat. It opens in the Work panel.
 2. Pick the version in the version menu, then select **Share…**.
 3. Turn on **Require a passcode** if the page is private. Spark makes the code.
-4. With [your own Cloudflare account](connect-cloudflare.md), pick **Link ends after**: 1 day or 7 days. Links from Spark's shared service always expire in 1 day.
+4. With [your own Cloudflare account](connect-cloudflare.md), pick **Link ends after**, up to 7 days. Spark's shared service gives 1 day.
 5. Select **Create link**. Spark copies the link; select **Copy code** if there is one, and send the code separately from the link.
 6. Select **Done**. The button now reads **Shared**.
 
-The passcode shows only in that window. Spark doesn't keep it. To get a new one, stop sharing and share again. Five wrong codes lock the link for that visitor for 15 minutes.
+The passcode shows only in that window. Spark doesn't keep it. Five wrong codes lock the link for that visitor for 15 minutes.
 
 ## Stop sharing
 
@@ -30,7 +30,8 @@ Deleting the chat or artifact takes its pages down too. Spark retries hourly unt
 | Sent to the share service                        | Never sent                        |
 | ------------------------------------------------ | --------------------------------- |
 | The version you picked, as stored, and its title | Your chats, other versions, files |
-| The passcode, if any, and your theme's colours   | Your keys or sign-ins             |
+| The passcode, if any, and your theme's colours   | Your sign-ins and other keys      |
+| Your upload key, to your own service             |                                   |
 
 A page that holds a secret value isn't shared. An SVG is sent inside a page that shows it as an image, so its scripts don't run. Markdown artifacts can't be shared yet.
 

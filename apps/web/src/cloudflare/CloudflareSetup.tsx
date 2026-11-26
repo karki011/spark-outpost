@@ -82,6 +82,7 @@ function ConnectForm() {
           className="inp"
           type="text"
           inputMode="url"
+          required
           value={address}
           placeholder="https://spark-outpost-share.example.workers.dev"
           disabled={connect.isPending}
@@ -104,6 +105,7 @@ function ConnectForm() {
             id={`${ids}key`}
             className="inp mono"
             type={revealed ? 'text' : 'password'}
+            required
             value={uploadKey}
             placeholder="Paste the upload key"
             disabled={connect.isPending}

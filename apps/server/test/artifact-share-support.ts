@@ -83,10 +83,10 @@ export class ShareHarness {
     return new ShareHarness(t, artifacts, await startFakeWorker());
   }
 
-  async connectOwn(worker: FakeWorker = this.worker): Promise<void> {
+  async connectOwn(worker: FakeWorker = this.worker, maxDays = 7): Promise<void> {
     worker.fake.uploadKey = UPLOAD_KEY;
     await this.secrets.set(CLOUDFLARE_UPLOAD_KEY_SECRET, UPLOAD_KEY);
-    await saveCloudflare(this.t.db, this.t.workspaceId, worker.origin);
+    await saveCloudflare(this.t.db, this.t.workspaceId, worker.origin, maxDays);
   }
 
   service(overrides: Partial<ShareService> = {}): ShareService {
