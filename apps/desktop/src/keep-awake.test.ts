@@ -23,6 +23,7 @@ function device(connected: boolean, revokedAt: string | null = null) {
   return {
     id: crypto.randomUUID(),
     name: 'Phone',
+    kind: 'browser' as const,
     createdAt: '2026-10-01T00:00:00.000Z',
     lastSeenAt: '2026-10-28T00:00:00.000Z',
     revokedAt,

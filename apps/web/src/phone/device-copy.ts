@@ -31,10 +31,10 @@ export function lastSeenLine(device: RemoteDevice, now: number): string {
 }
 
 export function deviceSummary(device: RemoteDevice): string {
-  return [
-    `Added ${shortDate(device.createdAt)}`,
-    passkeySummary(device.passkeys) ?? 'No passkey',
-  ].join(' · ');
+  const added = `Added ${shortDate(device.createdAt)}`;
+  const passkeys = passkeySummary(device.passkeys);
+  if (device.kind === 'spark' && passkeys === null) return added;
+  return [added, passkeys ?? 'No passkey'].join(' · ');
 }
 
 export function pushTestLine(result: PushTestResult, deviceName: string): string {

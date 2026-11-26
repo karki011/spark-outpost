@@ -1,7 +1,12 @@
 import './pair-scene.css';
 import './pair-motion.css';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { pairingLink, PAIRING_TTL_MS, type PendingPairing } from '@spark-outpost/contracts';
+import {
+  pairingLink,
+  PAIRING_TTL_MS,
+  REMOTE_DEVICE_KIND_LABELS,
+  type PendingPairing,
+} from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import {
   countdownText,
@@ -12,6 +17,7 @@ import {
   type PairStage,
 } from './pair-flow.ts';
 import { QrCode } from './QrCode.tsx';
+import { useCopyFeedback, type CopyState } from '../ui/use-copy-feedback.ts';
 
 interface PairSceneProps {
   stage: PairStage;
@@ -27,7 +33,7 @@ interface PairSceneProps {
 const RING_RADIUS = 15;
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
 
-function PhoneGlyph() {
+function PhoneGlyph({ computer = false }: { computer?: boolean }) {
   return (
     <svg
       className="ph-scene-phone"
@@ -41,8 +47,17 @@ function PhoneGlyph() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
-      <path d="M11 18.5h2" />
+      {computer ? (
+        <>
+          <rect x="4.5" y="5" width="15" height="10.5" rx="1.8" />
+          <path d="M2.5 19h19" />
+        </>
+      ) : (
+        <>
+          <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+          <path d="M11 18.5h2" />
+        </>
+      )}
     </svg>
   );
 }
@@ -96,6 +111,14 @@ function useOnScreen(target: RefObject<HTMLElement | null>): boolean {
   return onScreen;
 }
 
+export const COPY_PAIRING_LINK = 'Copy pairing link';
+
+function copyLinkText(state: CopyState): string {
+  if (state === 'copied') return 'Copied';
+  if (state === 'failed') return 'Copy failed';
+  return COPY_PAIRING_LINK;
+}
+
 function sceneClass(stage: PairStage): string {
   const expiring = stage.kind === 'code' && stage.expiring;
   return ['ph-scene', stage.kind, expiring ? 'expiring' : ''].filter(Boolean).join(' ');
@@ -115,6 +138,7 @@ export function PairScene({
   const primary = useRef<HTMLButtonElement>(null);
   usePrimaryFocus(stage.kind, primary);
   const onScreen = useOnScreen(scene);
+  const link = useCopyFeedback();
   const motion = stageMotion(stage, activation);
   const line = stageLine(stage, activation);
   const meetsPhone = stage.kind === 'found' || stage.kind === 'paired';
@@ -142,7 +166,9 @@ export function PairScene({
           <BlobScout size={compact ? 40 : 72} mood={motionMood(motion)} />
           <i className="ph-scene-shadow" />
         </span>
-        {meetsPhone && <PhoneGlyph />}
+        {meetsPhone && (
+          <PhoneGlyph computer={stage.kind === 'found' && stage.request.kind === 'spark'} />
+        )}
       </div>
       <p className="ph-scene-line" aria-hidden="true">
         {line}
@@ -163,6 +189,13 @@ export function PairScene({
             <output className="ph-code-text" aria-labelledby="ph-code-label">
               {stage.pairing.code}
             </output>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => link.copy(pairingLink(hostname, stage.pairing.code))}
+            >
+              {copyLinkText(link.state)}
+            </button>
             <CountdownRing remainingMs={stage.remainingMs} expiring={stage.expiring} />
             <button
               ref={primary}
@@ -180,6 +213,9 @@ export function PairScene({
       {stage.kind === 'found' && (
         <div className="ph-found">
           <span className="ph-found-name">{stage.request.deviceName}</span>
+          {stage.request.kind === 'spark' && (
+            <span className="ph-found-kind">{REMOTE_DEVICE_KIND_LABELS.spark}</span>
+          )}
           <output className="ph-match" aria-label={`Matching code ${stage.request.matchCode}`}>
             {stage.request.matchCode}
           </output>

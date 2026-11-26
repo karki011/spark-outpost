@@ -1,0 +1,41 @@
+.rs-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.rs-icon svg {
+  width: 72%;
+  height: 72%;
+}
+.rs-switch .rs-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.rs-icon img {
+  display: block;
+  border-radius: 22%;
+  object-fit: cover;
+  outline: 1px solid var(--line);
+  outline-offset: -1px;
+}
+.rs-switch-name {
+  white-space: nowrap;
+}
+.rs-local-tag {
+  color: var(--muted);
+}
+.rs-initials {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 22%;
+  background: var(--panel);
+  color: var(--text);
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+}

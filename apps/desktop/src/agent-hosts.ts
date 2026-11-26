@@ -7,6 +7,7 @@ import { startCalendarHost, type CalendarHostOptions } from './calendar/host.ts'
 import { joinBridges } from './mac-control/bridge.ts';
 import { startMacControlHost, type MacControlHostOptions } from './mac-control/host.ts';
 import { startMacPresence } from './mac-presence.ts';
+import { startRemoteSparkHost, type RemoteSparkHostOptions } from './remote-spark/host.ts';
 import { meetingHub } from './voice/meeting-hub.ts';
 
 export interface AgentHosts {
@@ -21,11 +22,16 @@ export async function startAgentHosts(
   browserOptions: BrowserHostOptions,
   macOptions: MacControlHostOptions,
   calendarOptions: CalendarHostOptions,
+  remoteSparkOptions: Pick<RemoteSparkHostOptions, 'openExternal' | 'log'>,
 ): Promise<AgentHosts> {
   const browser = await startBrowserHost(browserOptions);
   const mac = startMacControlHost(macOptions);
   const calendar = startCalendarHost(calendarOptions);
   const presence = startMacPresence(powerMonitor);
+  const remoteSparks = startRemoteSparkHost({
+    ...remoteSparkOptions,
+    blockedPorts: () => browser.blockedPorts(),
+  });
   return {
     links: browser.links,
     connectWorker: (port) =>
@@ -35,6 +41,7 @@ export async function startAgentHosts(
         calendar.connectWorker(port),
         meetingHub.connect(port),
         presence.connect(port),
+        remoteSparks.connect(port),
       ]),
     windowClosed: () => browser.windowClosed(),
     menuShortcut: (shortcut) => browser.menuShortcut(shortcut),
@@ -43,6 +50,7 @@ export async function startAgentHosts(
       mac.dispose();
       calendar.dispose();
       presence.dispose();
+      remoteSparks.dispose();
     },
   };
 }

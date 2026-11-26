@@ -60,6 +60,7 @@ export interface BrowserHostOptions {
 
 export interface DesktopBrowserHost {
   links: LinkOpening;
+  blockedPorts(): ReadonlySet<number>;
   connectWorker(port: BridgePort): WorkerBridge;
   windowClosed(): void;
   menuShortcut(shortcut: BrowserShortcut): boolean;
@@ -302,6 +303,7 @@ export async function startBrowserHost(options: BrowserHostOptions): Promise<Des
         return true;
       },
     },
+    blockedPorts: () => blocked,
     connectWorker(port) {
       return connectWorkerBridge(port, {
         run: (request, signal) => runBrowserOp(panes, request, signal),

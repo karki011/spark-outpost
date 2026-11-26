@@ -20,6 +20,7 @@ const started: PairingStart = {
 const request: PendingPairing = {
   id: started.id,
   deviceName: 'Kitchen phone',
+  kind: 'browser',
   matchCode: '482 913',
   expiresAt: started.expiresAt,
 };

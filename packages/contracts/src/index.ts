@@ -148,6 +148,7 @@ export * from './remote.ts';
 export * from './remote-passkeys.ts';
 export * from './remote-push.ts';
 export * from './remote-cards.ts';
+export * from './remote-sparks.ts';
 export * from './scout-shape.ts';
 export * from './island-hit.ts';
 export * from './island-size.ts';

@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RemoteDevice, RemoteSwitches, TailscaleState } from '@spark-outpost/contracts';
 import { Switch } from '../ui/Switch.tsx';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
@@ -11,6 +11,8 @@ import { onNote, statusCopy, statusHeadline } from './phone-copy.ts';
 import { QrCode } from './QrCode.tsx';
 import { groupCount, shownGroups } from './switch-groups.ts';
 import { hostWords } from '../desktop/host-words.ts';
+import { remoteSparkKeys, remoteSparksApi } from '../remote-sparks/remote-sparks-api.ts';
+import { OTHER_SPARKS_TITLE } from '../remote-sparks/remote-sparks-copy.ts';
 
 interface PhoneRailProps {
   state: TailscaleState;
@@ -118,6 +120,8 @@ export function PhoneRail({
   const online = active.filter((device) => device.connected).length;
   const on = state.status === 'on' || (state.status === 'error' && wanted);
   const note = state.status === 'on' ? onNote() : statusCopy(state).step;
+  const sparks = useQuery({ queryKey: remoteSparkKeys.all, queryFn: remoteSparksApi.list });
+  const saved = sparks.data?.available ? sparks.data.sparks.length : 0;
   const risky = shownGroups().find((group) => group.id === 'high-risk');
 
   return (
@@ -165,6 +169,7 @@ export function PhoneRail({
               on={risky.switches.some((id) => switches[id])}
             />
           )}
+          {saved > 0 && <Fact label={OTHER_SPARKS_TITLE} value={String(saved)} />}
           <Fact label="Last request" value={lastRequest ? relativeTime(lastRequest) : 'None yet'} />
         </dl>
       </div>

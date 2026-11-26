@@ -29,8 +29,30 @@ describe('pairing', () => {
       status: 'confirmed',
       id: started.id,
       deviceName: 'Phone',
+      kind: 'browser',
     });
     expect(pairings.claim(submitted.claim)).toBeNull();
+  });
+
+  it('carries the kind a Spark sent to the confirm step and the claim', () => {
+    const { pairings } = clocked();
+    const started = pairings.start();
+    const submitted = pairings.submit(started.code, 'Studio Mac', 'spark')!;
+
+    expect(pairings.pending()).toEqual([
+      expect.objectContaining({ deviceName: 'Studio Mac', kind: 'spark' }),
+    ]);
+    expect(pairings.confirm(started.id)).toMatchObject({ kind: 'spark' });
+    expect(pairings.claim(submitted.claim)).toMatchObject({ status: 'confirmed', kind: 'spark' });
+  });
+
+  it('calls a device a browser when it sent no kind', () => {
+    const { pairings } = clocked();
+    const started = pairings.start();
+    pairings.submit(started.code, 'Phone');
+
+    expect(pairings.pending()).toEqual([expect.objectContaining({ kind: 'browser' })]);
+    expect(pairings.deny(started.id)).toMatchObject({ kind: 'browser' });
   });
 
   it('refuses a wrong code and a code used twice', () => {

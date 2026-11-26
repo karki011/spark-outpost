@@ -69,12 +69,16 @@ const SCRIPT = `
   const grouped = (text) =>
     (text.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, ${PAIRING_CODE_LENGTH}).match(/.{1,4}/g) || [])
       .join('-');
-  const fromLink = new URLSearchParams(location.hash.slice(1)).get('code');
+  const link = new URLSearchParams(location.hash.slice(1));
+  const fromLink = link.get('code');
+  const nameFromLink = (link.get('name') || '').trim().slice(0, ${REMOTE_DEVICE_NAME_MAX}).trim();
+  const kindFromLink = link.get('kind') === 'spark' ? 'spark' : null;
+  if (nameFromLink) name.value = nameFromLink;
   if (fromLink) {
     code.value = grouped(fromLink);
-    history.replaceState(null, '', location.pathname);
-    name.focus();
-  } else if (location.search) history.replaceState(null, '', location.pathname);
+    (nameFromLink ? form.querySelector('button') : name).focus();
+  }
+  if (location.hash || location.search) history.replaceState(null, '', location.pathname);
   code.addEventListener('input', () => {
     code.removeAttribute('aria-invalid');
     if (code.selectionStart === code.value.length) code.value = grouped(code.value);
@@ -128,6 +132,7 @@ const SCRIPT = `
     const response = await post('/api/remote/pair', {
       code: code.value,
       deviceName: name.value,
+      ...(kindFromLink ? { kind: kindFromLink } : {}),
     }).catch(() => null);
     if (!response) {
       form.querySelector('button').disabled = false;

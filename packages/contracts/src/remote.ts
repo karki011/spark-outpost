@@ -184,6 +184,9 @@ export type UpdateRemoteAccessRequest = z.infer<typeof updateRemoteAccessRequest
 
 const deviceName = z.string().trim().min(1).max(REMOTE_DEVICE_NAME_MAX);
 
+export const remoteDeviceKindSchema = z.enum(['browser', 'spark']);
+export type RemoteDeviceKind = z.infer<typeof remoteDeviceKindSchema>;
+
 export const remotePasskeySchema = z.object({
   id: z.uuid(),
   label: z.string().nullable(),
@@ -199,6 +202,7 @@ export type RemotePasskeyList = z.infer<typeof remotePasskeyListSchema>;
 export const remoteDeviceSchema = z.object({
   id: z.uuid(),
   name: z.string(),
+  kind: remoteDeviceKindSchema,
   createdAt: z.string(),
   lastSeenAt: z.string(),
   revokedAt: z.string().nullable(),
@@ -225,6 +229,7 @@ export type PairingStart = z.infer<typeof pairingStartSchema>;
 export const pendingPairingSchema = z.object({
   id: z.uuid(),
   deviceName: z.string(),
+  kind: remoteDeviceKindSchema,
   matchCode: z.string(),
   expiresAt: z.string(),
 });
@@ -236,6 +241,7 @@ export type PendingPairingList = z.infer<typeof pendingPairingListSchema>;
 export const pairingSubmitRequestSchema = z.object({
   code: z.string().min(1).max(40),
   deviceName,
+  kind: remoteDeviceKindSchema.optional(),
 });
 
 export const pairingSubmitResponseSchema = z.object({

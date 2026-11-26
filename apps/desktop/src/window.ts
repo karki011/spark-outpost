@@ -32,7 +32,7 @@ function openViewer(url: string, origin: string): void {
   void viewer.loadURL(url);
 }
 
-function openExternal(url: string): void {
+export function openExternal(url: string): void {
   const fake = app.isPackaged ? undefined : process.env.SPARK_FAKE_OPEN_EXTERNAL;
   if (fake) appendFileSync(fake, `${new URL(url).host}\n`, { mode: 0o600 });
   else void shell.openExternal(url);

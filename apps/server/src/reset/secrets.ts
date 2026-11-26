@@ -2,11 +2,13 @@ import { connectableIdSchema, ticketSourceIdSchema } from '@spark-outpost/contra
 import type { Queryable } from '../persistence/db.ts';
 import { signInRefs } from '../persistence/browser-sign-ins.ts';
 import { cloudSubjects } from '../calendar/cloud/account-store.ts';
+import { remoteSparkIds } from '../remote-sparks/store.ts';
 import {
   SLACK_SECRET_IDS,
   SLACK_SIGN_IN_SECRET,
   googleCalendarSecret,
   microsoftCalendarSecret,
+  remoteSparkSecret,
   type SecretId,
 } from '../setup/secrets.ts';
 
@@ -26,5 +28,6 @@ export async function storedSecretIds(db: Queryable, keepApiKeys: boolean): Prom
     ...signIns,
     ...(await cloudSubjects(db, 'google')).map(googleCalendarSecret),
     ...(await cloudSubjects(db, 'microsoft')).map(microsoftCalendarSecret),
+    ...(await remoteSparkIds(db)).map(remoteSparkSecret),
   ];
 }

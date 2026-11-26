@@ -64,6 +64,27 @@ describe('remote policy', () => {
     );
   });
 
+  it('keeps another Mac’s saved Sparks on the Mac whatever the switches say', () => {
+    const routes = [
+      'GET /api/remote-sparks',
+      'POST /api/remote-sparks',
+      'PATCH /api/remote-sparks/:id',
+      'DELETE /api/remote-sparks/:id',
+      'POST /api/remote-sparks/:id/open',
+      'PUT /api/remote-sparks/local',
+      'GET /api/remote-sparks/local/icon',
+      'PUT /api/remote-sparks/local/icon',
+      'DELETE /api/remote-sparks/local/icon',
+      'GET /api/remote-sparks/:id/icon',
+      'PUT /api/remote-sparks/:id/icon',
+      'DELETE /api/remote-sparks/:id/icon',
+    ];
+    for (const route of routes) {
+      expect([route, ROUTE_RULES.get(route)]).toEqual([route, 'never']);
+      expect([route, kindOf(route, ALL_ON)]).toEqual([route, 'refuse']);
+    }
+  });
+
   it('lets a paired device read a chat’s sub-chats wherever it may read chats', () => {
     expect(remoteDecision('GET', `/api/conversations/${ID}/sub-chats`, ALL_OFF).kind).toBe('allow');
     expect(remoteDecision('POST', `/api/conversations/${ID}/sub-chats`, ALL_ON).kind).toBe(

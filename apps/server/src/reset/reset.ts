@@ -16,6 +16,7 @@ export interface ResetDeps {
   secrets: SecretStore;
   stopTerminals: () => void | Promise<void>;
   settleMs?: number;
+  afterReset?: () => void | Promise<void>;
 }
 
 async function removeSecret(secrets: SecretStore, id: SecretId): Promise<boolean> {
@@ -80,5 +81,6 @@ export async function resetSparkOutpost(
   const secretsRemoved = await removeSecrets(deps.secrets, secretIds, problems);
   const worktreesRemoved =
     (await removeWorktrees(worktrees, problems)) + (await removeChatCopies(chatCopies, problems));
+  await deps.afterReset?.();
   return { secretsRemoved, worktreesRemoved, problems };
 }

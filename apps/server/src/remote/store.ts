@@ -4,6 +4,7 @@ import {
   type RemoteAccess,
   type RemoteAuditAction,
   type RemoteAuditEntry,
+  type RemoteDeviceKind,
   type RemoteSwitch,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
@@ -92,6 +93,7 @@ export async function saveRemoteSwitches(
 export interface DeviceRow {
   id: string;
   name: string;
+  kind: RemoteDeviceKind;
   created_at: Date;
   last_seen_at: Date;
   revoked_at: Date | null;
@@ -99,7 +101,7 @@ export interface DeviceRow {
   expired: boolean;
 }
 
-const DEVICE_COLUMNS = `id, name, created_at, last_seen_at, revoked_at, replaced_by,
+const DEVICE_COLUMNS = `id, name, kind, created_at, last_seen_at, revoked_at, replaced_by,
   last_seen_at < now() - interval '${REMOTE_DEVICE_IDLE_DAYS} days' AS expired`;
 
 export async function listDevices(db: Queryable, workspaceId: string): Promise<DeviceRow[]> {
@@ -129,12 +131,13 @@ export async function deviceByTokenHash(
 export async function addDevice(
   db: Queryable,
   workspaceId: string,
-  device: { name: string; tokenHash: string },
+  device: { name: string; kind: RemoteDeviceKind; tokenHash: string },
 ): Promise<DeviceRow> {
   const { rows } = await db.query<DeviceRow>(
-    `INSERT INTO remote_devices (id, workspace_id, name, token_hash) VALUES ($1, $2, $3, $4)
+    `INSERT INTO remote_devices (id, workspace_id, name, token_hash, kind)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING ${DEVICE_COLUMNS}`,
-    [newId(), workspaceId, device.name, device.tokenHash],
+    [newId(), workspaceId, device.name, device.tokenHash, device.kind],
   );
   return rows[0]!;
 }
@@ -143,7 +146,7 @@ export async function repairDevice(
   db: Queryable,
   workspaceId: string,
   id: string,
-  device: { name: string; tokenHash: string; carriedHash: string },
+  device: { name: string; kind: RemoteDeviceKind; tokenHash: string; carriedHash: string },
 ): Promise<DeviceRow | null> {
   const { rows } = await db.query<DeviceRow>(
     `WITH usable AS (
@@ -154,11 +157,11 @@ export async function repairDevice(
        UPDATE remote_device_sessions SET token_hash = $4
        WHERE token_hash = $5 AND device_id IN (SELECT id FROM usable)
      )
-     UPDATE remote_devices SET name = $3, last_seen_at = now(),
+     UPDATE remote_devices SET name = $3, kind = $6, last_seen_at = now(),
        token_hash = CASE WHEN token_hash = $5 THEN $4 ELSE token_hash END
      WHERE id IN (SELECT id FROM usable)
      RETURNING ${DEVICE_COLUMNS}`,
-    [workspaceId, id, device.name, device.tokenHash, device.carriedHash],
+    [workspaceId, id, device.name, device.tokenHash, device.carriedHash, device.kind],
   );
   return rows[0] ?? null;
 }

@@ -1,0 +1,60 @@
+.rs-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 0;
+}
+.rs-row + .rs-row {
+  border-top: 1px solid var(--line);
+}
+.rs-body {
+  flex: 1 1 220px;
+}
+.rs-body .ph-device-summary {
+  overflow-wrap: anywhere;
+}
+.rs-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rs-row-note {
+  flex-basis: 100%;
+}
+.rs-dialog {
+  gap: 12px;
+  width: min(460px, calc(100vw - 32px));
+}
+.rs-dialog h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.rs-form {
+  display: grid;
+  gap: 12px;
+}
+.rs-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.rs-hint,
+.rs-problem {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.rs-hint {
+  color: var(--muted);
+}
+.rs-problem {
+  color: var(--danger);
+}
+.rs-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}

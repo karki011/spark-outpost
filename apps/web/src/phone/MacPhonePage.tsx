@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RemoteSession } from '@spark-outpost/contracts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -16,6 +16,8 @@ import { PhoneSwitches } from './PhoneSwitches.tsx';
 import { PhoneCardAnswering } from './PhoneCardAnswering.tsx';
 import { PushContact } from './PushContact.tsx';
 import { setupSteps } from './setup-steps.ts';
+import { OtherSparks } from '../remote-sparks/OtherSparks.tsx';
+import { hostWords } from '../desktop/host-words.ts';
 
 const STATE_POLL_MS = 10_000;
 const LIST_POLL_MS = 5000;
@@ -26,6 +28,8 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
   const hidden = usePageHidden();
   const now = useMinuteClock();
   const [freshAfter, setFreshAfter] = useState<number | null>(null);
+  const inboundTitle = useId();
+  const outboundTitle = useId();
   const tailscale = useQuery({
     queryKey: phoneKeys.tailscale,
     queryFn: phoneApi.tailscale,
@@ -110,31 +114,42 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
         />
       )}
       <div className="ph-area ph-area-main">
-        <PhoneDevices
-          devices={devices.data}
-          freshAfter={freshAfter}
-          passkeysAllowed={session.switches.passkeys}
-          pair={pair}
-          wait={
-            <QueryWait query={devices} what="devices">
-              <Skeleton label="Loading devices" shape="list" rows={2} />
-            </QueryWait>
-          }
-        />
-        <PhoneSwitches
-          switches={session.switches}
-          notificationsExtra={<PushContact poll={hidden ? false : LIST_POLL_MS} />}
-          cards={<PhoneCardAnswering answering={session.cardAnswering} />}
-        />
-        <PhoneActivity
-          entries={audit.data}
-          now={now}
-          wait={
-            <QueryWait query={audit} what="remote activity">
-              <Skeleton label="Loading remote activity" shape="list" rows={3} />
-            </QueryWait>
-          }
-        />
+        <div className="ph-zone" role="group" aria-labelledby={inboundTitle}>
+          <p id={inboundTitle} className="ph-zone-title">
+            Control this {hostWords().computer}
+          </p>
+          <PhoneDevices
+            devices={devices.data}
+            freshAfter={freshAfter}
+            passkeysAllowed={session.switches.passkeys}
+            pair={pair}
+            wait={
+              <QueryWait query={devices} what="devices">
+                <Skeleton label="Loading devices" shape="list" rows={2} />
+              </QueryWait>
+            }
+          />
+          <PhoneSwitches
+            switches={session.switches}
+            notificationsExtra={<PushContact poll={hidden ? false : LIST_POLL_MS} />}
+            cards={<PhoneCardAnswering answering={session.cardAnswering} />}
+          />
+          <PhoneActivity
+            entries={audit.data}
+            now={now}
+            wait={
+              <QueryWait query={audit} what="remote activity">
+                <Skeleton label="Loading remote activity" shape="list" rows={3} />
+              </QueryWait>
+            }
+          />
+        </div>
+        <div className="ph-zone" role="group" aria-labelledby={outboundTitle}>
+          <p id={outboundTitle} className="ph-zone-title">
+            Control another {hostWords().computer}
+          </p>
+          <OtherSparks ownHostname={state.hostname} />
+        </div>
       </div>
     </div>
   );
