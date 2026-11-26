@@ -1,11 +1,12 @@
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RemoteDevice, RemoteSwitches, TailscaleState } from '@spark-outpost/contracts';
 import { Switch } from '../ui/Switch.tsx';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
-import { CheckIcon, CopyIcon } from '../ui/icons.tsx';
+import { CheckIcon, CopyIcon, WarnIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { copyButtonText, useCopyFeedback } from '../ui/use-copy-feedback.ts';
+import { CUSTOM_ON_NOTE, PAIR_AGAIN_NOTE, TURN_OFF } from './custom-domain.ts';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { onNote, statusCopy, statusHeadline } from './phone-copy.ts';
 import { QrCode } from './QrCode.tsx';
@@ -23,6 +24,8 @@ interface PhoneRailProps {
   turning: boolean;
   failure: string | null;
   onTurn: (to: 'on' | 'off') => void;
+  choice?: ReactNode;
+  custom?: boolean;
 }
 
 function Fact({ label, value, on }: { label: string; value: string; on?: boolean }) {
@@ -112,6 +115,8 @@ export function PhoneRail({
   turning,
   failure,
   onTurn,
+  choice,
+  custom = false,
 }: PhoneRailProps) {
   const stepId = useId();
   const titleId = useId();
@@ -132,18 +137,40 @@ export function PhoneRail({
             <i className="ph-dot" aria-hidden="true" />
             {statusHeadline(state, devices ? active.length : null)}
           </h2>
-          <Switch
-            label="Remote control"
-            checked={on}
-            disabled={turning}
-            {...(note ? { describedBy: stepId } : {})}
-            onChange={(next) => onTurn(next ? 'on' : 'off')}
-          />
+          {custom ? (
+            <button
+              type="button"
+              className="btn line sm"
+              disabled={turning}
+              aria-describedby={stepId}
+              onClick={() => onTurn('off')}
+            >
+              {turning ? 'Turning off…' : TURN_OFF}
+            </button>
+          ) : (
+            <Switch
+              label="Remote control"
+              checked={on}
+              disabled={turning}
+              {...(note ? { describedBy: stepId } : {})}
+              onChange={(next) => onTurn(next ? 'on' : 'off')}
+            />
+          )}
         </div>
-        {note && (
-          <p id={stepId} className="ph-step">
-            {note}
-          </p>
+        {custom ? (
+          <div id={stepId} className="ph-custom-on">
+            <p className="ph-step ph-reach-note">
+              <WarnIcon />
+              {CUSTOM_ON_NOTE}
+            </p>
+            <p className="ph-step">{PAIR_AGAIN_NOTE}</p>
+          </div>
+        ) : (
+          note && (
+            <p id={stepId} className="ph-step">
+              {note}
+            </p>
+          )
         )}
         {failure && (
           <p className="ph-error" role="alert">
@@ -151,6 +178,7 @@ export function PhoneRail({
           </p>
         )}
       </div>
+      {choice && <div className="ph-rail-part">{choice}</div>}
       {state.address && <Address address={state.address} connected={online > 0} />}
       <div className="ph-rail-part">
         <h3 id={glanceId}>At a glance</h3>

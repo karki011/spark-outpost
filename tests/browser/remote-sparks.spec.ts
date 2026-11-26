@@ -43,10 +43,14 @@ async function asMacApp(page: Page, seen: Record<string, Seen> = {}): Promise<vo
       await route.continue();
       return;
     }
-    const response = await route.fetch();
-    const list = (await response.json()) as RemoteSparkList;
-    const sparks = list.sparks.map((spark) => ({ ...spark, ...seen[spark.name] }));
-    await route.fulfill({ response, json: { ...list, sparks, available: true } });
+    try {
+      const response = await route.fetch();
+      const list = (await response.json()) as RemoteSparkList;
+      const sparks = list.sparks.map((spark) => ({ ...spark, ...seen[spark.name] }));
+      await route.fulfill({ response, json: { ...list, sparks, available: true } });
+    } catch {
+      await route.abort().catch(() => undefined);
+    }
   });
 }
 
@@ -61,14 +65,14 @@ test.afterAll(() => {
   setFakeTailscale(null);
 });
 
-test('another Mac’s Spark is added, listed, renamed and removed', async ({ page }) => {
+test('another computer’s Spark is added, listed, renamed and removed', async ({ page }) => {
   await asMacApp(page);
   const main = await openPhone(page);
   await expand(main, 'Other Sparks');
   const card = main.getByRole('region', { name: 'Other Sparks' });
   await expect(card.getByText('No other Spark is saved yet.')).toBeVisible();
   await expect(
-    page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^This Mac/ }),
+    page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^This computer/ }),
   ).toHaveCount(0);
 
   const add = card.getByRole('button', { name: 'Add a Spark' });
@@ -79,8 +83,8 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
 
   await address.fill(`http://${STUDIO}`);
   await expect(dialog.getByText('The address must start with https://.')).toBeVisible();
-  await address.fill('https://studio.example.com');
-  await expect(dialog.getByText(/the address must end in \.ts\.net/)).toBeVisible();
+  await address.fill('https://203.0.113.7');
+  await expect(dialog.getByText(/That is not an address Spark can reach\./)).toBeVisible();
 
   await address.fill(`https://${STUDIO}/#code=ABCD-EFGH-JKLM`);
   await expect(dialog.getByText(`Opens ${STUDIO} with its pairing code filled in.`)).toBeVisible();
@@ -103,7 +107,7 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
   await address.fill(STUDIO);
   await dialog.getByLabel('Name').fill('Studio again');
   await dialog.getByRole('button', { name: 'Add a Spark' }).click();
-  await expect(dialog.getByRole('alert')).toHaveText('That Mac is already in your list.');
+  await expect(dialog.getByRole('alert')).toHaveText('That computer is already in your list.');
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(add).toBeFocused();
@@ -120,7 +124,7 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
   const confirm = page.getByRole('alertdialog', { name: 'Remove Garage Mac?' });
   await expect(
     confirm.getByText(
-      'Removing deletes this Mac’s saved sign-in for Garage Mac. Spark also asks Garage Mac to end this Mac’s access. If that Mac is asleep or offline, revoke this Mac there.',
+      'Removing deletes this computer’s saved sign-in for Garage Mac. Spark also asks Garage Mac to end this computer’s access. If that computer is asleep or offline, revoke this computer there.',
     ),
   ).toBeVisible();
   await confirm.getByRole('button', { name: 'Remove' }).click();
@@ -173,12 +177,12 @@ test('saved Sparks show their status, what waits there, and open from their row'
 
   const rail = page.getByRole('navigation', { name: 'Main' });
   const switcher = rail.getByRole('button', {
-    name: 'This Mac. 2 requests waiting on other Sparks',
+    name: 'This computer. 2 requests waiting on other Sparks',
   });
-  await expect(rail.getByRole('button').nth(1)).toHaveAccessibleName(/^This Mac/);
+  await expect(rail.getByRole('button').nth(1)).toHaveAccessibleName(/^This computer/);
   await switcher.click();
   const menu = page.getByRole('menu', { name: 'Sparks' });
-  await expect(menu.getByRole('menuitemradio', { name: /This Mac/ })).toBeChecked();
+  await expect(menu.getByRole('menuitemradio', { name: /This computer/ })).toBeChecked();
   await expect(menu.getByRole('menuitem', { name: /Studio Mac/ })).toContainText('Online');
   await expect(menu.getByRole('menuitem', { name: /Studio Mac/ })).toContainText('2 waiting');
   await expect(menu.getByRole('menuitem', { name: /Attic Mac/ })).toContainText('Offline');
@@ -192,13 +196,13 @@ test('saved Sparks show their status, what waits there, and open from their row'
   await expect(menu).toBeHidden();
 });
 
-test('this Mac and a saved Spark get a name and an icon of their own', async ({ page }) => {
+test('this computer and a saved Spark get a name and an icon of their own', async ({ page }) => {
   await asMacApp(page);
   const main = await openPhone(page);
   await expand(main, 'Other Sparks');
   const card = main.getByRole('region', { name: 'Other Sparks' });
   const own = card.getByRole('listitem').first();
-  await expect(own.getByText('This Mac', { exact: true })).toBeVisible();
+  await expect(own.getByText('This computer', { exact: true })).toBeVisible();
   await expect(own.getByText(/sees this name when this one pairs/)).toBeVisible();
   await expect(own.getByRole('button', { name: /^Open/ })).toHaveCount(0);
 
@@ -209,12 +213,12 @@ test('this Mac and a saved Spark get a name and an icon of their own', async ({ 
   await page.keyboard.press('Enter');
   await expect(dialog).toBeHidden();
   const rail = page.getByRole('navigation', { name: 'Main' });
-  await expect(rail.getByRole('button', { name: 'This Mac', exact: true })).toBeVisible();
+  await expect(rail.getByRole('button', { name: 'This computer', exact: true })).toBeVisible();
 
-  const ownActions = own.getByRole('button', { name: 'Actions for This Mac' });
+  const ownActions = own.getByRole('button', { name: 'Actions for This computer' });
   await ownActions.click();
   await page.getByRole('menuitem', { name: 'Rename' }).click();
-  await page.getByLabel('New name for This Mac').fill('Office');
+  await page.getByLabel('New name for This computer').fill('Office');
   await page.keyboard.press('Enter');
   await expect(own.getByText('Office', { exact: true })).toBeVisible();
   await expect(ownActions).toBeFocused();
@@ -255,14 +259,14 @@ test('this Mac and a saved Spark get a name and an icon of their own', async ({ 
 
   await ownActions.click();
   await page.getByRole('menuitem', { name: 'Use computer name' }).click();
-  await expect(rail.getByRole('button', { name: 'This Mac', exact: true })).toBeVisible();
+  await expect(rail.getByRole('button', { name: 'This computer', exact: true })).toBeVisible();
 });
 
-test('outside the Mac app the card only says where other Sparks open', async ({ page }) => {
+test('outside the app the card only says where other Sparks open', async ({ page }) => {
   const main = await openPhone(page);
   await expand(main, 'Other Sparks');
   const card = main.getByRole('region', { name: 'Other Sparks' });
-  await expect(card.getByText('Other Sparks open from the Mac app.')).toBeVisible();
+  await expect(card.getByText('Other Sparks open from the Spark Outpost app.')).toBeVisible();
   await expect(card.getByRole('button', { name: 'Add a Spark' })).toHaveCount(0);
 });
 

@@ -39,7 +39,7 @@ a:focus-visible{outline:3px solid Highlight;outline-offset:2px}
 </style>
 <main>
 <h1>${escaped(name)} did not load</h1>
-<p>${escaped(hostname)} is not answering. That Mac may be asleep or offline, or Remote control may be off there.</p>
+<p>${escaped(hostname)} is not answering. That computer may be asleep or offline, or Remote control may be off there.</p>
 <a href="${escaped(retryUrl)}" autofocus>Try again</a>
 </main>
 </html>`;

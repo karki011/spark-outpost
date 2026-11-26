@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/api/app.ts';
 import { createTestApp, localClient, testAppOptions } from './app-support.ts';
 import {
+  REMOTE_HOST,
   pairDevice,
   remoteClient,
   setSwitches,
@@ -54,7 +55,7 @@ describe('the Mac switch', () => {
     const saved = await subscribe().expect(200);
     expect(saved.body.endpoints).toEqual([ENDPOINT]);
     expect(await subscriptions()).toEqual([
-      { device_id: device.id, endpoint: ENDPOINT, hostname: 'mac.tail1234.ts.net' },
+      { device_id: device.id, endpoint: ENDPOINT, hostname: REMOTE_HOST },
     ]);
   });
 

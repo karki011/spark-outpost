@@ -170,8 +170,23 @@ export const remoteHostnameSchema = z
   .regex(new RegExp(`^${HOST_LABEL}(?:\\.${HOST_LABEL})+$`))
   .refine((host) => host !== 'localhost' && !/^[0-9.]+$/.test(host));
 
+export const remoteReachSchema = z.enum(['tailscale', 'custom']);
+export type RemoteReach = z.infer<typeof remoteReachSchema>;
+
+export const REMOTE_REACH_LABELS: Record<RemoteReach, string> = {
+  tailscale: 'Tailscale',
+  custom: 'Custom domain',
+};
+
+export const CUSTOM_DOMAIN_PROBLEMS = {
+  tailscale: 'That is a Tailscale address. Choose Tailscale to use it.',
+  unconfirmed: 'Confirm that you control who can reach this domain.',
+} as const;
+
 export const remoteAccessSchema = z.object({
   hostname: z.string().nullable(),
+  reach: remoteReachSchema,
+  forwardTo: z.string().nullable(),
   switches: remoteSwitchesSchema,
   cardAnswering: remoteCardAnsweringSchema,
 });
@@ -179,6 +194,7 @@ export type RemoteAccess = z.infer<typeof remoteAccessSchema>;
 
 export const updateRemoteAccessRequestSchema = z.object({
   hostname: remoteHostnameSchema.nullable(),
+  confirmed: z.boolean().optional(),
 });
 export type UpdateRemoteAccessRequest = z.infer<typeof updateRemoteAccessRequestSchema>;
 

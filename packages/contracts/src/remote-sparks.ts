@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { REMOTE_DEVICE_NAME_MAX, remoteHostnameSchema, type RemoteDeviceKind } from './remote.ts';
+import {
+  REMOTE_DEVICE_NAME_MAX,
+  remoteHostnameSchema,
+  remoteReachSchema,
+  type RemoteDeviceKind,
+  type RemoteReach,
+} from './remote.ts';
 import { parseUrl } from './url.ts';
 import type { AttentionList } from './attention-items.ts';
 
@@ -19,23 +25,10 @@ export const REMOTE_SPARK_ICON_TYPES = [
 ] as const;
 export const LOCAL_SPARK_ID = 'local';
 
-export const remoteReachSchema = z.enum(['tailscale']);
-export type RemoteReach = z.infer<typeof remoteReachSchema>;
+const TAILSCALE_SUFFIX = '.ts.net';
 
-export const REMOTE_REACH_LABELS: Record<RemoteReach, string> = {
-  tailscale: 'Tailscale',
-};
-
-const REACH_SUFFIXES: Record<RemoteReach, readonly string[]> = {
-  tailscale: ['.ts.net'],
-};
-
-export function reachOfHostname(hostname: string): RemoteReach | null {
-  const host = hostname.toLowerCase();
-  for (const reach of remoteReachSchema.options) {
-    if (REACH_SUFFIXES[reach].some((suffix) => host.endsWith(suffix))) return reach;
-  }
-  return null;
+export function reachOfHostname(hostname: string): RemoteReach {
+  return hostname.toLowerCase().endsWith(TAILSCALE_SUFFIX) ? 'tailscale' : 'custom';
 }
 
 export const REMOTE_DEVICE_KIND_LABELS: Record<RemoteDeviceKind, string> = {
@@ -96,6 +89,7 @@ export type RemoteSparkList = z.infer<typeof remoteSparkListSchema>;
 export const addRemoteSparkRequestSchema = z.object({
   address: z.string().trim().min(1).max(400),
   name: sparkName,
+  trusted: z.boolean().optional(),
 });
 export type AddRemoteSparkRequest = z.infer<typeof addRemoteSparkRequestSchema>;
 
@@ -121,13 +115,13 @@ export function sparkIconPath(id: string, version: string): string {
 export type RenameRemoteSparkRequest = z.infer<typeof renameRemoteSparkRequestSchema>;
 
 export const SPARK_ADDRESS_PROBLEMS = {
-  empty: 'Paste the other Mac’s Remote control address or its pairing link.',
+  empty: 'Paste the other computer’s Remote control address or its pairing link.',
   scheme: 'The address must start with https://.',
   shape:
     'Use the address alone, like https://studio.example.ts.net, with no port, path or sign-in in it.',
-  host: 'That is not an address Spark can reach. Use the address shown on the other Mac’s Remote control page.',
-  reach: 'Spark can add another Mac through Tailscale only, so the address must end in .ts.net.',
-  own: 'That is this Mac’s own address. Paste the address of the other Mac.',
+  host: 'That is not an address Spark can reach. Use the address shown on the other computer’s Remote control page.',
+  untrusted: 'This is not a Tailscale address. Confirm that you trust it before adding it.',
+  own: 'That is this computer’s own address. Paste the address of the other computer.',
 } as const;
 export type SparkAddressProblem = keyof typeof SPARK_ADDRESS_PROBLEMS;
 
@@ -165,7 +159,6 @@ export function parseSparkAddress(input: string, ownHostname: string | null): Pa
   const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
   if (!remoteHostnameSchema.safeParse(hostname).success) return refused('host');
   const reach = reachOfHostname(hostname);
-  if (!reach) return refused('reach');
   if (ownHostname !== null && hostname === ownHostname.toLowerCase()) return refused('own');
   const code = pairingCode.safeParse(fragmentValue(url.hash, 'code'));
   return { ok: true, hostname, reach, code: code.success ? code.data : null };

@@ -7,12 +7,13 @@ import { appRequest, localClient, type createTestApp, type RequestMethod } from 
 
 type TestApp = ReturnType<typeof createTestApp>;
 
-export const REMOTE_HOST = 'mac.tail1234.ts.net';
+export const REMOTE_HOST = 'mac.sparktest.dev';
 export const REMOTE_ORIGIN = `https://${REMOTE_HOST}`;
 export const ENTERED = `?${REMOTE_ENTRY_PARAM}=1`;
 
 export async function turnRemoteOn(app: TestApp, hostname: string | null = REMOTE_HOST) {
-  await localClient(app).send('put', '/api/remote/access', { hostname }).expect(200);
+  const body = hostname === null ? { hostname } : { hostname, confirmed: true };
+  await localClient(app).send('put', '/api/remote/access', body).expect(200);
 }
 
 export async function setSwitches(app: TestApp, change: Partial<RemoteSwitches>) {

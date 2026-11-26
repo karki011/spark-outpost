@@ -124,6 +124,24 @@ describe('OtherSparks', () => {
     expect(within(rows[3]!).getByText('2 waiting')).toBeTruthy();
   });
 
+  it('tags a custom domain with an icon and words, and says it is not checked', async () => {
+    const cabin: RemoteSpark = {
+      ...STUDIO,
+      id: CELLAR_ID,
+      name: 'Cabin Mac',
+      hostname: 'spark.example.com',
+      reach: 'custom',
+    };
+    serve({ available: true, local: LOCAL, sparks: [STUDIO, cabin] });
+    await show();
+    const [studio, custom] = screen.getAllByRole('listitem').slice(1);
+    const tag = within(custom!).getByText('Custom domain');
+    expect(tag.querySelector('svg')).toBeTruthy();
+    expect(within(custom!).getByText('spark.example.com · Not checked by Spark')).toBeTruthy();
+    expect(within(studio!).queryByText('Custom domain')).toBeNull();
+    expect(within(studio!).queryByText(/Not checked by Spark/)).toBeNull();
+  });
+
   it('opens the Add dialog when it was asked for from elsewhere', async () => {
     serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     requestAddSpark();
@@ -173,7 +191,7 @@ describe('OtherSparks', () => {
     expect(calls[0]).toMatchObject({ method: 'PATCH', body: { name: 'Garage Mac' } });
   });
 
-  it('asks before removing and says what removing does on both Macs', async () => {
+  it('asks before removing and says what removing does on both computers', async () => {
     const calls = serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     await show();
     const actions = screen.getByRole('button', { name: 'Actions for Studio Mac' });
@@ -185,7 +203,7 @@ describe('OtherSparks', () => {
     const dialog = screen.getByRole('alertdialog', { name: 'Remove Studio Mac?' });
     expect(
       within(dialog).getByText(
-        'Removing deletes this Mac’s saved sign-in for Studio Mac. Spark also asks Studio Mac to end this Mac’s access. If that Mac is asleep or offline, revoke this Mac there.',
+        'Removing deletes this computer’s saved sign-in for Studio Mac. Spark also asks Studio Mac to end this computer’s access. If that computer is asleep or offline, revoke this computer there.',
       ),
     ).toBeTruthy();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));

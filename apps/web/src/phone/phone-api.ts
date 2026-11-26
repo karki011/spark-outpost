@@ -8,6 +8,7 @@ import {
   pushContactStateSchema,
   pushStateSchema,
   pushTestResultSchema,
+  remoteAccessSchema,
   remoteAuditListSchema,
   remoteDeviceListSchema,
   remoteDeviceSchema,
@@ -26,12 +27,14 @@ import {
   type PushState,
   type PushSubscribeRequest,
   type PushTestResult,
+  type RemoteAccess,
   type RemoteAuditEntry,
   type RemoteDevice,
   type RemotePasskey,
   type RemoteSession,
   type RemoteSwitches,
   type TailscaleState,
+  type UpdateRemoteAccessRequest,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
 
@@ -39,6 +42,7 @@ export const phoneKeys = {
   all: ['phone'] as const,
   session: ['phone', 'session'] as const,
   tailscale: ['phone', 'tailscale'] as const,
+  access: ['phone', 'access'] as const,
   devices: ['phone', 'devices'] as const,
   pairings: ['phone', 'pairings'] as const,
   audit: ['phone', 'audit'] as const,
@@ -53,6 +57,9 @@ const post = { method: 'POST', body: '{}' };
 export const phoneApi = {
   session: (): Promise<RemoteSession> => request(remoteSessionSchema, '/remote/session'),
   tailscale: (): Promise<TailscaleState> => request(tailscaleStateSchema, '/remote/tailscale'),
+  access: (): Promise<RemoteAccess> => request(remoteAccessSchema, '/remote/access'),
+  setAccess: (body: UpdateRemoteAccessRequest): Promise<RemoteAccess> =>
+    request(remoteAccessSchema, '/remote/access', { method: 'PUT', body: JSON.stringify(body) }),
   turn: (to: 'on' | 'off'): Promise<TailscaleState> =>
     request(tailscaleStateSchema, `/remote/tailscale/${to}`, post),
   devices: async (): Promise<RemoteDevice[]> =>

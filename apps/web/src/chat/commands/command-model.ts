@@ -155,6 +155,7 @@ export function shownDuration(seconds: number): string {
 export function commandOutcome(command: LiveCommand): string {
   if (command.status === 'running') return 'Running';
   if (command.status === 'interrupted') return 'Interrupted';
+  if (command.status === 'blocked') return 'Blocked before it ran';
   const code = command.exitCode === null ? '' : `, exit code ${command.exitCode}`;
   return command.status === 'failed' ? `Failed${code}` : `Finished${code}`;
 }

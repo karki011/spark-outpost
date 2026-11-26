@@ -200,7 +200,8 @@
   color: var(--muted);
 }
 
-.cmd-tab.interrupted .run-cmd-mark {
+.cmd-tab.interrupted .run-cmd-mark,
+.cmd-tab.blocked .run-cmd-mark {
   color: var(--muted);
 }
 

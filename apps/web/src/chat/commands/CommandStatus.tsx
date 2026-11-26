@@ -1,6 +1,6 @@
 import { isMcpToolName } from '@spark-outpost/contracts';
 import { useEffect, useState } from 'react';
-import { CheckIcon, PauseIcon, XIcon } from '../../ui/icons.tsx';
+import { CheckIcon, MinusIcon, PauseIcon, XIcon } from '../../ui/icons.tsx';
 import { commandSeconds, shownDuration, type CommandView } from './command-model.ts';
 
 export function Elapsed({ command }: { command: CommandView }) {
@@ -44,6 +44,14 @@ export function CommandWord({ command, waiting, denied = false }: CommandWordPro
       </span>
     );
   }
+  if (command.status === 'blocked') {
+    return (
+      <span className="trow-word">
+        <MinusIcon />
+        blocked
+      </span>
+    );
+  }
   const ended = Date.parse(command.finishedAt ?? command.startedAt);
   const took = shownDuration(commandSeconds(command, ended));
   if (command.status === 'failed') {
@@ -68,13 +76,16 @@ export function StatusMark({ command, waiting }: { command: CommandView; waiting
   }
   return (
     <span className="run-cmd-mark" aria-hidden="true">
-      {command.status === 'completed' ? <CheckIcon className="run-cmd-ok" /> : <XIcon />}
+      {command.status === 'completed' && <CheckIcon className="run-cmd-ok" />}
+      {command.status === 'blocked' && <MinusIcon />}
+      {command.status !== 'completed' && command.status !== 'blocked' && <XIcon />}
     </span>
   );
 }
 
 export function stateText(command: CommandView): string {
   if (command.status === 'interrupted') return 'interrupted';
+  if (command.status === 'blocked') return 'blocked';
   const took = shownDuration(commandSeconds(command, Date.now()));
   if (command.exitCode !== null) return `exit ${command.exitCode} · ${took}`;
   return `${command.status === 'failed' ? 'failed' : 'done'} · ${took}`;
