@@ -137,15 +137,17 @@ test('the host names a Spark that pairs and copies the pairing link', async ({ p
     `${PHONE_ADDRESS}/#code=${code}`,
   );
 
-  await asPhone(
+  const submitted = await asPhone(
     'POST',
     '/api/remote/pair',
     JSON.stringify({ code, deviceName: 'Laptop Mac', kind: 'spark' }),
   );
+  const { claim } = JSON.parse(submitted.body) as { claim: string };
   const found = main.locator('.ph-found');
   await expect(found.getByText('Laptop Mac')).toBeVisible();
   await expect(found.getByText('Spark Outpost')).toBeVisible();
   await found.getByRole('button', { name: 'Confirm' }).click();
+  await asPhone('POST', '/api/remote/pair/claim', JSON.stringify({ claim }));
 
   const device = main.getByRole('listitem').filter({ hasText: 'Laptop Mac' });
   await expect(device.getByText('Spark Outpost')).toBeVisible();

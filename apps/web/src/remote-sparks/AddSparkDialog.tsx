@@ -1,5 +1,5 @@
 import './remote-sparks.css';
-import { useId, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { REMOTE_SPARK_NAME_MAX } from '@spark-outpost/contracts';
 import { ModalFrame } from '../ui/ModalFrame.tsx';
@@ -17,6 +17,7 @@ export function AddSparkDialog({ ownHostname, onClose }: AddSparkDialogProps) {
   const [address, setAddress] = useState('');
   const [name, setName] = useState('');
   const [tried, setTried] = useState(false);
+  const addressField = useRef<HTMLInputElement>(null);
   const typed = address.trim() !== '';
   const problem = typed || tried ? addressProblem(address, ownHostname) : null;
   const hint = addressHint(address, ownHostname);
@@ -27,6 +28,7 @@ export function AddSparkDialog({ ownHostname, onClose }: AddSparkDialogProps) {
       await queryClient.invalidateQueries({ queryKey: remoteSparkKeys.all });
       onClose();
     },
+    onError: () => addressField.current?.focus(),
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -59,6 +61,7 @@ export function AddSparkDialog({ ownHostname, onClose }: AddSparkDialogProps) {
         <div className="field">
           <label htmlFor={`${ids}-address`}>Address or pairing link</label>
           <input
+            ref={addressField}
             id={`${ids}-address`}
             className="inp"
             data-autofocus
