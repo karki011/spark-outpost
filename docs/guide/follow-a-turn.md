@@ -12,7 +12,7 @@ About 2 minutes.
 
 1. The working line shows step, time or **No output for 2m**; **Thinking** expands.
 2. Answered cards and flags stay; waiting cards sit last.
-3. Summaries separate commands **passed** from tools **done**.
+3. Summaries: commands **passed** or **blocked**, tools **done**.
 4. Browser, web and Mac steps show.
 5. Code Mode labels discovery and combining; failures expand.
 6. Edits show **+N −M**; open as diffs.

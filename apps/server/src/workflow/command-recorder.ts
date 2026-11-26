@@ -260,7 +260,8 @@ export function createCommandRecorder(options: CommandRecorderOptions): CommandR
       if (output.kind === 'command_described') await describe(output);
       if (output.kind === 'command_output') await add(output);
       if (output.kind === 'command_finished') {
-        await finish(output.id, output.failed ? 'failed' : 'completed', output.exitCode);
+        const status = output.blocked ? 'blocked' : output.failed ? 'failed' : 'completed';
+        await finish(output.id, status, output.exitCode);
       }
     },
     async close() {

@@ -367,7 +367,13 @@ export type ProviderOutput =
     }
   | { kind: 'command_output'; id: string; data: string; replace?: boolean }
   | { kind: 'command_described'; id: string; description: string }
-  | { kind: 'command_finished'; id: string; failed: boolean; exitCode: number | null }
+  | {
+      kind: 'command_finished';
+      id: string;
+      failed: boolean;
+      blocked?: boolean;
+      exitCode: number | null;
+    }
   | { kind: 'account'; account: ProviderAccount };
 
 export interface LiveSessions {

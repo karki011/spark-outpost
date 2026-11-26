@@ -1,7 +1,7 @@
 import { isMcpToolName } from '@spark-outpost/contracts';
 import './rows.css';
 import { Fragment, use, useId, useState, type ReactNode } from 'react';
-import { CheckIcon, ChevronIcon, PauseIcon, XIcon } from '../../ui/icons.tsx';
+import { CheckIcon, ChevronIcon, MinusIcon, PauseIcon, XIcon } from '../../ui/icons.tsx';
 import { Counts } from '../changes/FileChangeList.tsx';
 import { CommandTerminal } from '../commands/CommandTerminal.tsx';
 import { commandTitle } from '../commands/command-title.ts';
@@ -214,6 +214,7 @@ function statusWords(group: RowGroup, answers: CommandAnswers) {
     { count: failedCount(group) - deniedFailed, word: 'failed', tone: 'bad', icon: <XIcon /> },
     { count: all.length - commands.length, word: 'denied', tone: 'bad', icon: <XIcon /> },
     { count: countOf(commands, 'interrupted'), word: 'interrupted', tone: '', icon: <PauseIcon /> },
+    { count: countOf(commands, 'blocked'), word: 'blocked', tone: '', icon: <MinusIcon /> },
     {
       count: countOf(shell, 'completed'),
       word: 'passed',
