@@ -5,6 +5,24 @@ import { parseUrl } from './url.ts';
 export const SHARE_URL_ENV = 'SPARK_SHARE_URL';
 export const ARTIFACT_SHARE_DAYS = [1, 7] as const;
 export const ARTIFACT_SHARE_DEFAULT_DAYS = 7;
+export const ARTIFACT_SHARE_HOSTED_DAYS = [1] as const;
+export const ARTIFACT_SHARE_SERVICE_PATH = '/v1/service';
+export const ARTIFACT_SHARE_SERVICE_NAME = 'spark-share';
+export const ARTIFACT_SHARE_UPLOAD_KEY_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
+
+export const artifactShareServiceSchema = z.enum(['own', 'hosted']);
+export type ArtifactShareService = z.infer<typeof artifactShareServiceSchema>;
+
+export function artifactShareDaysFor(service: ArtifactShareService): readonly number[] {
+  return service === 'own' ? ARTIFACT_SHARE_DAYS : ARTIFACT_SHARE_HOSTED_DAYS;
+}
+
+export const shareServiceInfoSchema = z.object({
+  service: z.literal(ARTIFACT_SHARE_SERVICE_NAME),
+  maxDays: z.number().int().min(1).max(7),
+  uploadKey: z.enum(['required', 'none']),
+});
+export type ShareServiceInfo = z.infer<typeof shareServiceInfoSchema>;
 export const ARTIFACT_SHARE_PASSCODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const ARTIFACT_SHARE_PASSCODE_LENGTH = 8;
 export const ARTIFACT_SHARE_ID_BYTES = 16;
@@ -44,6 +62,9 @@ export type ArtifactShare = z.infer<typeof artifactShareSchema>;
 
 export const artifactShareStatusSchema = z.object({
   available: z.boolean(),
+  service: artifactShareServiceSchema.nullable(),
+  host: z.string().nullable(),
+  days: z.array(z.number().int().positive()),
   share: artifactShareSchema.nullable(),
 });
 export type ArtifactShareStatus = z.infer<typeof artifactShareStatusSchema>;
