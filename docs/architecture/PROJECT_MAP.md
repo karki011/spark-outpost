@@ -203,14 +203,18 @@ referenced first, each with its file and line range from the code index), the ar
 explanation. Everything but the explanation comes from the index, so it is rebuilt with the map
 and costs no model call.
 
-`spark_map_note` (`map/area-notes.ts`, `acts`, so it follows the agent's mode and is not offered
-to read-only turns) saves the explanation. Every source must be a file on the map with a line
-range inside it, at least one must be in the area, and a secret or `.sparkignore` path is
-refused. Saving replaces the area's earlier explanation. On read, a source whose file's
-`content_hash` differs from the saved one (or is gone) is listed as changed, and the tool result
-says the explanation is out of date and that the code is the authority. The result also marks the
-text as notes from an earlier chat, not instructions. Nothing is sent off the computer and Jev is
-not involved.
+`spark_map_note` saves the explanation through the `save_map_note` action
+(`spark-mcp/actions/map-note-actions.ts`, `proposeAction`), so the agent's mode decides whether it
+runs at once or waits on a card showing the project, area, text and cited lines; it is not offered
+to read-only turns. Sources are checked before any card and again when it is saved
+(`map/area-notes.ts`): each path is normalised and must stay inside the project, be a file on the
+map with a line range inside it, and not be a secret or `.sparkignore` path; at least one must be
+in the area. Saving replaces the area's earlier explanation. On read, a source whose file's
+`content_hash` differs from the saved one (or is gone) is listed as changed, and the result says
+the explanation is out of date and that the code is the authority. The explanation is returned
+inside an untrusted `<map_explanation>` block (`untrustedEvidence`), and the server instructions
+list saved Map explanations as data, never instructions. Entry points skip secret and
+`.sparkignore` files. Nothing is sent off the computer and Jev is not involved.
 
 ## Measured
 

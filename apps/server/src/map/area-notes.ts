@@ -1,3 +1,4 @@
+import { posix } from 'node:path';
 import { redactText, storableText } from '../audit/redact.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
@@ -49,7 +50,11 @@ async function indexedFiles(
 }
 
 function cleanPath(path: string): string {
-  return path.trim().replace(/^\.\//, '');
+  const clean = posix.normalize(path.trim().replaceAll('\\', '/'));
+  if (clean === '..' || clean.startsWith('../') || posix.isAbsolute(clean)) {
+    throw new AreaNoteError(`${path} is outside the project. Cite paths relative to its folder.`);
+  }
+  return clean;
 }
 
 function checkSource(
@@ -82,7 +87,12 @@ export interface SaveAreaNote {
   conversationId: string | null;
 }
 
-export async function saveAreaNote(db: Queryable, input: SaveAreaNote): Promise<void> {
+interface CheckedNote {
+  body: string;
+  sources: NoteSource[];
+}
+
+export async function checkAreaNote(db: Queryable, input: SaveAreaNote): Promise<CheckedNote> {
   const body = storableText(redactText(input.text)).trim();
   if (body.length === 0) throw new AreaNoteError('The explanation is empty.');
   if (body.length > NOTE_MAX_CHARS) {
@@ -101,6 +111,11 @@ export async function saveAreaNote(db: Queryable, input: SaveAreaNote): Promise<
   if (!sources.some((source) => files.get(source.path)?.area_id === input.areaId)) {
     throw new AreaNoteError('Cite at least one file from this area.');
   }
+  return { body, sources };
+}
+
+export async function saveAreaNote(db: Queryable, input: SaveAreaNote): Promise<void> {
+  const { body, sources } = await checkAreaNote(db, input);
   await db.query(
     `INSERT INTO map_area_notes (root_path, area_id, body, sources, conversation_id)
      VALUES ($1, $2, $3, $4::jsonb, $5)

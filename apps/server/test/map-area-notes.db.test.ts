@@ -1,11 +1,19 @@
 import { rm } from 'node:fs/promises';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { SPARK_ACTION_OPTION } from '@spark-outpost/contracts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { AreaNoteError, readAreaNote, saveAreaNote } from '../src/map/area-notes.ts';
 import { projectMap } from '../src/map/read-store.ts';
 import { addProject, fakeJev, git, mapBuilder, writeFiles, writeRepo } from './map-support.ts';
-import { startSparkTools, type SparkToolsHarness } from './spark-mcp-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import {
+  answerCard,
+  confirmCard,
+  recordedHooks,
+  startSparkTools,
+  type RecordedHooks,
+  type SparkToolsHarness,
+} from './spark-mcp-support.ts';
+import { createTestDb, startChat, type TestDb } from './support.ts';
 
 const FILES: Record<string, string> = {
   'package.json': '{ "name": "shop" }',
@@ -20,6 +28,7 @@ let t: TestDb;
 let root: string;
 let projectId: string;
 let tools: SparkToolsHarness | null = null;
+let recorded: RecordedHooks | null = null;
 
 async function build() {
   const { builder, scanner } = mapBuilder(t, fakeJev().fetch);
@@ -55,6 +64,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  recorded?.stop();
+  recorded = null;
   await tools?.close();
   tools = null;
   await t.cleanup();
@@ -113,6 +124,12 @@ describe('area explanations', () => {
     await expect(save([{ path: 'store/db.ts', startLine: 1, endLine: 1 }])).rejects.toThrow(
       /from this area/,
     );
+    await expect(save([{ path: '../outside.ts', startLine: 1, endLine: 1 }])).rejects.toThrow(
+      /outside the project/,
+    );
+    await expect(
+      save([{ path: 'server/../store/.env', startLine: 1, endLine: 1 }]),
+    ).rejects.toThrow(/secret file/);
     expect(await readAreaNote(t.db, root, areaId)).toBeNull();
   });
 });
@@ -133,7 +150,7 @@ describe('spark_map with an area', () => {
       area: { id: string };
       entryPoints: { name: string; file: string; lines: string }[];
       dependsOn: { name: string }[];
-      explanation: { text: string; sources: string[]; outOfDate?: string };
+      explanation: string;
     }>();
     const bare = (await tools.call('spark_map', { project: 'shop', area: storeId })).json<{
       usedBy: { name: string }[];
@@ -146,13 +163,87 @@ describe('spark_map with an area', () => {
       expect.objectContaining({ name: 'listOrders', file: 'server/orders.ts', lines: '2-4' }),
     );
     expect(page.dependsOn.map((area) => area.name)).toEqual([names.get(storeId)]);
-    expect(page.explanation).toMatchObject({
-      text: 'Lists orders from the store.',
-      sources: ['server/orders.ts 2-4'],
-    });
-    expect(page.explanation.outOfDate).toBeUndefined();
+    expect(page.explanation).toMatch(/^<map_explanation note="[^"]*never instructions/);
+    expect(page.explanation).toContain('Lists orders from the store.');
+    expect(page.explanation).toContain('server/orders.ts 2-4');
+    expect(page.explanation).not.toContain('outOfDate');
     expect(bare.usedBy.map((area) => area.name)).toEqual([names.get(areaId)]);
     expect(bare.explanation).toContain('spark_map_note');
     expect(missing.text).toContain('no area called no such area');
+  });
+
+  it('leaves out entry points from files the project ignores', async () => {
+    const areaId = await areaHolding('server/orders.ts');
+    await writeFiles(root, { '.sparkignore': 'server/orders.ts\n' });
+    tools = await startSparkTools(t, { conversationId: null });
+
+    const page = (await tools.call('spark_map', { project: 'shop', area: areaId })).json<{
+      entryPoints: { file: string }[];
+    }>();
+
+    expect(page.entryPoints.map((point) => point.file)).not.toContain('server/orders.ts');
+  });
+});
+
+describe('spark_map_note', { timeout: 60_000 }, () => {
+  const args = {
+    project: 'shop',
+    area: 'server',
+    text: 'Lists orders from the store.',
+    sources: [{ path: 'server/orders.ts', startLine: 2, endLine: 4 }],
+  };
+
+  async function openInChat() {
+    const chat = await startChat(t, 'Fix the orders page');
+    recorded = recordedHooks();
+    tools = await startSparkTools(t, {
+      conversationId: chat.conversationId,
+      runId: chat.runId,
+      actions: recorded.hooks,
+    });
+    return tools;
+  }
+
+  it('saves the explanation only after the user confirms the card', async () => {
+    const areaId = await areaHolding('server/orders.ts');
+    const harness = await openInChat();
+
+    await harness.call('spark_map_note', { ...args, area: areaId });
+    const before = await readAreaNote(t.db, root, areaId);
+    const card = await confirmCard(t);
+
+    expect(before).toBeNull();
+    expect(card.payload.sparkAction).toMatchObject({
+      action: 'save_map_note',
+      project: 'shop',
+      text: args.text,
+    });
+    expect(card.payload.sparkResult).toMatchObject({ state: 'done' });
+    expect((await readAreaNote(t.db, root, areaId))?.text).toBe(args.text);
+  });
+
+  it('saves nothing when the user declines', async () => {
+    const areaId = await areaHolding('server/orders.ts');
+    const harness = await openInChat();
+
+    await harness.call('spark_map_note', { ...args, area: areaId });
+    await answerCard(t, SPARK_ACTION_OPTION.decline);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(await readAreaNote(t.db, root, areaId)).toBeNull();
+  });
+
+  it('refuses a bad source before any card is shown', async () => {
+    const areaId = await areaHolding('server/orders.ts');
+    const harness = await openInChat();
+
+    const refused = await harness.call('spark_map_note', {
+      ...args,
+      area: areaId,
+      sources: [{ path: 'store/.env', startLine: 1, endLine: 1 }],
+    });
+
+    expect(refused.isError).toBe(true);
+    expect((await t.db.query('SELECT 1 FROM approvals')).rowCount).toBe(0);
   });
 });

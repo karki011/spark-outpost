@@ -1,6 +1,7 @@
 import type { MapArea } from '@spark-outpost/contracts';
 import { declarationsIn } from '../codescan/scan-store.ts';
 import type { Queryable } from '../persistence/db.ts';
+import { isSecretPath } from '../projects/path-policy.ts';
 import { readAreaNote, type AreaNote } from './area-notes.ts';
 
 const ENTRY_POINTS = 12;
@@ -38,8 +39,13 @@ export function matchArea(areas: readonly MapArea[], reference: string): MapArea
   );
 }
 
-async function entryPoints(db: Queryable, root: string, area: MapArea): Promise<AreaEntryPoint[]> {
-  const files = area.topFiles.slice(0, ENTRY_FILES);
+async function entryPoints(
+  db: Queryable,
+  root: string,
+  area: MapArea,
+  ignore: readonly string[],
+): Promise<AreaEntryPoint[]> {
+  const files = area.topFiles.filter((file) => !isSecretPath(file, ignore)).slice(0, ENTRY_FILES);
   const declared = await declarationsIn(db, root, files);
   return files
     .flatMap((file) =>
@@ -77,9 +83,10 @@ export async function areaPage(
   root: string,
   areas: readonly MapArea[],
   area: MapArea,
+  ignore: readonly string[],
 ): Promise<AreaPage> {
   const [points, edges, note] = await Promise.all([
-    entryPoints(db, root, area),
+    entryPoints(db, root, area, ignore),
     db.query<EdgeRow>(
       `SELECT e.from_area, e.to_area, e.weight
        FROM map_area_edges e JOIN map_repos r ON r.id = e.repo_id

@@ -127,6 +127,7 @@ function cardTitle(action: SparkAction): string {
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
   if (action.action === 'publish_artifact') return `${question} ${action.title}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
+  if (action.action === 'save_map_note') return `${question} ${action.area}`;
   if (action.action === 'post_slack') return `${question} #${action.channel.name}`;
   if ('name' in action) return `${question} ${action.name}`;
   if (
