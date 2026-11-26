@@ -9,17 +9,26 @@ export const THIS_MAC = 'Desk Mac';
 export const STUDIO = 'studio.tail1234.ts.net';
 export const STUDIO_COOKIE = `studio-device-cookie-${'c'.repeat(43)}`;
 
+type WatchMessage = Extract<RemoteSparkBridgeToHost, { kind: 'remote-spark:watch' }>;
+type WindowMessage = Exclude<RemoteSparkBridgeToHost, WatchMessage>;
+
 export interface FakeDesktop extends RemoteSparkPort {
-  posted: RemoteSparkBridgeToHost[];
+  posted: WindowMessage[];
+  watched: WatchMessage['sparks'][];
   send(message: unknown): void;
 }
 
 export function fakeDesktop(): FakeDesktop {
   const listeners: ((message: unknown) => void)[] = [];
-  const posted: RemoteSparkBridgeToHost[] = [];
+  const posted: WindowMessage[] = [];
+  const watched: WatchMessage['sparks'][] = [];
   return {
     posted,
-    post: (message) => posted.push(message),
+    watched,
+    post: (message) => {
+      if (message.kind === 'remote-spark:watch') watched.push(message.sparks);
+      else posted.push(message);
+    },
     subscribe: (listener) => listeners.push(listener),
     send: (message) => listeners.forEach((listener) => listener(message)),
   };

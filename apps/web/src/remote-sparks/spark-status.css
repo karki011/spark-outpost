@@ -1,0 +1,29 @@
+.rs-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rs-status[data-status='online'] {
+  color: var(--success);
+}
+.rs-status svg,
+.ctx button .rs-status svg {
+  flex-shrink: 0;
+  color: currentColor;
+}
+.rs-needs {
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ctx.rs-switch-menu {
+  max-width: min(380px, calc(100vw - 16px));
+}
+.rs-switch-menu button {
+  min-height: 28px;
+}

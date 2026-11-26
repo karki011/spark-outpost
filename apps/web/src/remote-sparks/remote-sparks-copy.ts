@@ -14,8 +14,26 @@ export const OTHER_SPARKS_UNAVAILABLE = 'Other Sparks open from the Mac app.';
 export const OTHER_SPARKS_EMPTY = 'No other Spark is saved yet.';
 export const NAME_PROBLEM = 'Give this Spark a name.';
 
-export function pairedWord(spark: Pick<RemoteSpark, 'paired'>): string {
-  return spark.paired ? 'Paired' : 'Not paired yet';
+export const SWITCHER_MENU = 'Sparks';
+export const ADD_SPARK_ITEM = 'Add a Spark…';
+export const MANAGE_SPARKS_ITEM = 'Manage Sparks…';
+
+export function thisComputer(computer: string): string {
+  return `This ${computer}`;
+}
+
+export function waitingWord(count: number): string {
+  return `${count} waiting`;
+}
+
+export function waitingTotal(sparks: readonly Pick<RemoteSpark, 'needsYou'>[]): number {
+  return sparks.reduce((total, spark) => total + spark.needsYou, 0);
+}
+
+export function switcherName(computer: string, total: number): string {
+  if (total === 0) return thisComputer(computer);
+  const requests = total === 1 ? '1 request' : `${total} requests`;
+  return `${thisComputer(computer)}. ${requests} waiting on other Sparks`;
 }
 
 export function lastOpenedLine(spark: Pick<RemoteSpark, 'lastOpenedAt'>, now: number): string {

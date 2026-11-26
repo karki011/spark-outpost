@@ -3,9 +3,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { REMOTE_SPARK_NAME_MAX, type RemoteSpark } from '@spark-outpost/contracts';
 import '../conversations/chat-menu.css';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
-import { CheckIcon, ClockIcon, DotsIcon, LaptopIcon } from '../ui/icons.tsx';
+import { DotsIcon, LaptopIcon } from '../ui/icons.tsx';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
-import { lastOpenedLine, pairedWord } from './remote-sparks-copy.ts';
+import { lastOpenedLine } from './remote-sparks-copy.ts';
+import { SparkStatus } from './SparkStatus.tsx';
 
 function RenameSpark({ spark, onDone }: { spark: RemoteSpark; onDone: () => void }) {
   const queryClient = useQueryClient();
@@ -94,10 +95,7 @@ export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
           <>
             <div className="ph-device-line">
               <b>{spark.name}</b>
-              <span className={spark.paired ? 'ph-connected' : 'rs-waiting'}>
-                {spark.paired ? <CheckIcon /> : <ClockIcon />}
-                {pairedWord(spark)}
-              </span>
+              <SparkStatus spark={spark} />
             </div>
             <span className="ph-device-summary">
               {spark.hostname} · {lastOpenedLine(spark, now)}

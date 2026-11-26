@@ -41,6 +41,7 @@ import { resetRoutes } from './reset-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard, requireLaunchToken } from './security.ts';
 import { remoteAccessParts } from '../remote/access.ts';
+import { linkRemoteSparks } from '../remote-sparks/bridge.ts';
 import { remoteSparkRoutes, type RemoteSparkRouteDeps } from '../remote-sparks/routes.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
@@ -224,11 +225,13 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', chatPortRoutes(options));
   app.use('/api', agentConnectorRoutes(options));
   app.use('/api', signInRoutes(options));
-  app.use('/api', remoteSparkRoutes(options));
+  const remoteSparks = linkRemoteSparks(options, options.remoteSparkPort ?? null);
+  app.use('/api', remoteSparkRoutes(options, remoteSparks));
   app.use(
     '/api',
     resetRoutes({
       ...options,
+      afterReset: () => remoteSparks.forgetAll(),
       stopTerminals: async () => {
         await options.nativeTerminals?.stopAll();
         options.terminals.killAll();

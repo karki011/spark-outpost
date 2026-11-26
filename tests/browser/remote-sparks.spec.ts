@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import type { RemoteSparkList } from '../../packages/contracts/src/remote-sparks.ts';
+import type { RemoteSpark, RemoteSparkList } from '../../packages/contracts/src/remote-sparks.ts';
 import { openTestDb } from './database.ts';
 import { asPairedPhone } from './paired-phone.ts';
 import {
@@ -29,7 +29,9 @@ async function forgetSavedSparks(): Promise<void> {
   }
 }
 
-async function asMacApp(page: Page): Promise<void> {
+type Seen = Pick<RemoteSpark, 'status' | 'needsYou'>;
+
+async function asMacApp(page: Page, seen: Record<string, Seen> = {}): Promise<void> {
   await page.route('**/api/remote-sparks', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
@@ -37,7 +39,8 @@ async function asMacApp(page: Page): Promise<void> {
     }
     const response = await route.fetch();
     const list = (await response.json()) as RemoteSparkList;
-    await route.fulfill({ response, json: { ...list, available: true } });
+    const sparks = list.sparks.map((spark) => ({ ...spark, ...seen[spark.name] }));
+    await route.fulfill({ response, json: { ...list, sparks, available: true } });
   });
 }
 
@@ -109,6 +112,51 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
   await expect(confirm.getByText(/Also revoke this Mac on Garage Mac/)).toBeVisible();
   await confirm.getByRole('button', { name: 'Remove' }).click();
   await expect(card.getByText('No other Spark is saved yet.')).toBeVisible();
+});
+
+test('saved Sparks show their status, what waits there, and open from their row', async ({
+  page,
+}) => {
+  await asMacApp(page, {
+    'Studio Mac': { status: 'online', needsYou: 2 },
+    'Attic Mac': { status: 'offline', needsYou: 0 },
+  });
+  const opened: string[] = [];
+  await page.route('**/api/remote-sparks/*/open', async (route) => {
+    opened.push(new URL(route.request().url()).pathname);
+    await route.fulfill({ json: {} });
+  });
+  const main = await openPhone(page);
+  await expand(main, 'Other Sparks');
+  const card = main.getByRole('region', { name: 'Other Sparks' });
+  const dialog = page.getByRole('dialog', { name: 'Add a Spark' });
+  for (const [name, host] of [
+    ['Studio Mac', STUDIO],
+    ['Attic Mac', 'attic.tail1234.ts.net'],
+  ] as const) {
+    await card.getByRole('button', { name: 'Add a Spark' }).click();
+    await dialog.getByLabel('Address or pairing link').fill(host);
+    await dialog.getByLabel('Name').fill(name);
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+  }
+
+  const studio = card.getByRole('listitem').filter({ hasText: 'Studio Mac' });
+  await expect(studio.getByText('Online')).toBeVisible();
+  await expect(studio.getByText('2 waiting')).toBeVisible();
+  const attic = card.getByRole('listitem').filter({ hasText: 'Attic Mac' });
+  await expect(attic.getByText('Offline')).toBeVisible();
+  await expect(attic.getByText(/waiting$/)).toHaveCount(0);
+
+  const axe = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .include('.rs-list')
+    .analyze();
+  expect(axe.violations).toEqual([]);
+
+  await studio.getByRole('button', { name: 'Open Studio Mac' }).click();
+  await expect.poll(() => opened).toHaveLength(1);
+  expect(opened[0]).toMatch(/^\/api\/remote-sparks\/[0-9a-f-]{36}\/open$/);
 });
 
 test('outside the Mac app the card only says where other Sparks open', async ({ page }) => {

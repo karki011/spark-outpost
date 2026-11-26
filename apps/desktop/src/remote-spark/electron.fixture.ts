@@ -25,7 +25,14 @@ export interface SetCookie {
 
 export class FakeCookies extends EventEmitter {
   readonly placed: SetCookie[] = [];
+  readonly held = new Map<string, string>();
   failing = false;
+
+  get(filter: { url: string; name: string }): Promise<{ name: string; value: string }[]> {
+    if (this.failing) return Promise.reject(new Error('The cookie store is closed.'));
+    const value = this.held.get(`${new URL(filter.url).hostname} ${filter.name}`);
+    return Promise.resolve(value === undefined ? [] : [{ name: filter.name, value }]);
+  }
 
   set(details: SetCookie): Promise<void> {
     if (this.failing) return Promise.reject(new Error('The cookie store is closed.'));
@@ -38,10 +45,12 @@ export class FakeCookies extends EventEmitter {
 
   remove(url: string, name: string): Promise<void> {
     this.removed.push(`${url} ${name}`);
+    this.held.delete(`${new URL(url).hostname} ${name}`);
     return Promise.resolve();
   }
 
   hostSets(name: string, domain: string, value: string): void {
+    this.held.set(`${domain} ${name}`, value);
     this.emit('changed', {}, { name, domain, value }, 'inserted', false);
   }
 
@@ -51,8 +60,24 @@ export class FakeCookies extends EventEmitter {
   }
 
   hostRemoves(name: string, domain: string, value: string): void {
+    this.held.delete(`${domain} ${name}`);
     this.emit('changed', {}, { name, domain, value }, 'expired-overwrite', true);
   }
+}
+
+export type FakeAnswer = { status: number; body: unknown } | 'unreachable' | 'silent';
+
+export interface FakeResponse {
+  status: number;
+  json(): Promise<unknown>;
+}
+
+function answered(status: number, body: unknown): FakeResponse {
+  return {
+    status,
+    json: () =>
+      body === undefined ? Promise.reject(new SyntaxError('Not JSON.')) : Promise.resolve(body),
+  };
 }
 
 export class FakeSession extends EventEmitter {
@@ -60,10 +85,19 @@ export class FakeSession extends EventEmitter {
   cleared = 0;
   sessionStatus = 200;
   readonly fetched: string[] = [];
+  attention: FakeAnswer = { status: 200, body: { items: [] } };
 
-  fetch(url: string): Promise<{ status: number }> {
+  fetch(url: string, init?: { signal?: AbortSignal }): Promise<FakeResponse> {
     this.fetched.push(url);
-    return Promise.resolve({ status: this.sessionStatus });
+    if (!url.endsWith('/api/attention')) return Promise.resolve(answered(this.sessionStatus, null));
+    const answer = this.attention;
+    if (answer === 'unreachable') return Promise.reject(new Error('net::ERR_NAME_NOT_RESOLVED'));
+    if (answer === 'silent') {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new Error('Aborted.')));
+      });
+    }
+    return Promise.resolve(answered(answer.status, answer.body));
   }
 
   private beforeRequest: RequestHandler | null = null;

@@ -14,6 +14,8 @@ const SAVED = {
   hostname: 'studio.tail1234.ts.net',
   reach: 'tailscale',
   paired: false,
+  status: 'not-paired',
+  needsYou: 0,
   createdAt: '2026-11-20T10:00:00Z',
   lastOpenedAt: null,
 };

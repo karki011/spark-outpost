@@ -1,5 +1,5 @@
 import './remote-sparks.css';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RemoteSpark } from '@spark-outpost/contracts';
 import { DisconnectDialog } from '../connectors/DisconnectDialog.tsx';
@@ -10,6 +10,7 @@ import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { PlusIcon } from '../ui/icons.tsx';
 import { AddSparkDialog } from './AddSparkDialog.tsx';
+import { useAddSparkRequest } from './add-spark-request.ts';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
 import {
   ADD_SPARK,
@@ -35,6 +36,7 @@ export function OtherSparks({ ownHostname }: { ownHostname: string | null }) {
   const addButton = useRef<HTMLButtonElement>(null);
   const [adding, setAdding] = useState(false);
   const [removal, setRemoval] = useState<Removal | null>(null);
+  useAddSparkRequest(useCallback(() => setAdding(true), []));
   const list = useQuery({
     queryKey: remoteSparkKeys.all,
     queryFn: remoteSparksApi.list,

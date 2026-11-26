@@ -14,7 +14,7 @@ import { paramId, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { remoteAccess } from '../remote/store.ts';
 import type { SecretStore } from '../setup/secrets.ts';
-import { captureRemoteSparkCookies, type RemoteSparkPort } from './bridge.ts';
+import type { RemoteSparkLink, RemoteSparkPort } from './bridge.ts';
 import { forgetSparkCookie, savedSparkCookie } from './secrets.ts';
 import {
   RemoteSparkTakenError,
@@ -48,22 +48,25 @@ export function macNameOf(hostname: string): string {
   return name === '' ? FALLBACK_NAME : name;
 }
 
-export function remoteSparkRoutes(deps: RemoteSparkRouteDeps): Router {
+export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkLink): Router {
   const { db, workspaceId, secrets } = deps;
-  const port = deps.remoteSparkPort ?? null;
+  const port = link.port;
   const deviceName = macNameOf(deps.thisMacName ?? computerHostname());
   const router = Router();
-  if (port) captureRemoteSparkCookies({ db, workspaceId, secrets }, port);
 
-  const toSpark = async (row: RemoteSparkRow): Promise<RemoteSpark> => ({
-    id: row.id,
-    name: row.name,
-    hostname: row.hostname,
-    reach: reachOfHostname(row.hostname) ?? 'tailscale',
-    paired: (await savedSparkCookie(secrets, row.id)) !== null,
-    createdAt: row.created_at.toISOString(),
-    lastOpenedAt: row.last_opened_at?.toISOString() ?? null,
-  });
+  const toSpark = async (row: RemoteSparkRow): Promise<RemoteSpark> => {
+    const paired = (await savedSparkCookie(secrets, row.id)) !== null;
+    return {
+      id: row.id,
+      name: row.name,
+      hostname: row.hostname,
+      reach: reachOfHostname(row.hostname) ?? 'tailscale',
+      paired,
+      ...link.stateOf(row.id, paired),
+      createdAt: row.created_at.toISOString(),
+      lastOpenedAt: row.last_opened_at?.toISOString() ?? null,
+    };
+  };
 
   const open = async (
     openPort: RemoteSparkPort,
@@ -132,6 +135,7 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps): Router {
     await forgetSparkCookie(secrets, id);
     await deleteRemoteSpark(db, workspaceId, id);
     port?.post({ kind: 'remote-spark:close', id });
+    await link.forget(id);
     res.status(204).end();
   });
 
