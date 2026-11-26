@@ -99,3 +99,19 @@
     grid-column: 1 / -1;
   }
 }
+
+.ashare-from {
+  align-items: flex-end;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.ashare-ends {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ashare-upsell .btn {
+  flex: none;
+}

@@ -83,6 +83,7 @@ import type { PushKeys } from '../remote/push-keys.ts';
 import { subChatRoutes } from './sub-chat-routes.ts';
 import { artifactShareRoutes } from '../artifacts/share-routes.ts';
 import type { ShareService } from '../artifacts/share-service.ts';
+import { cloudflareRoutes, type CloudflareRouteDeps } from '../cloudflare/routes.ts';
 
 export interface AppOptions
   extends
@@ -103,7 +104,8 @@ export interface AppOptions
     Pick<ChatShareRouteDeps, 'linkScheme'>,
     ChatPortRouteDeps,
     Pick<GithubReviewRouteDeps, 'nudgeReviews'>,
-    Pick<RemoteSparkRouteDeps, 'remoteSparkPort' | 'thisMacName'> {
+    Pick<RemoteSparkRouteDeps, 'remoteSparkPort' | 'thisMacName'>,
+    Pick<CloudflareRouteDeps, 'cloudflareCheck'> {
   terminals: TerminalSessions;
   nativeTerminals?: NativeRuntime;
   previews: PreviewServers;
@@ -165,6 +167,7 @@ export function createAppParts(options: AppOptions) {
   app.use('/api', chatWorkspaceRoutes(options));
   app.use('/api', conversationActionRoutes(options));
   app.use('/api', artifactShareRoutes(options));
+  app.use('/api', cloudflareRoutes(options));
   app.use('/api', interruptionRoutes(options));
   app.use('/api', chatShareRoutes(options));
   app.use('/api', projectRoutes(options));

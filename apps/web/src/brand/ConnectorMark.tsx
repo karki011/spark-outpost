@@ -2,7 +2,7 @@ import type { LogoName } from './logo-paths.ts';
 import { MarkTile } from './MarkTile.tsx';
 
 export type ConnectorId =
-  'github' | 'atlassian' | 'linear' | 'servicenow' | 'slack' | 'calendar' | 'zoom';
+  'github' | 'atlassian' | 'linear' | 'servicenow' | 'slack' | 'calendar' | 'zoom' | 'cloudflare';
 
 const CONNECTOR_MARK: Record<ConnectorId, { letters: string; hue: number; logo?: LogoName }> = {
   calendar: { letters: 'Ca', hue: 50 },
@@ -12,6 +12,7 @@ const CONNECTOR_MARK: Record<ConnectorId, { letters: string; hue: number; logo?:
   servicenow: { letters: 'SN', hue: 170, logo: 'servicenow' },
   slack: { letters: 'Sl', hue: 10, logo: 'slack' },
   zoom: { letters: 'Zo', hue: 230 },
+  cloudflare: { letters: 'Cf', hue: 35, logo: 'cloudflare' },
 };
 
 interface ConnectorMarkProps {

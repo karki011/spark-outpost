@@ -68,10 +68,14 @@ export async function uploadShare(
   service: ShareService,
   origin: string,
   upload: ShareUpload,
+  uploadKey: string | null = null,
 ): Promise<Date> {
   const response = await call(service, `${origin}/v1/shares`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(uploadKey ? { authorization: `Bearer ${uploadKey}` } : {}),
+    },
     body: JSON.stringify({
       id: upload.id,
       deleteToken: upload.deleteToken,

@@ -19,7 +19,7 @@ afterEach(async () => {
   await s.close();
 });
 
-const BODY = { expiresInDays: 7, passcode: true };
+const BODY = { expiresInDays: 1, passcode: true };
 
 function answerInsert(answer: () => Promise<unknown>): void {
   const query = s.t.db.query.bind(s.t.db);
@@ -39,6 +39,9 @@ describe('sharing an artifact when something is wrong', { timeout: 30_000 }, () 
     const client = s.client(null);
     expect((await client.get(sharePath(id)).expect(200)).body).toEqual({
       available: false,
+      service: null,
+      host: null,
+      days: [],
       share: null,
     });
     const refused = await client.send('post', sharePath(id), BODY).expect(503);

@@ -15,14 +15,15 @@ import { currentShareTheme } from './share-theme.ts';
 import { useRemoteClient } from '../../phone/use-remote-client.ts';
 import { useTooltip } from '../../ui/Tooltip.tsx';
 import { CheckIcon, ExternalLinkIcon } from '../../ui/icons.tsx';
-import { ShareConfirmSheet, SharedSheet } from './ShareSheets.tsx';
+import { openCloudflareCard } from '../../cloudflare/cloudflare-open.ts';
+import { ShareConfirmSheet, ShareConnectSheet, SharedSheet } from './ShareSheets.tsx';
 
 interface ArtifactShareProps {
   page: ArtifactPage;
   version: number;
 }
 
-type Sheet = 'confirm' | 'shared' | null;
+type Sheet = 'confirm' | 'connect' | 'shared' | null;
 
 const STATUS_STALE_MS = 5 * 60_000;
 
@@ -64,8 +65,7 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
   const [failure, setFailure] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const focusOwed = useRef(false);
-  const answered = remote ? undefined : status.data;
-  const current = answered && (answered.available || answered.share) ? answered : null;
+  const current = (remote ? undefined : status.data) ?? null;
   const visible = current !== null;
   useEffect(() => {
     if (sheet !== null || !visible || !focusOwed.current) return;
@@ -80,12 +80,12 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
 
   const settle = async (next: ArtifactShareStatus['share']) => {
     await client.cancelQueries({ queryKey });
-    client.setQueryData<ArtifactShareStatus>(queryKey, { available, share: next });
+    client.setQueryData<ArtifactShareStatus>(queryKey, { ...current, share: next });
   };
 
   const open = () => {
     setPinned(shown);
-    setSheet(share ? 'shared' : 'confirm');
+    setSheet(share ? 'shared' : available ? 'confirm' : 'connect');
   };
 
   const close = () => {
@@ -95,6 +95,12 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
     setFailure(null);
     setNotice(null);
     focusOwed.current = true;
+  };
+
+  const connect = () => {
+    close();
+    focusOwed.current = false;
+    openCloudflareCard();
   };
 
   const run = async (work: () => Promise<void>) => {
@@ -114,7 +120,12 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
       try {
         const created = await request(createdArtifactShareSchema, path, {
           method: 'POST',
-          body: JSON.stringify({ ...choice, theme: currentShareTheme() ?? undefined }),
+          body: JSON.stringify({
+            ...choice,
+            service: current.service ?? undefined,
+            host: current.host ?? undefined,
+            theme: currentShareTheme() ?? undefined,
+          }),
         });
         await settle(created.share);
         setPasscode(created.passcode);
@@ -123,7 +134,10 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
         const already = alreadySharedSchema.safeParse(
           error instanceof ApiError ? error.body : null,
         );
-        if (!already.success) throw error;
+        if (!already.success) {
+          void client.invalidateQueries({ queryKey });
+          throw error;
+        }
         await settle(already.data.share);
         setPasscode(null);
         setNotice(already.data.error);
@@ -164,11 +178,18 @@ export function ArtifactShare({ page, version: shown }: ArtifactShareProps) {
           title={entry?.title ?? page.title}
           version={version}
           bytes={entry?.bytes ?? 0}
+          service={current.service}
+          host={current.host}
+          days={current.days}
           busy={busy}
           failure={failure}
           onCancel={close}
+          onConnect={connect}
           onCreate={(choice) => void create(choice)}
         />
+      )}
+      {(sheet === 'connect' || sheet === 'confirm') && !available && !share && (
+        <ShareConnectSheet onCancel={close} onConnect={connect} />
       )}
       {sheet === 'shared' && share && (
         <SharedSheet

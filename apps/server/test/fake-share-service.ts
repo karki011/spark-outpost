@@ -2,6 +2,7 @@ import {
   ARTIFACT_SHARE_DELETE_TOKEN_PATTERN,
   ARTIFACT_SHARE_FINAL_HEADER,
   ARTIFACT_SHARE_ID_PATTERN,
+  ARTIFACT_SHARE_SERVICE_PATH,
 } from '@spark-outpost/contracts';
 import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -27,6 +28,9 @@ export interface FakeShareService {
   shares: Map<string, StoredShare>;
   retired: Set<string>;
   retires: boolean;
+  uploadKey: string | null;
+  info: unknown;
+  serviceCalls: IncomingMessage['headers'][];
   uploadMs: number;
   posts: ReceivedShare[];
   answered: { method: string; id: string; status: number }[];
@@ -74,6 +78,9 @@ export function fakeShareService(): FakeShareService {
     shares: new Map(),
     retired: new Set(),
     retires: true,
+    uploadKey: null,
+    info: null,
+    serviceCalls: [],
     uploadMs: 0,
     posts: [],
     answered: [],
@@ -82,6 +89,28 @@ export function fakeShareService(): FakeShareService {
     async handle(req, res) {
       const path = (req.url ?? '').split('?')[0]!;
       const origin = `http://${req.headers.host}`;
+      const keyed =
+        service.uploadKey === null || req.headers.authorization === `Bearer ${service.uploadKey}`;
+      if (req.method === 'GET' && path === ARTIFACT_SHARE_SERVICE_PATH) {
+        service.serviceCalls.push(req.headers);
+        if (!keyed) {
+          send(res, 401, { error: 'unauthorized' });
+          return true;
+        }
+        const info = {
+          service: 'spark-share',
+          maxDays: 7,
+          uploadKey: service.uploadKey === null ? 'none' : 'required',
+        };
+        send(res, 200, service.info ?? info);
+        return true;
+      }
+      if (req.method === 'POST' && path === '/v1/shares' && !keyed) {
+        await readBody(req);
+        service.answered.push({ method: 'POST', id: '', status: 401 });
+        send(res, 401, { error: 'unauthorized' });
+        return true;
+      }
       if (req.method === 'POST' && path === '/v1/shares') {
         const body = JSON.parse(await readBody(req)) as Omit<ReceivedShare, 'keys' | 'headers'>;
         const received = { ...body, keys: Object.keys(body).sort(), headers: req.headers };

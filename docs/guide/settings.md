@@ -94,10 +94,10 @@ Other-branch pushes, force pushes, protected files and outside writes are flagge
 
 ## Connections
 
-| Section                         | Holds                                                                                                 | More                             |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **Connectors**                  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), Calendar (**Let agents read my calendar**: on). | [Connect](tickets-and-github.md) |
-| **Connectors**: **MCP servers** | Off until on for all chats, a project or one chat.                                                    | [Glossary](glossary.md)          |
+| Section                         | Holds                                                                                                                                      | More                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| **Connectors**                  | GitHub, Atlassian, Linear, [Slack](connect-slack.md), [Cloudflare](connect-cloudflare.md), Calendar (**Let agents read my calendar**: on). | [Connect](tickets-and-github.md) |
+| **Connectors**: **MCP servers** | Off until on for all chats, a project or one chat.                                                                                         | [Glossary](glossary.md)          |
 
 **Mac control** (Mac app): **Let agents control other Mac apps** and Accessibility ([more](mac-control.md)).
 

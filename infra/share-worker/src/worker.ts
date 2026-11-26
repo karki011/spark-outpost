@@ -3,6 +3,7 @@ import type { ShareEnv } from './env.ts';
 import { recordEvent } from './events.ts';
 import { methodPage } from './pages.ts';
 import { jsonError, pageResponse } from './responses.ts';
+import { SERVICE_PATH, serviceInfo } from './service.ts';
 import { removeExpired } from './storage.ts';
 import { notFound, report, showContent, showShell, unlock } from './viewer.ts';
 
@@ -32,6 +33,10 @@ async function route(request: Request, env: ShareEnv, now: number): Promise<Resp
   if (path === SHARES_PATH) {
     if (request.method !== 'POST') return apiMethodNotAllowed('POST');
     return createShare(request, env, now);
+  }
+  if (path === SERVICE_PATH) {
+    if (request.method !== 'GET') return apiMethodNotAllowed('GET');
+    return serviceInfo(request, env, now);
   }
   const deleteMatch = SHARE_DELETE.exec(path);
   if (deleteMatch) {

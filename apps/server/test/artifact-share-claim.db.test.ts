@@ -14,7 +14,7 @@ afterEach(async () => {
   await s.close();
 });
 
-const BODY = { expiresInDays: 7, passcode: false };
+const BODY = { expiresInDays: 1, passcode: false };
 const OTHER_WORKER = 'https://other-worker.example';
 
 const storedThenTimedOut: typeof fetch = async (url, init) => {

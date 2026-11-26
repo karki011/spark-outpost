@@ -8,7 +8,8 @@ All JSON errors look like `{ "error": "<code>" }`.
 
 | Request                                         | Answer                                                                                                                                            |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /v1/shares` (JSON)                        | `201 { id, url, expiresAt }`, or `400 invalid_request`, `409 conflict`, `413 too_large`, `429 rate_limited`                                       |
+| `GET /v1/service`                               | `200 { service: "spark-share", maxDays: 1 \| 7, uploadKey: "required" \| "none" }`, or `401 unauthorized`, `429 rate_limited`                     |
+| `POST /v1/shares` (JSON)                        | `201 { id, url, expiresAt }`, or `400 invalid_request`, `401 unauthorized`, `409 conflict`, `413 too_large`, `429 rate_limited`                   |
 | `DELETE /v1/shares/:id`, `Bearer <deleteToken>` | `204`, or `404 not_found` for an unknown id, a wrong or missing token, or an expired share                                                        |
 | `GET /a/:id`                                    | The viewer shell, or the unlock page for a passcode share without a valid unlock cookie; a plain 404 page when gone                               |
 | `POST /a/:id/unlock` (form field `code`)        | `200` Verified page that sets the unlock cookie and refreshes to `/a/:id` after 2 s; `401` wrong code; `429` locked                               |
@@ -16,6 +17,17 @@ All JSON errors look like `{ "error": "<code>" }`.
 | `POST /a/:id/report` (form field `reason`)      | A small Thanks page; the report is stored and nothing is deleted. `400` unless the form was posted from this worker's own page                    |
 
 The create body is `{ "id": string, "deleteToken": string, "title": string (1 to 120 characters), "html": string (at most 2 MiB of UTF-8), "expiresInDays": 1 | 7, "passcode"?: string, "theme"?: object }`. A passcode is 8 characters from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, made by the Mac app. A theme is `{ scheme: "light" | "dark" }` plus ten colours (`bg`, `card`, `text`, `muted`, `line`, `accent`, `accentInk`, `ok`, `bad`, `strip`), each exactly `#rrggbb` in lower case; the worker's own pages for that share (unlock, Verified, report, viewer strip) use them, and a share without one follows the viewer's light or dark setting with neutral colours. Anything else, including unknown fields, is `400`. The per-client rate limit counts every create request from a client, valid or not, until the client is over it.
+
+### Upload key and longest share
+
+Two optional settings decide who may upload and for how long:
+
+- `UPLOAD_KEY` (a secret). When it is set, `POST /v1/shares` and `GET /v1/service` need `Authorization: Bearer <UPLOAD_KEY>`, compared in constant time. A missing or wrong key answers `401 { "error": "unauthorized" }` before the body is read, and nothing is stored or added to the counts for all clients. The request still counts against that client's own limit (20 creates, 60 service requests per hour), so someone guessing keys gets `429` after that. When it is not set, or empty, anyone may upload, as before. Spark Outpost only accepts a key of 32 to 128 letters, digits, `-` or `_`, so make one with `openssl rand -hex 32`.
+- `MAX_EXPIRY_DAYS` (a plain variable, `"1"` or `"7"`). A create whose `expiresInDays` is above it is `400 invalid_request`. Unset, or any other value, means 7.
+
+`DELETE /v1/shares/:id` never needs the upload key: the share's own delete token is its only check, so a page can still be removed after the key changes.
+
+`GET /v1/service` says what this copy accepts, so the app can check an address and key before it saves them: `service` is always `spark-share`, `maxDays` comes from `MAX_EXPIRY_DAYS` and `uploadKey` is `required` when a key is set, `none` otherwise. It says nothing else. `src/service.test.ts` checks the answer against `shareServiceInfoSchema` in `packages/contracts`.
 
 The Mac app makes the `deleteToken` (32 random bytes, 43 base64url characters) before it sends the request, and the share's `id` comes from it:
 
@@ -89,7 +101,7 @@ An expired share is deleted the next time someone opens it, and every day at 03:
 ## Limits
 
 - Pages up to 2 MiB of HTML, titles up to 120 characters, expiry 1 or 7 days.
-- 20 creates, 10 reports and 60 retirements of ids with nothing stored per hour per client. A client is an IPv4 address, or the /64 network of an IPv6 address, so rotating addresses inside one IPv6 network does not get past a limit.
+- 20 creates, 10 reports, 60 service requests and 60 retirements of ids with nothing stored per hour per client. A client is an IPv4 address, or the /64 network of an IPv6 address, so rotating addresses inside one IPv6 network does not get past a limit.
 - All clients together: 600 creates per hour and 1 GiB of HTML per day (`ALL_CREATES_PER_HOUR`, `ALL_CREATE_BYTES_PER_DAY` in `src/api.ts`). Past either, creates answer `429 rate_limited` until the window ends. These are a brake on abuse and cost, not a quota for one user: someone with many networks can use them up and stop sharing for everyone for that window, so also set the Cloudflare rule below.
 - 5 passcode attempts per client per 15 minutes and 50 wrong codes per share per hour.
 - Free plan: the passcode hash runs once when a passcode share is created and once per unlock attempt. Whether 100,000 PBKDF2 iterations fit the free plan's CPU limit has not been measured. If those requests fail with a CPU limit error, move to Workers Paid or lower `PASSCODE_ITERATIONS` in `src/crypto.ts`. A lower value only applies to shares created after the deploy: each share stores the count it was hashed with, so an existing passcode share still costs the old count on every unlock and keeps failing until the worker has enough CPU (Workers Paid) or the share is made again.
@@ -98,7 +110,7 @@ An expired share is deleted the next time someone opens it, and every day at 03:
 
 The worker writes one data point per event to the Workers Analytics Engine dataset `spark_outpost_share_events` (binding `EVENTS`, `src/events.ts`). A point holds the event's name, one word of detail for `share_created` (`open` or `passcode`) and one number (the HTML's size in bytes for `share_created`, how many shares the daily run removed for `share_expired`, otherwise 1). Every point uses the same index. Nothing in a point identifies a share or a visitor: no id, title, address, country, user agent, token, passcode, report text or URL is written, and Workers logs stay off.
 
-The events are `share_created`, `share_viewed` (the content was served to a frame), `unlock_ok`, `unlock_wrong`, `unlock_locked`, `share_deleted`, `share_expired`, `report_filed`, `create_rate_limited` (a client over its own limit), `create_global_limited` (all clients over the shared cap) and `create_rejected` (a create answered `400` or `413`).
+The events are `share_created`, `share_viewed` (the content was served to a frame), `unlock_ok`, `unlock_wrong`, `unlock_locked`, `share_deleted`, `share_expired`, `report_filed`, `create_rate_limited` (a client over its own limit), `create_global_limited` (all clients over the shared cap), `create_rejected` (a create answered `400` or `413`) and `create_unauthorized` (a create without the right upload key).
 
 The binding is optional: without it (tests, a deploy before the dataset exists) nothing is written, and a failed write never fails a request. Counts per event per day, through the [SQL API](https://developers.cloudflare.com/analytics/analytics-engine/sql-api/):
 
@@ -118,6 +130,30 @@ The worker's own limits are the last line. Set these in the account too; none of
 - Serve the worker from a domain used for nothing else, not `workers.dev`, so a flagged page can't take other services or every link down with it. Set `SPARK_SHARE_URL` to that origin; links made earlier keep working only while the old address still routes to the worker.
 - A billing alert for Workers, Durable Objects and R2.
 
+## Deploy your own
+
+This folder is a complete Worker project (`package.json`, `wrangler.toml`, `src/`), so Cloudflare's Deploy button can copy it into your own account:
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/karki011/spark-outpost/tree/main/infra/share-worker)
+
+`https://deploy.workers.cloudflare.com/?url=https://github.com/karki011/spark-outpost/tree/main/infra/share-worker`
+
+1. Open the link and sign in to Cloudflare. It copies this folder into a new repository of yours, creates the R2 bucket and the Durable Object, and asks for the two secrets listed in `.dev.vars.example`.
+2. Set `UPLOAD_KEY` to the output of `openssl rand -hex 32` and keep a copy. Without it anyone who finds the address can upload to your account.
+3. Set `SIGNING_KEY` to the output of `openssl rand -base64 48`. You never need it again.
+4. Deploy. Cloudflare shows the worker's address, for example `https://spark-outpost-share.<your-subdomain>.workers.dev`.
+5. In Spark Outpost open Settings → Connectors → Cloudflare and paste the worker's address and the upload key. Spark asks `GET /v1/service` with the key to check both.
+
+Shares from your own copy can last 1 or 7 days. To allow only 1, add `MAX_EXPIRY_DAYS = "1"` under `[vars]` in your copy's `wrangler.toml`, or as a variable in the worker's settings.
+
+Cloudflare's documentation for the button does not list Workers Analytics Engine among the resources it sets up. If the deploy stops at the `EVENTS` binding, delete the `[[analytics_engine_datasets]]` block from `wrangler.toml` in your copy: the worker runs the same without it and writes no events.
+
+The button has not been run against this folder yet. The steps under [Set up and deploy](#set-up-and-deploy) do the same by hand; for your own copy also run `openssl rand -hex 32`, keep the output to paste into Spark Outpost, then run `npx wrangler@4 secret put UPLOAD_KEY` and paste that same value when asked.
+
+## The hosted copy
+
+The copy the app falls back to when no own copy is connected takes uploads from every install, so it has no `UPLOAD_KEY` and is held back by the limits below and the Cloudflare rules instead. It keeps pages for a day at most: set `MAX_EXPIRY_DAYS = "1"` under `[vars]` in its `wrangler.toml` (or as a variable in the dashboard) before deploying it. `GET /v1/service` then answers `{ "service": "spark-share", "maxDays": 1, "uploadKey": "none" }`.
+
 ## Set up and deploy
 
 You need a Cloudflare account. R2 must be enabled on it (the free tier is enough).
@@ -129,6 +165,8 @@ npx wrangler@4 r2 bucket create spark-outpost-shares
 openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY
 npx wrangler@4 deploy
 ```
+
+`package.json` pins the same Wrangler major for the Deploy button and for `npm install && npm run deploy`; it is not part of the repo's pnpm workspace.
 
 `SIGNING_KEY` must be at least 32 characters. Without it the viewer routes answer `503` (shares can still be created, deleted and reported). Changing it signs everyone out of passcode shares and breaks open frames for a minute; nothing else.
 
@@ -193,4 +231,4 @@ Wrangler v4 works on local storage unless you pass `--remote`.
 
 ## Test
 
-`pnpm test` runs `src/*.test.ts` with the repo's other unit tests, using in-memory fakes for R2 and the Durable Object. Nothing in them talks to Cloudflare. `src/contract.test.ts` checks that the worker's own limits (passcode alphabet and length, expiry days, page size, title length, id and token shapes) match `packages/contracts` and that the worker and the app give the same id for a delete token; the worker itself imports nothing from the repo.
+`pnpm test` runs `src/*.test.ts` with the repo's other unit tests, using in-memory fakes for R2 and the Durable Object. Nothing in them talks to Cloudflare. `src/contract.test.ts` checks that the worker's own limits (passcode alphabet and length, expiry days, page size, title length, id and token shapes) match `packages/contracts` and that the worker and the app give the same id for a delete token, and `src/service.test.ts` does the same for the service path, name and answer; the worker itself imports nothing from outside this folder.

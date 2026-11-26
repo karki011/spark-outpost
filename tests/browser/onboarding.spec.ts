@@ -101,6 +101,7 @@ test('first run goes through name, provider, defaults, and done, then opens the 
     'Slack',
     'ServiceNow',
     ...(CALENDAR_HOST ? ['Calendar'] : []),
+    'Cloudflare',
   ];
   await expect(tools).toHaveCount(names.length);
   for (const [index, name] of names.entries()) await expect(tools.nth(index)).toContainText(name);

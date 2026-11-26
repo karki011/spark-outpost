@@ -49,4 +49,6 @@ export interface ShareEnv {
   COUNTERS: CounterNamespace;
   EVENTS?: EventDataset;
   SIGNING_KEY?: string;
+  UPLOAD_KEY?: string;
+  MAX_EXPIRY_DAYS?: string;
 }

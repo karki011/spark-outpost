@@ -1,0 +1,132 @@
+.cf-setup h4,
+.cf-needs h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.cf-needs {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+.cf-needs ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.cf-needs ul,
+.cf-needs p,
+.cf-step p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.cf-needs ul {
+  color: var(--text);
+}
+.cf-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  min-height: 28px;
+  border-radius: 6px;
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.cf-guide:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.cf-guide svg {
+  width: 14px;
+  height: 14px;
+}
+.cf-steps {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: cf-step;
+}
+.cf-step {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  min-width: 0;
+  padding-left: 34px;
+  counter-increment: cf-step;
+}
+.cf-step::before {
+  content: counter(cf-step);
+  position: absolute;
+  left: 0;
+  top: -2px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  corner-shape: round;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.cf-step .tk-cform {
+  width: 100%;
+  max-width: 520px;
+}
+.cf-facts {
+  display: grid;
+  margin: 0;
+}
+.cf-facts > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.cf-facts > div + div {
+  border-top: 1px solid var(--line);
+}
+.cf-facts dt {
+  color: var(--muted);
+}
+.cf-facts dd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+}
+.cf-facts .cf-ok {
+  gap: 5px;
+  color: var(--success);
+  font-weight: 500;
+}
+.cf-host {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+@media (pointer: coarse) {
+  .cf-guide {
+    min-height: 44px;
+  }
+}
+.cf-step a.btn {
+  color: var(--text);
+  text-decoration: none;
+}

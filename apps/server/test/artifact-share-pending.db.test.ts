@@ -13,7 +13,7 @@ afterEach(async () => {
   await s.close();
 });
 
-const BODY = { expiresInDays: 7, passcode: true };
+const BODY = { expiresInDays: 1, passcode: true };
 
 const storedThenTimedOut: typeof fetch = async (url, init) => {
   if (init?.method === 'POST') await fetch(url, { ...init, signal: null });

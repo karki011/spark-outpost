@@ -89,6 +89,8 @@ const RESET_TABLES = [
   'calendar_google_accounts',
   'calendar_microsoft_accounts',
   'zoom_accounts',
+  'cloudflare_connections',
+  'artifact_page_shares',
   'calendar_marks',
   'meetings',
   'browser_history',

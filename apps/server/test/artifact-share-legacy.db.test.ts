@@ -5,7 +5,7 @@ import { HTML, ShareHarness, sharePath } from './artifact-share-support.ts';
 
 const LEGACY_ID = 'Ab3_-Ab3_-Ab3_-Ab3_-Ab';
 const LEGACY_TOKEN = 'L'.repeat(43);
-const BODY = { expiresInDays: 7, passcode: false };
+const BODY = { expiresInDays: 1, passcode: false };
 
 let s: ShareHarness;
 
