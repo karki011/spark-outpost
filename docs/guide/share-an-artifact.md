@@ -6,12 +6,12 @@ order: 215
 summary: Send a page an agent made as a link anyone can open in a browser, with an optional passcode, and stop sharing it.
 ---
 
-Give someone a page an agent made, such as a chart or a report. About 1 minute.
+Give someone a page an agent made. About 1 minute.
 
 1. Open the artifact from its card in the chat. It opens in the Work panel.
 2. Pick the version in the version menu, then select **Share…**.
 3. Turn on **Require a passcode** if the page is private. Spark makes the code.
-4. Pick when **Link ends after**: 1 day or 7 days (the default).
+4. Pick when **Link ends after**. Spark's shared service allows 1 day; [your own Cloudflare account](connect-cloudflare.md) allows 7.
 5. Select **Create link**. Spark copies the link; select **Copy code** if there is one, and send the code separately from the link.
 6. Select **Done**. The button now reads **Shared**.
 
@@ -23,11 +23,11 @@ The passcode shows only in that window. Spark doesn't keep it. To get a new one,
 
 If Spark can't remove the page, Stop sharing says why and the button stays **Shared**.
 
-Deleting the chat or artifact takes its pages down too, as does a failed share. Spark retries hourly until the link expires.
+Deleting the chat or artifact takes its pages down too. Spark retries hourly until the link expires.
 
-## What leaves your Mac
+## What leaves your computer
 
-| Sent to Spark's share service                    | Never sent                        |
+| Sent to the share service                        | Never sent                        |
 | ------------------------------------------------ | --------------------------------- |
 | The version you picked, as stored, and its title | Your chats, other versions, files |
 | The passcode, if any, and your theme's colours   | Your keys or sign-ins             |
@@ -36,6 +36,6 @@ A page that holds a secret value isn't shared. An SVG is sent inside a page that
 
 Each version gets one link. To change its passcode or end date, stop sharing and share again. Only your click shares: agents, Ask Spark and [paired devices](use-your-phone.md) can't.
 
-Without a share service, only **Shared** shows, to stop a live link.
+**Shared from** names where the page goes. With no service, **Share…** offers **Connect Cloudflare**.
 
 **Next:** [Review, keep or revert changes](review-changes.md)
