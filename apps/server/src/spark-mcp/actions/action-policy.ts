@@ -65,6 +65,10 @@ const REQUESTS: Readonly<Record<SparkActionName, RegExp | null>> = {
   update_teammate: asked(CREW_CHANGE_VERB, CREW_NOUN),
   delete_teammate: asked('delete|remove|drop|get rid of', 'sparks?|teammates?'),
   prepare_setup: asked('connect|set up|configure|add|link|sign in|prepare', SETUP_NOUN),
+  save_map_note: asked(
+    'save|write|record|add|update|document|explain',
+    'map|areas?|explanations?|notes?|wiki',
+  ),
   add_mcp_server: asked('add|create|set up|install|connect|configure|register', MCP_NOUN),
   update_mcp_server: asked('change|update|rename|edit|fix|reconfigure|point', MCP_NOUN),
   switch_mcp_server: asked('turn on|turn off|enable|disable|switch', MCP_NOUN),

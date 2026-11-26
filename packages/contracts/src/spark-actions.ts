@@ -17,6 +17,7 @@ import {
   switchMcpServerActionSchema,
   updateMcpServerActionSchema,
 } from './spark-mcp-actions.ts';
+import { saveMapNoteActionSchema } from './map-notes.ts';
 import { prepareSetupActionSchema } from './setup-drafts.ts';
 import { SLACK_POST_TEXT_MAX, slackChannelIdSchema } from './slack.ts';
 import { rulesEditActionSchema, rulesEditLabels, rulesEditQuestion } from './spark-rules-edit.ts';
@@ -244,6 +245,7 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   switchMcpServerActionSchema,
   removeMcpServerActionSchema,
   prepareSetupActionSchema,
+  saveMapNoteActionSchema,
   ...browserActionSchemas,
   macUseAppActionSchema,
   macActActionSchema,
@@ -301,6 +303,7 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   switch_mcp_server: [],
   remove_mcp_server: [],
   prepare_setup: [],
+  save_map_note: [],
   read_page: [],
   open_page: [],
   act_page: [],
@@ -392,6 +395,11 @@ export const sparkActionLabels: Record<SparkActionName, SparkActionLabel> = {
     question: 'Prepare this connection?',
     confirm: 'Prepare',
     doing: 'Preparing the connection…',
+  },
+  save_map_note: {
+    question: 'Save this Map explanation?',
+    confirm: 'Save',
+    doing: 'Saving the explanation…',
   },
   add_mcp_server: {
     question: 'Add this MCP server?',

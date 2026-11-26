@@ -38,6 +38,7 @@ import { performCrewEdit } from './crew-edit-perform.ts';
 import { performLinkRepo } from './link-repo-perform.ts';
 import { performCloneRepo } from './clone-repo-perform.ts';
 import type { StartedBy } from '../../sub-chats/start.ts';
+import { performSaveMapNote } from './map-note-actions.ts';
 import { performPrepareSetup } from './setup-actions.ts';
 
 export const OPEN_PR_RETIRED =
@@ -70,6 +71,8 @@ export function performSparkAction(
       return performDeleteTeammate(context, action);
     case 'prepare_setup':
       return performPrepareSetup(context, action);
+    case 'save_map_note':
+      return performSaveMapNote(context, action);
     case 'add_mcp_server':
       return performAddMcpServer(context, action);
     case 'update_mcp_server':
