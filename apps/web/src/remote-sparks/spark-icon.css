@@ -16,6 +16,8 @@
   display: block;
   border-radius: 22%;
   object-fit: cover;
+  outline: 1px solid var(--line);
+  outline-offset: -1px;
 }
 .rs-switch-name {
   max-width: 100%;
