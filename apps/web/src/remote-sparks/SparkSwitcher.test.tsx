@@ -195,7 +195,7 @@ describe('SparkSwitcher', () => {
   });
 
   it('shows a failed open as one visible message', async () => {
-    const message = 'Other Sparks open from the Mac app.';
+    const message = 'Other Sparks open from the Spark Outpost app.';
     const list = { available: true, local: LOCAL, sparks: [STUDIO] };
     vi.stubGlobal(
       'fetch',

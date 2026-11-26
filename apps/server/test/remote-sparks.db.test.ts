@@ -46,7 +46,7 @@ async function added(address = `https://${STUDIO}`): Promise<string> {
 }
 
 describe('saved Sparks', () => {
-  it('saves another Mac and opens its window with this Mac’s name', async () => {
+  it('saves another computer and opens its window with this computer’s name', async () => {
     const response = await add(`https://${STUDIO}/#code=ABCD-EFGH-JKLM`).expect(201);
 
     expect(response.body).toMatchObject({
@@ -79,11 +79,11 @@ describe('saved Sparks', () => {
     ]);
   });
 
-  it('refuses the same Mac twice', async () => {
+  it('refuses the same computer twice', async () => {
     await added();
     const again = await add(`https://${STUDIO}/`, 'Studio again').expect(409);
 
-    expect(again.body.error).toBe('That Mac is already in your list.');
+    expect(again.body.error).toBe('That computer is already in your list.');
     expect((await list()).sparks).toHaveLength(1);
     expect(desktop.posted).toHaveLength(1);
   });

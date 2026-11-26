@@ -43,10 +43,14 @@ async function asMacApp(page: Page, seen: Record<string, Seen> = {}): Promise<vo
       await route.continue();
       return;
     }
-    const response = await route.fetch();
-    const list = (await response.json()) as RemoteSparkList;
-    const sparks = list.sparks.map((spark) => ({ ...spark, ...seen[spark.name] }));
-    await route.fulfill({ response, json: { ...list, sparks, available: true } });
+    try {
+      const response = await route.fetch();
+      const list = (await response.json()) as RemoteSparkList;
+      const sparks = list.sparks.map((spark) => ({ ...spark, ...seen[spark.name] }));
+      await route.fulfill({ response, json: { ...list, sparks, available: true } });
+    } catch {
+      await route.abort().catch(() => undefined);
+    }
   });
 }
 

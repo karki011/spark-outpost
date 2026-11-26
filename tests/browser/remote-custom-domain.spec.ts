@@ -32,9 +32,13 @@ async function asMacApp(page: Page): Promise<void> {
       await route.continue();
       return;
     }
-    const response = await route.fetch();
-    const list = (await response.json()) as RemoteSparkList;
-    await route.fulfill({ response, json: { ...list, available: true } });
+    try {
+      const response = await route.fetch();
+      const list = (await response.json()) as RemoteSparkList;
+      await route.fulfill({ response, json: { ...list, available: true } });
+    } catch {
+      await route.abort().catch(() => undefined);
+    }
   });
 }
 
