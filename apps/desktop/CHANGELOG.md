@@ -4,6 +4,13 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.22
+
+- **Workflows run in the background.** A workflow started by **Run**, a schedule or a trigger no longer holds the chat: keep talking to the chat's agent while it works, and its report arrives as a later turn. On **When it runs**, **Tell the chat's agent only when there are findings** skips the report after a clean run.
+- **See what each step is doing.** The workflow card above the message box shows what every step is doing as it runs, also for a review before publishing; **Show in chat** jumps to a step.
+- **Follow-up rounds in one card.** Rounds in a row for one pull request fold into one **PR #7 · N rounds** card that sums what they did.
+- A workflow's report to the chat's agent holds only its last steps' replies, and the chat no longer scrolls sideways in a narrow window.
+
 ## 0.1.0-beta.21
 
 - **Workflows inside workflows.** A workflow step can run another workflow, so you can build one workflow on top of others: in **Steps**, add a step and pick a workflow.
