@@ -51,8 +51,6 @@ describe('parseSparkAddress', () => {
     ['https://studio.tail1234.ts.net/?next=1', 'shape'],
     ['https://100.64.0.1', 'host'],
     ['https://localhost', 'host'],
-    ['https://studio.example.com', 'reach'],
-    ['https://ts.net.example.com', 'reach'],
     ['https://laptop.tail1234.ts.net', 'own'],
     ['LAPTOP.tail1234.ts.net', 'own'],
   ])('refuses %s as %s', (address, problem) => {
@@ -65,10 +63,20 @@ describe('parseSparkAddress', () => {
 });
 
 describe('reachOfHostname', () => {
-  it('names the reach of a Serve hostname and nothing else', () => {
+  it('names a Serve hostname Tailscale and any other hostname a custom domain', () => {
     expect(reachOfHostname('studio.tail1234.ts.net')).toBe('tailscale');
-    expect(reachOfHostname('studio.example.com')).toBeNull();
-    expect(reachOfHostname('ts.net')).toBeNull();
+    expect(reachOfHostname('STUDIO.tail1234.TS.NET')).toBe('tailscale');
+    expect(reachOfHostname('spark.example.com')).toBe('custom');
+    expect(reachOfHostname('ts.net.example.com')).toBe('custom');
+  });
+
+  it('accepts a custom domain as an address, with its code', () => {
+    expect(parseSparkAddress('https://spark.example.com/#code=AB12', OWN)).toEqual({
+      ok: true,
+      hostname: 'spark.example.com',
+      reach: 'custom',
+      code: 'AB12',
+    });
   });
 });
 

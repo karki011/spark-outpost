@@ -11,7 +11,13 @@ export const COMMAND_LIVE_CHARS = 1024 * 1024;
 export const COMMAND_CHUNK_CHARS = 32 * 1024;
 export const COMMAND_BROWSER_CHARS = 256 * 1024;
 
-export const commandStatusSchema = z.enum(['running', 'completed', 'failed', 'interrupted']);
+export const commandStatusSchema = z.enum([
+  'running',
+  'completed',
+  'failed',
+  'blocked',
+  'interrupted',
+]);
 export type CommandStatus = z.infer<typeof commandStatusSchema>;
 
 const anchorFields = {

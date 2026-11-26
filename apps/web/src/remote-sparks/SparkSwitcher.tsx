@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
 import { ToastHost } from '../conversations/Toast.tsx';
 import { useToast } from '../conversations/use-toast.ts';
-import { hostWords } from '../desktop/host-words.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { GearIcon, PlusIcon } from '../ui/icons.tsx';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
@@ -15,11 +14,12 @@ import {
   MANAGE_SPARKS_ITEM,
   SWITCHER_MENU,
   switcherName,
-  thisComputer,
+  SWITCHER_LABEL,
+  THIS_COMPUTER,
   waitingTotal,
 } from './remote-sparks-copy.ts';
 import { SparkIcon } from './SparkIcon.tsx';
-import { SparkStatus } from './SparkStatus.tsx';
+import { CustomDomainTag, SparkStatus } from './SparkStatus.tsx';
 
 const POLL_MS = 5000;
 const GAP = 8;
@@ -51,7 +51,7 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
   if (!local || !list.data?.available || sparks.length === 0) return null;
 
   const own = list.data.local;
-  const name = own.name ?? thisComputer(hostWords().computer);
+  const name = own.name ?? THIS_COMPUTER;
   const total = waitingTotal(sparks);
   const closeMenu = () => {
     setAnchor(null);
@@ -80,7 +80,7 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
         onClick={() => (anchor ? closeMenu() : openMenu())}
       >
         <SparkIcon icon={own.icon} size={BUTTON_ICON_SIZE} name={own.name} />
-        <span className="rs-switch-name">{thisComputer(hostWords().computer)}</span>
+        <span className="rs-switch-name">{SWITCHER_LABEL}</span>
         {total > 0 && (
           <i className="rbadge" aria-hidden="true">
             {total}
@@ -107,7 +107,12 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
               key={spark.id}
               icon={<SparkIcon icon={spark.icon} size={MENU_ICON_SIZE} name={spark.name} />}
               label={spark.name}
-              trailing={<SparkStatus spark={spark} />}
+              trailing={
+                <>
+                  <CustomDomainTag spark={spark} />
+                  <SparkStatus spark={spark} />
+                </>
+              }
               onSelect={() => {
                 closeMenu();
                 open.mutate(spark.id);

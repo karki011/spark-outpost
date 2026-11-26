@@ -22,6 +22,7 @@ const UNNAMED = 'Command';
 
 const FENCED = /^```[a-z]*\n([\s\S]*?)\n?```$/;
 const EXIT_LINE = /^Exit code (\d{1,3})\n+/;
+const REFUSED_BEFORE_START = /^\s*(?:<tool_use_error>)?Blocked: /;
 
 function commandText(title: string | null | undefined, rawInput: unknown): string {
   const shown = title?.trim() ?? '';
@@ -102,7 +103,14 @@ export function createCommandTracker(live: boolean): CommandTracker {
     if (text) outputs.push({ kind: 'command_output', id, data: text });
     const code = exitCode(update) ?? (exitLine ? Number(exitLine[1]) : null);
     const failed = update.status === 'failed' || (code !== null && code !== 0);
-    outputs.push({ kind: 'command_finished', id, failed, exitCode: code });
+    const blocked = update.status === 'failed' && code === null && REFUSED_BEFORE_START.test(text);
+    outputs.push({
+      kind: 'command_finished',
+      id,
+      failed,
+      ...(blocked ? { blocked } : {}),
+      exitCode: code,
+    });
     open.delete(id);
     return outputs;
   };

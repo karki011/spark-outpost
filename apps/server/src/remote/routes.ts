@@ -1,6 +1,7 @@
 import type { PushTestResult } from '@spark-outpost/contracts';
 import { Router, type Request, type Response } from 'express';
 import {
+  CUSTOM_DOMAIN_PROBLEMS,
   pairingClaimRequestSchema,
   pairingSubmitRequestSchema,
   renameRemoteDeviceRequestSchema,
@@ -10,9 +11,11 @@ import {
   type PairingClaimResponse,
   type PairingSubmitResponse,
   type PendingPairingList,
+  type RemoteAccess,
   type RemoteAuditList,
   type RemoteDevice,
   type RemoteDeviceKind,
+  reachOfHostname,
   remoteHostOf,
   type RemoteDeviceList,
   type RemoteSession,
@@ -59,6 +62,7 @@ import type { TailscaleServe } from './tailscale.ts';
 export interface RemoteRouteDeps {
   db: Db;
   workspaceId: string;
+  port: number;
   pairings: Pairings;
   challenges: PasskeyChallenges;
   grants: StepUpGrants;
@@ -84,6 +88,11 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
   const { db, workspaceId, pairings, challenges, streams, tailscale } = deps;
   const router = Router();
   const audit = (entry: AuditInput) => recordRemoteAudit(db, workspaceId, entry);
+  const forwardTo = `http://127.0.0.1:${deps.port}`;
+  const withForward = (access: RemoteAccess): RemoteAccess => ({ ...access, forwardTo });
+  const refuseDomain = (res: Response, problem: keyof typeof CUSTOM_DOMAIN_PROBLEMS) => {
+    res.status(400).json({ error: CUSTOM_DOMAIN_PROBLEMS[problem], problem });
+  };
 
   const toDevice = (
     row: DeviceRow,
@@ -272,18 +281,32 @@ export function remoteRoutes(deps: RemoteRouteDeps): Router {
   });
 
   router.get('/remote/access', async (_req, res) => {
-    res.json(await remoteAccess(db, workspaceId));
+    res.json(withForward(await remoteAccess(db, workspaceId)));
   });
 
   router.put('/remote/access', async (req, res) => {
-    const { hostname } = parseBody(updateRemoteAccessRequestSchema, req);
-    const before = await remoteAccess(db, workspaceId);
-    const saved = await saveRemoteHostname(db, workspaceId, hostname);
-    if (before.hostname !== saved.hostname) {
-      streams.closeAll();
-      await audit({ action: 'hostname_changed', detail: { on: saved.hostname !== null } });
+    const { hostname, confirmed } = parseBody(updateRemoteAccessRequestSchema, req);
+    if (hostname !== null) {
+      if (reachOfHostname(hostname) === 'tailscale') {
+        refuseDomain(res, 'tailscale');
+        return;
+      }
+      if (confirmed !== true) {
+        refuseDomain(res, 'unconfirmed');
+        return;
+      }
+      await tailscale.release();
     }
-    res.json(saved);
+    const before = await remoteAccess(db, workspaceId);
+    const saved = await saveRemoteHostname(db, workspaceId, hostname, 'custom');
+    if (before.hostname !== saved.hostname || before.reach !== saved.reach) {
+      streams.closeAll();
+      await audit({
+        action: 'hostname_changed',
+        detail: { on: saved.hostname !== null, reach: saved.reach },
+      });
+    }
+    res.json(withForward(saved));
   });
 
   router.get('/remote/tailscale', async (_req, res) => {

@@ -3,7 +3,7 @@ import { REMOTE_DEVICE_NAME_MAX } from '@spark-outpost/contracts';
 import { connectRemoteSparkPort } from './bridge.ts';
 import { macNameOf } from './routes.ts';
 
-describe('this Mac’s name for another Spark', () => {
+describe('this computer’s name for another Spark', () => {
   it('drops the .local ending of the computer’s host name', () => {
     expect(macNameOf('Haris-MacBook-Pro.local')).toBe('Haris-MacBook-Pro');
     expect(macNameOf('studio.LOCAL.')).toBe('studio');
@@ -11,8 +11,8 @@ describe('this Mac’s name for another Spark', () => {
   });
 
   it('is never empty and never over the device name limit', () => {
-    expect(macNameOf('')).toBe('Mac');
-    expect(macNameOf('.local')).toBe('Mac');
+    expect(macNameOf('')).toBe('Computer');
+    expect(macNameOf('.local')).toBe('Computer');
     expect(macNameOf('m'.repeat(200))).toHaveLength(REMOTE_DEVICE_NAME_MAX);
   });
 });

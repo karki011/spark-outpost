@@ -5,6 +5,7 @@ import {
   type RemoteAuditAction,
   type RemoteAuditEntry,
   type RemoteDeviceKind,
+  type RemoteReach,
   type RemoteSwitch,
   type RemoteSwitches,
 } from '@spark-outpost/contracts';
@@ -32,12 +33,14 @@ const SWITCH_COLUMNS: Record<RemoteSwitch, string> = {
 
 const SWITCH_IDS = Object.keys(SWITCH_COLUMNS) as RemoteSwitch[];
 
-type SettingsRow = { hostname: string | null } & Record<string, unknown>;
+type SettingsRow = { hostname: string | null; reach: RemoteReach } & Record<string, unknown>;
 
 function toAccess(row: SettingsRow | undefined): RemoteAccess {
   if (!row) {
     return {
       hostname: null,
+      reach: 'tailscale',
+      forwardTo: null,
       switches: { ...REMOTE_SWITCH_DEFAULTS },
       cardAnswering: cardAnsweringOf(undefined),
     };
@@ -45,7 +48,13 @@ function toAccess(row: SettingsRow | undefined): RemoteAccess {
   const switches = Object.fromEntries(
     SWITCH_IDS.map((id) => [id, row[SWITCH_COLUMNS[id]] === true]),
   ) as RemoteSwitches;
-  return { hostname: row.hostname, switches, cardAnswering: cardAnsweringOf(row) };
+  return {
+    hostname: row.hostname,
+    reach: row.reach,
+    forwardTo: null,
+    switches,
+    cardAnswering: cardAnsweringOf(row),
+  };
 }
 
 export async function remoteAccess(db: Queryable, workspaceId: string): Promise<RemoteAccess> {
@@ -60,12 +69,13 @@ export async function saveRemoteHostname(
   db: Queryable,
   workspaceId: string,
   hostname: string | null,
+  reach: RemoteReach = 'tailscale',
 ): Promise<RemoteAccess> {
   const { rows } = await db.query<SettingsRow>(
-    `INSERT INTO remote_access_settings (workspace_id, hostname) VALUES ($1, $2)
-     ON CONFLICT (workspace_id) DO UPDATE SET hostname = $2, updated_at = now()
+    `INSERT INTO remote_access_settings (workspace_id, hostname, reach) VALUES ($1, $2, $3)
+     ON CONFLICT (workspace_id) DO UPDATE SET hostname = $2, reach = $3, updated_at = now()
      RETURNING *`,
-    [workspaceId, hostname],
+    [workspaceId, hostname, hostname === null ? 'tailscale' : reach],
   );
   return toAccess(rows[0]);
 }

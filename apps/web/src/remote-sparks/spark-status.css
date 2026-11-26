@@ -10,8 +10,19 @@
 .rs-status[data-status='online'] {
   color: var(--success);
 }
+.rs-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .rs-status svg,
-.ctx button .rs-status svg {
+.rs-tag svg,
+.ctx button .rs-status svg,
+.ctx button .rs-tag svg {
   flex-shrink: 0;
   color: currentColor;
 }

@@ -22,7 +22,7 @@ export function PhonePage() {
             <p>
               {session.data?.remote
                 ? `Use Spark Outpost from another device while the work stays on your ${hostWords().computer}.`
-                : `Use this ${hostWords().computer}’s Spark from another device, or open another ${hostWords().computer}’s Spark from here.`}
+                : 'Use this computer’s Spark from another device, or open another computer’s Spark from here.'}
             </p>
           </header>
           <QueryWait query={session} what="remote control">

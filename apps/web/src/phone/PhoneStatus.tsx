@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { TailscaleState } from '@spark-outpost/contracts';
 import { statusHeadline } from './phone-copy.ts';
 import { PhoneSetup, WhatYouGet } from './PhoneSetup.tsx';
@@ -12,6 +12,8 @@ interface PhoneStatusProps {
   failure: string | null;
   onCheck: () => void;
   onTurn: (to: 'on' | 'off') => void;
+  choice?: ReactNode;
+  notice?: string | null;
 }
 
 function setupNote(): string {
@@ -26,6 +28,8 @@ export function PhoneStatus({
   failure,
   onCheck,
   onTurn,
+  choice,
+  notice,
 }: PhoneStatusProps) {
   const titleId = useId();
   return (
@@ -39,6 +43,8 @@ export function PhoneStatus({
           <p className="ph-step">{setupNote()}</p>
         </div>
       </div>
+      {choice}
+      {notice && <p className="ph-note">{notice}</p>}
       <PhoneSetup
         state={state}
         checking={checking}

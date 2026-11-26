@@ -288,7 +288,7 @@ export const SPEC_GROUPS = {
     'phone-pair-again',
     'phone-passkey',
   ],
-  'remote-sparks': ['remote-sparks'],
+  'remote-sparks': ['remote-sparks', 'remote-custom-domain'],
   'docs-help': ['docs', 'help'],
 } as const satisfies Record<string, readonly string[]>;
 

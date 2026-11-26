@@ -65,6 +65,15 @@ function Turn({ commands, steps = [] }: { commands: CommandView[]; steps?: StepV
 const toggle = (name: RegExp) => screen.getByRole('button', { name });
 
 describe('command rows', () => {
+  it('keeps a blocked command folded and words it apart from a failure', () => {
+    render(<Turn commands={[command('wait', 'blocked', 0), command('test', 'failed', 10)]} />);
+    expect(toggle(/pnpm wait/).getAttribute('aria-expanded')).toBe('false');
+    expect(toggle(/pnpm wait/).textContent).toContain('blocked');
+    expect(toggle(/pnpm test/).getAttribute('aria-expanded')).toBe('true');
+    expect(toggle(/Ran 2 commands/).textContent).toContain('1 failed');
+    expect(toggle(/Ran 2 commands/).textContent).toContain('1 blocked');
+  });
+
   it('keeps an opened command open and focused when a sibling finishes and they group', () => {
     const view = render(
       <Turn commands={[command('lint', 'completed', 0), command('test', 'running', 10)]} />,

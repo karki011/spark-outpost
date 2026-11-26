@@ -51,6 +51,7 @@ export function remoteAccessParts(deps: RemoteAccessDeps): RemoteAccessParts {
     routes: remoteRoutes({
       db: deps.db,
       workspaceId: deps.workspaceId,
+      port: deps.port,
       pairings: new Pairings(Date.now, deps.pairingAttemptsPerMinute),
       challenges: new PasskeyChallenges(),
       grants,

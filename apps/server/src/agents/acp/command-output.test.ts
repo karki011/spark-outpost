@@ -232,6 +232,44 @@ describe('command tracker', () => {
     ]);
   });
 
+  it('marks a command the shell tool refused before it ran as blocked', () => {
+    const refusal = '<tool_use_error>Blocked: sleep 25 followed by: echo ok.</tool_use_error>';
+    const outputs = see(false, [
+      { sessionUpdate: 'tool_call', toolCallId: 'b1', kind: 'execute', title: 'sleep 25; echo ok' },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'b1',
+        status: 'failed',
+        content: [{ type: 'content', content: { type: 'text', text: refusal } }],
+      },
+    ]);
+    expect(outputs.at(-1)).toEqual({
+      kind: 'command_finished',
+      id: 'b1',
+      failed: true,
+      blocked: true,
+      exitCode: null,
+    });
+  });
+
+  it('keeps a command that ran and printed Blocked as failed', () => {
+    const outputs = see(false, [
+      { sessionUpdate: 'tool_call', toolCallId: 'b1', kind: 'execute', title: 'deploy' },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'b1',
+        status: 'failed',
+        content: [{ type: 'content', content: { type: 'text', text: 'Exit code 1\nBlocked: no' } }],
+      },
+    ]);
+    expect(outputs.at(-1)).toEqual({
+      kind: 'command_finished',
+      id: 'b1',
+      failed: true,
+      exitCode: 1,
+    });
+  });
+
   it('ignores tools that are not commands and updates after the end', () => {
     const outputs = see(true, [
       { sessionUpdate: 'tool_call', toolCallId: 'r1', kind: 'read', title: 'Read a.ts' },
