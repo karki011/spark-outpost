@@ -34,6 +34,13 @@ export class FakeCookies extends EventEmitter {
     return Promise.resolve();
   }
 
+  readonly removed: string[] = [];
+
+  remove(url: string, name: string): Promise<void> {
+    this.removed.push(`${url} ${name}`);
+    return Promise.resolve();
+  }
+
   hostSets(name: string, domain: string, value: string): void {
     this.emit('changed', {}, { name, domain, value }, 'inserted', false);
   }
@@ -51,6 +58,14 @@ export class FakeCookies extends EventEmitter {
 export class FakeSession extends EventEmitter {
   readonly cookies = new FakeCookies();
   cleared = 0;
+  sessionStatus = 200;
+  readonly fetched: string[] = [];
+
+  fetch(url: string): Promise<{ status: number }> {
+    this.fetched.push(url);
+    return Promise.resolve({ status: this.sessionStatus });
+  }
+
   private beforeRequest: RequestHandler | null = null;
   private beforeHeaders: HeaderHandler | null = null;
   private permission: PermissionHandler | null = null;

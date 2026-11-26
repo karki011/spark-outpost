@@ -5,6 +5,7 @@ import {
   remoteSparkPartition,
 } from '@spark-outpost/contracts';
 import { withoutSparkToken } from '../browser/request-guard.ts';
+import { isNotLoadedPage } from './load-state.ts';
 
 export interface RemoteSparkGuards {
   blockedPorts(): ReadonlySet<number>;
@@ -39,7 +40,7 @@ export function remoteRequestAllowed(request: RemoteRequest, facts: RemoteReques
     return false;
   }
   const page = request.resourceType === 'mainFrame';
-  if (INLINE_SCHEMES.has(url.protocol)) return !page;
+  if (INLINE_SCHEMES.has(url.protocol)) return !page || isNotLoadedPage(request.url);
   const standardPort = NETWORK_PORTS[url.protocol];
   if (standardPort === undefined) return false;
   const port = url.port === '' ? standardPort : Number(url.port);

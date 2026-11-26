@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { REMOTE_SPARK_PARTITION_PREFIX } from '@spark-outpost/contracts';
 import { desk, fakeElectron, type FakeSession } from './electron.fixture.ts';
+import { notLoadedPage } from './load-state.ts';
 import { remoteRequestAllowed, remoteSparkSession } from './partition.ts';
 
 vi.mock('electron', async () => (await import('./electron.fixture.ts')).fakeElectron);
@@ -83,6 +84,7 @@ describe('a request from the remote Spark window', () => {
     expect(page(`https://${HOST}:8443/`)).toBe(false);
     expect(page(`https://other.tail1234.ts.net/`)).toBe(false);
     expect(page('data:text/html,<p>hi</p>')).toBe(false);
+    expect(page(notLoadedPage('Studio Mac', HOST, `https://${HOST}/`))).toBe(true);
     expect(page('blob:https://studio.tail1234.ts.net/1')).toBe(false);
     expect(page('file:///etc/passwd')).toBe(false);
   });

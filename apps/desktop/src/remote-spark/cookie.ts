@@ -18,12 +18,15 @@ export interface CookieJar {
     httpOnly: boolean;
     sameSite: 'strict';
   }): Promise<void>;
+  remove(url: string, name: string): Promise<void>;
   on(event: 'changed', listener: CookieChange): unknown;
   off(event: 'changed', listener: CookieChange): unknown;
 }
 
 export interface DeviceCookieWatch {
   place(value: string): Promise<void>;
+  holds(): boolean;
+  forget(): Promise<void>;
   stop(): void;
 }
 
@@ -67,6 +70,13 @@ export function watchDeviceCookie(
         httpOnly: true,
         sameSite: 'strict',
       });
+    },
+    holds: () => known !== null,
+    async forget() {
+      if (known === null) return;
+      known = null;
+      events.signedOut();
+      await jar.remove(remoteSparkOrigin(hostname), REMOTE_DEVICE_COOKIE);
     },
     stop: () => void jar.off('changed', listener),
   };

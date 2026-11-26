@@ -4,6 +4,7 @@ import { createAppLockGate, type AppLockGate } from '../app-lock-gate.ts';
 import type { WorkerBridge } from '../browser/bridge.ts';
 import { desk, fakeElectron, type FakeWindow } from './electron.fixture.ts';
 import { startRemoteSparkHost, type RemoteSparkHost } from './host.ts';
+import { isNotLoadedPage } from './load-state.ts';
 
 vi.mock('electron', async () => (await import('./electron.fixture.ts')).fakeElectron);
 
@@ -238,5 +239,73 @@ describe('a remote Spark window and the privacy screen', () => {
     expect(window.visible).toBe(false);
     lock(false);
     expect(window.visible).toBe(true);
+  });
+});
+
+describe('a remote Spark that does not answer or no longer knows this Mac', () => {
+  const entry = `https://${HOST}/`;
+
+  it('shows the did-not-load page when the address cannot be reached, once', async () => {
+    bridge.receive({ ...open, cookie: 'saved' });
+    await settle();
+    const window = only();
+    window.webContents.emit('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entry, true);
+    await settle();
+    const shown = window.webContents.loaded.at(-1)!;
+    expect(isNotLoadedPage(shown)).toBe(true);
+    expect(decodeURIComponent(shown)).toContain(`<a href="${entry}" autofocus>Try again</a>`);
+
+    const before = window.webContents.loaded.length;
+    window.webContents.emit('did-fail-load', {}, -3, 'ABORTED', entry, true);
+    window.webContents.emit('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entry, false);
+    window.webContents.emit('did-fail-load', {}, -300, 'INVALID_URL', shown, true);
+    await settle();
+    expect(window.webContents.loaded).toHaveLength(before);
+  });
+
+  it('shows the did-not-load page for a gateway error', async () => {
+    bridge.receive(open);
+    await settle();
+    const window = only();
+    window.webContents.emit('did-navigate', {}, entry, 502);
+    await settle();
+    expect(isNotLoadedPage(window.webContents.loaded.at(-1)!)).toBe(true);
+  });
+
+  it('forgets a sign-in the other Mac refuses and goes back to pairing', async () => {
+    bridge.receive({ ...open, cookie: 'saved' });
+    await settle();
+    const window = only();
+    const session = window.options.webPreferences.session;
+    session.sessionStatus = 401;
+    posted.length = 0;
+    window.webContents.emit('did-navigate', {}, entry, 200);
+    await settle();
+    expect(session.fetched).toEqual([`https://${HOST}/api/remote/session`]);
+    expect(posted).toEqual([{ kind: 'remote-spark:signed-out', id: ID }]);
+    expect(session.cookies.removed).toEqual([`https://${HOST} ${REMOTE_DEVICE_COOKIE}`]);
+    expect(window.webContents.loaded.at(-1)).toBe(`https://${HOST}/#name=Desk%20Mac&kind=spark`);
+
+    window.webContents.emit('did-navigate', {}, entry, 200);
+    await settle();
+    expect(session.fetched).toHaveLength(1);
+  });
+
+  it('keeps a sign-in the other Mac accepts and asks nothing without one', async () => {
+    bridge.receive({ ...open, cookie: 'saved' });
+    await settle();
+    const signedIn = only();
+    posted.length = 0;
+    signedIn.webContents.emit('did-navigate', {}, entry, 200);
+    await settle();
+    expect(posted).toEqual([]);
+    expect(signedIn.options.webPreferences.session.cookies.removed).toEqual([]);
+
+    bridge.receive({ ...open, id: OTHER_ID });
+    await settle();
+    const unsigned = desk.open().find((window) => window !== signedIn)!;
+    unsigned.webContents.emit('did-navigate', {}, entry, 200);
+    await settle();
+    expect(unsigned.options.webPreferences.session.fetched).toEqual([]);
   });
 });

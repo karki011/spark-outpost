@@ -8,6 +8,7 @@ import {
 import type { AppLockGate } from '../app-lock-gate.ts';
 import { hideWhileLocked } from '../app-lock-windows.ts';
 import { watchDeviceCookie, type CookieJar, type DeviceCookieEvents } from './cookie.ts';
+import { answerFailed, isNotLoadedPage, loadFailed, notLoadedPage } from './load-state.ts';
 import { guardRemoteNavigation } from './navigation.ts';
 import { remoteSparkSession, type RemoteSparkGuards } from './partition.ts';
 
@@ -58,6 +59,34 @@ export function openRemoteSparkWindow(
     hooks.closed();
   });
 
+  const origin = remoteSparkOrigin(hostname);
+  const pairingEntry = (code: string | null) => sparkPairingEntry(hostname, spark.deviceName, code);
+  let entry = `${origin}/`;
+  const load = async (url: string) => {
+    if (window.isDestroyed()) return;
+    await window.loadURL(url).catch(() => undefined);
+  };
+  const showNotLoaded = () => void load(notLoadedPage(spark.name, hostname, entry));
+  const checkSignIn = async () => {
+    if (!watch.holds()) return;
+    const status = await target
+      .fetch(`${origin}/api/remote/session`, { credentials: 'include' })
+      .then((response) => response.status)
+      .catch(() => null);
+    if (status !== 401 || !watch.holds()) return;
+    await watch.forget().catch(() => undefined);
+    entry = pairingEntry(null);
+    await load(entry);
+  };
+  window.webContents.on('did-fail-load', (_event, code, _text, url, isMainFrame) => {
+    if (isMainFrame && loadFailed(code) && !isNotLoadedPage(url)) showNotLoaded();
+  });
+  window.webContents.on('did-navigate', (_event, url, httpCode) => {
+    if (!url.startsWith(`${origin}/`)) return;
+    if (answerFailed(httpCode)) showNotLoaded();
+    else void checkSignIn();
+  });
+
   const signedIn = async (): Promise<boolean> => {
     if (spark.cookie === null) return false;
     try {
@@ -69,11 +98,8 @@ export function openRemoteSparkWindow(
     }
   };
   const start = async () => {
-    const entry = (await signedIn())
-      ? `${remoteSparkOrigin(hostname)}/`
-      : sparkPairingEntry(hostname, spark.deviceName, spark.code);
-    if (window.isDestroyed()) return;
-    await window.loadURL(entry).catch(() => undefined);
+    if (!(await signedIn())) entry = pairingEntry(spark.code);
+    await load(entry);
   };
   void start();
 
