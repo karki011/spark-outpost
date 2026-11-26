@@ -2,6 +2,8 @@ import '../conversations/chat-menu.css';
 import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MenuItem, MenuShell, type MenuAnchor } from '../conversations/MenuShell.tsx';
+import { ToastHost } from '../conversations/Toast.tsx';
+import { useToast } from '../conversations/use-toast.ts';
 import { hostWords } from '../desktop/host-words.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
 import { GearIcon, PlusIcon } from '../ui/icons.tsx';
@@ -31,6 +33,8 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
   const { remote, session } = useRemoteClient();
   const button = useRef<HTMLButtonElement>(null);
   const [anchor, setAnchor] = useState<MenuAnchor | null>(null);
+  const toaster = useToast();
+  const { show } = toaster;
   const local = session !== undefined && !remote;
   const list = useQuery({
     queryKey: remoteSparkKeys.all,
@@ -41,6 +45,7 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
   const open = useMutation({
     mutationFn: (id: string) => remoteSparksApi.open(id),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: remoteSparkKeys.all }),
+    onError: (error: Error) => show({ text: error.message }),
   });
   const sparks = list.data?.sparks ?? [];
   if (!local || !list.data?.available || sparks.length === 0) return null;
@@ -82,11 +87,7 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
           </i>
         )}
       </button>
-      {open.error && (
-        <span className="sr-only" role="alert">
-          {open.error.message}
-        </span>
-      )}
+      <ToastHost toaster={toaster} />
       {anchor && (
         <MenuShell
           anchor={anchor}

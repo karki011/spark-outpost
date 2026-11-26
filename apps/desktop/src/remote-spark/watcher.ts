@@ -32,6 +32,8 @@ export interface RemoteSparkWatcherHooks {
 export interface RemoteSparkWatcher {
   watch(sparks: readonly WatchedSpark[]): void;
   forget(id: string): void;
+  pause(): void;
+  resume(): void;
   stop(): void;
 }
 
@@ -39,8 +41,9 @@ interface Watched {
   hostname: string;
   cookie: string;
   target: Session;
-  timer: ReturnType<typeof setInterval>;
+  timer: ReturnType<typeof setInterval> | undefined;
   checking: boolean;
+  round: number;
   stopped: boolean;
   sent: Reach | null;
 }
@@ -88,6 +91,7 @@ async function reachOf(watched: Watched): Promise<Reach | 'signed-out'> {
 
 export function startRemoteSparkWatcher(hooks: RemoteSparkWatcherHooks): RemoteSparkWatcher {
   const watching = new Map<string, Watched>();
+  let paused = false;
 
   const end = (id: string, watched: Watched) => {
     watched.stopped = true;
@@ -104,9 +108,11 @@ export function startRemoteSparkWatcher(hooks: RemoteSparkWatcherHooks): RemoteS
   };
 
   const check = async (id: string, watched: Watched) => {
-    if (watched.checking || watched.stopped) return;
+    if (paused || watched.checking || watched.stopped) return;
     watched.checking = true;
+    const { round } = watched;
     const reach = await reachOf(watched);
+    if (watched.round !== round) return;
     watched.checking = false;
     if (watched.stopped) return;
     if (reach === 'signed-out') {
@@ -119,17 +125,22 @@ export function startRemoteSparkWatcher(hooks: RemoteSparkWatcherHooks): RemoteS
     hooks.status(id, reach);
   };
 
+  const schedule = (id: string, watched: Watched) =>
+    setInterval(() => void check(id, watched), REMOTE_SPARK_WATCH_MS);
+
   const start = ({ id, hostname, cookie }: WatchedSpark) => {
     const watched: Watched = {
       hostname,
       cookie,
       target: remoteSparkSession(id, hostname, hooks.guards),
-      timer: setInterval(() => void check(id, watched), REMOTE_SPARK_WATCH_MS),
+      timer: undefined,
       checking: false,
+      round: 0,
       stopped: false,
       sent: null,
     };
     watching.set(id, watched);
+    if (!paused) watched.timer = schedule(id, watched);
     void check(id, watched);
   };
 
@@ -155,6 +166,24 @@ export function startRemoteSparkWatcher(hooks: RemoteSparkWatcherHooks): RemoteS
     forget(id) {
       const watched = watching.get(id);
       if (watched) end(id, watched);
+    },
+    pause() {
+      if (paused) return;
+      paused = true;
+      for (const watched of watching.values()) {
+        clearInterval(watched.timer);
+        watched.timer = undefined;
+        watched.round += 1;
+        watched.checking = false;
+      }
+    },
+    resume() {
+      if (!paused) return;
+      paused = false;
+      for (const [id, watched] of watching) {
+        watched.timer = schedule(id, watched);
+        void check(id, watched);
+      }
     },
     stop() {
       for (const [id, watched] of [...watching]) end(id, watched);

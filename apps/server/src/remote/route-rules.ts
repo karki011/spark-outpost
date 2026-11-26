@@ -8,6 +8,7 @@ GET /api/health
 GET /api/events
 GET /api/remote/switches
 GET /api/remote/session
+POST /api/remote/session/end
 GET /api/remote/push
 DELETE /api/remote/push/subscription
 GET /api/spark-pause

@@ -5,7 +5,7 @@ import {
   remoteSparkPartition,
 } from '@spark-outpost/contracts';
 import type { WorkerBridge } from '../browser/bridge.ts';
-import { desk, fakeElectron, type FakeSession } from './electron.fixture.ts';
+import { desk, fakeElectron, FakePower, type FakeSession } from './electron.fixture.ts';
 import { startRemoteSparkHost, type RemoteSparkHost } from './host.ts';
 import { REMOTE_SPARK_CHECK_TIMEOUT_MS } from './watcher.ts';
 
@@ -49,6 +49,7 @@ let host: RemoteSparkHost;
 let bridge: WorkerBridge;
 let posted: unknown[];
 let logged: string[];
+let power: FakePower;
 
 const sessionOf = (id: string): FakeSession =>
   fakeElectron.session.fromPartition(remoteSparkPartition(id));
@@ -61,8 +62,10 @@ beforeEach(() => {
   desk.reset();
   posted = [];
   logged = [];
+  power = new FakePower();
   host = startRemoteSparkHost({
     blockedPorts: () => new Set([32682]),
+    power,
     openExternal: () => undefined,
     log: (line) => logged.push(line),
   });
@@ -263,6 +266,70 @@ describe('a new watch list', () => {
     expect(sessionOf(ID).fetched).toHaveLength(2);
     expect(desk.sessions.has(remoteSparkPartition(OTHER_ID))).toBe(false);
     expect(posted).toEqual([status(ID, 'online', 0)]);
+  });
+});
+
+describe('while this Mac sleeps', () => {
+  it('stops checking on suspend and reports nothing', async () => {
+    watch(studio, laptop);
+    await settle();
+    posted.length = 0;
+    power.sleeps();
+    expect(vi.getTimerCount()).toBe(0);
+    await nextCheck();
+    await nextCheck();
+    expect(sessionOf(ID).fetched).toHaveLength(1);
+    expect(sessionOf(OTHER_ID).fetched).toHaveLength(1);
+    expect(posted).toEqual([]);
+  });
+
+  it('checks every Spark at once on resume and goes back to checking each minute', async () => {
+    watch(studio, laptop);
+    await settle();
+    posted.length = 0;
+    power.sleeps();
+    sessionOf(ID).attention = waiting(3);
+    power.wakes();
+    await settle();
+    expect(sessionOf(ID).fetched).toHaveLength(2);
+    expect(sessionOf(OTHER_ID).fetched).toHaveLength(2);
+    expect(posted).toEqual([status(ID, 'online', 3)]);
+    await nextCheck();
+    expect(sessionOf(ID).fetched).toHaveLength(3);
+    expect(sessionOf(OTHER_ID).fetched).toHaveLength(3);
+  });
+
+  it('drops the answer of a check that sleep cut short and asks again on resume', async () => {
+    watch(studio);
+    await settle();
+    posted.length = 0;
+    sessionOf(ID).attention = 'silent';
+    await nextCheck();
+    power.sleeps();
+    sessionOf(ID).attention = waiting(1);
+    power.wakes();
+    await settle();
+    expect(posted).toEqual([status(ID, 'online', 1)]);
+    await vi.advanceTimersByTimeAsync(REMOTE_SPARK_CHECK_TIMEOUT_MS);
+    expect(posted).toEqual([status(ID, 'online', 1)]);
+  });
+
+  it('starts no check for a Spark added during sleep until resume', async () => {
+    power.sleeps();
+    watch(studio);
+    await nextCheck();
+    expect(sessionOf(ID).fetched).toEqual([]);
+    power.wakes();
+    await settle();
+    expect(sessionOf(ID).fetched).toEqual([ATTENTION]);
+    expect(posted).toEqual([status(ID, 'online', 0)]);
+  });
+
+  it('stops listening for sleep when the app quits', async () => {
+    watch(studio);
+    await settle();
+    host.dispose();
+    expect(power.listenerCount('suspend') + power.listenerCount('resume')).toBe(0);
   });
 });
 

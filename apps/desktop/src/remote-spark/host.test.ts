@@ -2,7 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { REMOTE_DEVICE_COOKIE, REMOTE_SPARK_PARTITION_PREFIX } from '@spark-outpost/contracts';
 import { createAppLockGate, type AppLockGate } from '../app-lock-gate.ts';
 import type { WorkerBridge } from '../browser/bridge.ts';
-import { desk, fakeElectron, type FakeWindow } from './electron.fixture.ts';
+import {
+  desk,
+  fakeElectron,
+  FakePower,
+  type FakeSession,
+  type FakeView,
+  type FakeWindow,
+} from './electron.fixture.ts';
+import { REMOTE_SPARK_END_TIMEOUT_MS } from './end-session.ts';
 import { startRemoteSparkHost, type RemoteSparkHost } from './host.ts';
 import { isNotLoadedPage } from './load-state.ts';
 
@@ -28,12 +36,26 @@ let bridge: WorkerBridge;
 let posted: unknown[];
 let external: string[];
 let logged: string[];
+let power: FakePower;
 
 const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
 const only = (): FakeWindow => {
   expect(desk.open()).toHaveLength(1);
   return desk.open()[0]!;
 };
+const viewOn = (window: FakeWindow, remote: boolean): FakeView => {
+  const found = window.views.filter(
+    (view) =>
+      view.options.webPreferences.session.partition.startsWith(REMOTE_SPARK_PARTITION_PREFIX) ===
+      remote,
+  );
+  expect(found).toHaveLength(1);
+  return found[0]!;
+};
+const remoteView = (window: FakeWindow) => viewOn(window, true);
+const page = (window: FakeWindow) => remoteView(window).webContents;
+const sessionOf = (window: FakeWindow): FakeSession =>
+  remoteView(window).options.webPreferences.session;
 const lock = (locked: boolean) =>
   gate.publish({ locked, available: true, hideNotifications: true });
 
@@ -43,8 +65,10 @@ beforeEach(() => {
   posted = [];
   external = [];
   logged = [];
+  power = new FakePower();
   host = startRemoteSparkHost({
     blockedPorts: () => new Set([32682]),
+    power,
     openExternal: (url) => external.push(url),
     log: (line) => logged.push(line),
     gate,
@@ -57,22 +81,22 @@ describe('opening a remote Spark window', () => {
     bridge.receive({ ...open, code: 'ABCD-1234' });
     await settle();
     const window = only();
-    expect(window.webContents.loaded).toEqual([
+    expect(page(window).loaded).toEqual([
       `https://${HOST}/#code=ABCD-1234&name=Desk%20Mac&kind=spark`,
     ]);
-    expect(window.options.webPreferences.session.cookies.placed).toEqual([]);
+    expect(sessionOf(window).cookies.placed).toEqual([]);
   });
 
   it('places the saved cookie before loading the host and sends nothing back', async () => {
     bridge.receive({ ...open, cookie: 'saved-value' });
     const window = only();
-    const { cookies } = window.options.webPreferences.session;
+    const { cookies } = sessionOf(window);
     expect(cookies.placed.map((cookie) => [cookie.url, cookie.name, cookie.value])).toEqual([
       [`https://${HOST}`, REMOTE_DEVICE_COOKIE, 'saved-value'],
     ]);
-    expect(window.webContents.loaded).toEqual([]);
+    expect(page(window).loaded).toEqual([]);
     await settle();
-    expect(window.webContents.loaded).toEqual([`https://${HOST}/`]);
+    expect(page(window).loaded).toEqual([`https://${HOST}/`]);
     expect(posted).toEqual([]);
   });
 
@@ -81,7 +105,7 @@ describe('opening a remote Spark window', () => {
       true;
     bridge.receive({ ...open, cookie: 'saved-value' });
     await settle();
-    expect(only().webContents.loaded).toEqual([`https://${HOST}/#name=Desk%20Mac&kind=spark`]);
+    expect(page(only()).loaded).toEqual([`https://${HOST}/#name=Desk%20Mac&kind=spark`]);
     expect(logged.join('\n')).not.toContain('saved-value');
   });
 
@@ -89,7 +113,7 @@ describe('opening a remote Spark window', () => {
     bridge.receive(open);
     await settle();
     const window = only();
-    const { session, ...preferences } = window.options.webPreferences;
+    const { session, ...preferences } = remoteView(window).options.webPreferences;
     expect(preferences).toEqual({
       sandbox: true,
       contextIsolation: true,
@@ -98,7 +122,7 @@ describe('opening a remote Spark window', () => {
     });
     expect(session.partition).toBe(`${REMOTE_SPARK_PARTITION_PREFIX}${ID}`);
     expect(window.title).toBe(TITLE);
-    window.pageTitle('Spark Outpost');
+    page(window).emit('page-title-updated', {}, 'Spark Outpost', true);
     expect(window.title).toBe(TITLE);
   });
 
@@ -112,12 +136,13 @@ describe('opening a remote Spark window', () => {
     expect(desk.windows).toHaveLength(1);
     expect(window.minimized).toBe(false);
     expect(window.focused).toBe(1);
+    expect(page(window).focused).toBe(1);
   });
 
   it('sends a link to another site to the default browser', async () => {
     bridge.receive(open);
     await settle();
-    expect(only().webContents.navigates('https://example.com/docs')).toBe(false);
+    expect(page(only()).navigates('https://example.com/docs')).toBe(false);
     expect(external).toEqual(['https://example.com/docs']);
   });
 });
@@ -144,7 +169,7 @@ describe('the bridge to the API process', () => {
   it('reports a cookie the host sets, a replaced one, and a sign-out', async () => {
     bridge.receive(open);
     await settle();
-    const { cookies } = only().options.webPreferences.session;
+    const { cookies } = sessionOf(only());
     cookies.hostSets(REMOTE_DEVICE_COOKIE, HOST, 'first');
     cookies.hostReplaces(REMOTE_DEVICE_COOKIE, HOST, 'first', 'second');
     cookies.hostRemoves(REMOTE_DEVICE_COOKIE, HOST, 'second');
@@ -158,7 +183,7 @@ describe('the bridge to the API process', () => {
   it('reports nothing for another host or cookie name, or a value too long to save', async () => {
     bridge.receive(open);
     await settle();
-    const { cookies } = only().options.webPreferences.session;
+    const { cookies } = sessionOf(only());
     cookies.hostSets(REMOTE_DEVICE_COOKIE, 'other.tail1234.ts.net', 'theirs');
     cookies.hostSets('theme', HOST, 'dark');
     cookies.hostSets(REMOTE_DEVICE_COOKIE, HOST, 'x'.repeat(513));
@@ -169,7 +194,7 @@ describe('the bridge to the API process', () => {
     bridge.receive(open);
     await settle();
     bridge.close();
-    only().options.webPreferences.session.cookies.hostSets(REMOTE_DEVICE_COOKIE, HOST, 'first');
+    sessionOf(only()).cookies.hostSets(REMOTE_DEVICE_COOKIE, HOST, 'first');
     expect(posted).toEqual([]);
   });
 });
@@ -179,13 +204,101 @@ describe('closing a remote Spark window', () => {
     bridge.receive({ ...open, cookie: 'saved-value' });
     await settle();
     const window = only();
-    const target = window.options.webPreferences.session;
+    const target = sessionOf(window);
     bridge.receive({ kind: 'remote-spark:close', id: ID });
     await settle();
     expect(window.destroyed).toBe(true);
     expect(target.cleared).toBe(1);
     target.cookies.hostRemoves(REMOTE_DEVICE_COOKIE, HOST, 'saved-value');
     expect(posted).toEqual([]);
+  });
+
+  it('asks the other Mac to end the session before clearing it', async () => {
+    bridge.receive({ ...open, cookie: 'saved-value' });
+    await settle();
+    const window = only();
+    const target = sessionOf(window);
+    bridge.receive({ kind: 'remote-spark:close', id: ID });
+    await settle();
+    expect(target.ended).toHaveLength(1);
+    const [{ url, init, clearedBefore }] = target.ended as [(typeof target.ended)[number]];
+    expect(url).toBe(`https://${HOST}/api/remote/session/end`);
+    expect(clearedBefore).toBe(0);
+    expect({ ...init, signal: undefined }).toEqual({
+      method: 'POST',
+      credentials: 'include',
+      headers: { Origin: `https://${HOST}`, 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: undefined,
+    });
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+    expect(window.destroyed).toBe(true);
+    expect(target.cleared).toBe(1);
+    expect(posted).toEqual([]);
+  });
+
+  it('asks nothing of a Mac it holds no sign-in for', async () => {
+    bridge.receive(open);
+    await settle();
+    const target = sessionOf(only());
+    bridge.receive({ kind: 'remote-spark:close', id: ID });
+    await settle();
+    expect(target.ended).toEqual([]);
+    expect(target.cleared).toBe(1);
+  });
+
+  it('ends the session of a Spark it only watched', async () => {
+    bridge.receive({
+      kind: 'remote-spark:watch',
+      sparks: [{ id: ID, hostname: HOST, cookie: 'saved-value' }],
+    });
+    await settle();
+    const target = fakeElectron.session.fromPartition(`${REMOTE_SPARK_PARTITION_PREFIX}${ID}`);
+    bridge.receive({ kind: 'remote-spark:close', id: ID });
+    await settle();
+    expect(target.ended.map((request) => request.url)).toEqual([
+      `https://${HOST}/api/remote/session/end`,
+    ]);
+    expect(target.cleared).toBe(1);
+    host.dispose();
+  });
+
+  it('clears the session when the other Mac refuses or cannot be reached, once', async () => {
+    for (const [id, end] of [
+      [ID, 'unreachable'],
+      [OTHER_ID, { status: 403, body: null }],
+    ] as const) {
+      bridge.receive({ ...open, id, cookie: 'saved-value' });
+      await settle();
+      const target = fakeElectron.session.fromPartition(`${REMOTE_SPARK_PARTITION_PREFIX}${id}`);
+      target.end = end;
+      bridge.receive({ kind: 'remote-spark:close', id });
+      await settle();
+      expect(target.ended).toHaveLength(1);
+      expect(target.cleared).toBe(1);
+    }
+    expect(desk.open()).toEqual([]);
+    expect(logged.join('\n')).not.toContain('saved-value');
+  });
+
+  it('gives up on an end request that gets no answer and clears the session', async () => {
+    vi.useFakeTimers();
+    try {
+      bridge.receive({ ...open, cookie: 'saved-value' });
+      await vi.advanceTimersByTimeAsync(0);
+      const window = only();
+      const target = sessionOf(window);
+      target.end = 'silent';
+      bridge.receive({ kind: 'remote-spark:close', id: ID });
+      await vi.advanceTimersByTimeAsync(REMOTE_SPARK_END_TIMEOUT_MS - 1);
+      expect(window.destroyed).toBe(true);
+      expect(target.cleared).toBe(0);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(target.ended).toHaveLength(1);
+      expect(target.cleared).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('clears the session of a Spark whose window the user already closed', async () => {
@@ -195,7 +308,7 @@ describe('closing a remote Spark window', () => {
     window.destroy();
     bridge.receive({ kind: 'remote-spark:close', id: ID });
     await settle();
-    expect(window.options.webPreferences.session.cleared).toBe(1);
+    expect(sessionOf(window).cleared).toBe(1);
   });
 
   it('opens a new window after the user closed the old one', async () => {
@@ -249,44 +362,44 @@ describe('a remote Spark that does not answer or no longer knows this Mac', () =
     bridge.receive({ ...open, cookie: 'saved' });
     await settle();
     const window = only();
-    window.webContents.emit('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entry, true);
+    page(window).emit('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entry, true);
     await settle();
-    const shown = window.webContents.loaded.at(-1)!;
+    const shown = page(window).loaded.at(-1)!;
     expect(isNotLoadedPage(shown)).toBe(true);
     expect(decodeURIComponent(shown)).toContain(`<a href="${entry}" autofocus>Try again</a>`);
 
-    const before = window.webContents.loaded.length;
-    window.webContents.emit('did-fail-load', {}, -3, 'ABORTED', entry, true);
-    window.webContents.emit('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entry, false);
-    window.webContents.emit('did-fail-load', {}, -300, 'INVALID_URL', shown, true);
+    const before = page(window).loaded.length;
+    page(window).emit('did-fail-load', {}, -3, 'ABORTED', entry, true);
+    page(window).emit('did-fail-load', {}, -105, 'NAME_NOT_RESOLVED', entry, false);
+    page(window).emit('did-fail-load', {}, -300, 'INVALID_URL', shown, true);
     await settle();
-    expect(window.webContents.loaded).toHaveLength(before);
+    expect(page(window).loaded).toHaveLength(before);
   });
 
   it('shows the did-not-load page for a gateway error', async () => {
     bridge.receive(open);
     await settle();
     const window = only();
-    window.webContents.emit('did-navigate', {}, entry, 502);
+    page(window).emit('did-navigate', {}, entry, 502);
     await settle();
-    expect(isNotLoadedPage(window.webContents.loaded.at(-1)!)).toBe(true);
+    expect(isNotLoadedPage(page(window).loaded.at(-1)!)).toBe(true);
   });
 
   it('forgets a sign-in the other Mac refuses and goes back to pairing', async () => {
     bridge.receive({ ...open, cookie: 'saved' });
     await settle();
     const window = only();
-    const session = window.options.webPreferences.session;
+    const session = sessionOf(window);
     session.sessionStatus = 401;
     posted.length = 0;
-    window.webContents.emit('did-navigate', {}, entry, 200);
+    page(window).emit('did-navigate', {}, entry, 200);
     await settle();
     expect(session.fetched).toEqual([`https://${HOST}/api/remote/session`]);
     expect(posted).toEqual([{ kind: 'remote-spark:signed-out', id: ID }]);
     expect(session.cookies.removed).toEqual([`https://${HOST} ${REMOTE_DEVICE_COOKIE}`]);
-    expect(window.webContents.loaded.at(-1)).toBe(`https://${HOST}/#name=Desk%20Mac&kind=spark`);
+    expect(page(window).loaded.at(-1)).toBe(`https://${HOST}/#name=Desk%20Mac&kind=spark`);
 
-    window.webContents.emit('did-navigate', {}, entry, 200);
+    page(window).emit('did-navigate', {}, entry, 200);
     await settle();
     expect(session.fetched).toHaveLength(1);
   });
@@ -296,16 +409,16 @@ describe('a remote Spark that does not answer or no longer knows this Mac', () =
     await settle();
     const signedIn = only();
     posted.length = 0;
-    signedIn.webContents.emit('did-navigate', {}, entry, 200);
+    page(signedIn).emit('did-navigate', {}, entry, 200);
     await settle();
     expect(posted).toEqual([]);
-    expect(signedIn.options.webPreferences.session.cookies.removed).toEqual([]);
+    expect(sessionOf(signedIn).cookies.removed).toEqual([]);
 
     bridge.receive({ ...open, id: OTHER_ID });
     await settle();
     const unsigned = desk.open().find((window) => window !== signedIn)!;
-    unsigned.webContents.emit('did-navigate', {}, entry, 200);
+    page(unsigned).emit('did-navigate', {}, entry, 200);
     await settle();
-    expect(unsigned.options.webPreferences.session.fetched).toEqual([]);
+    expect(sessionOf(unsigned).fetched).toEqual([]);
   });
 });

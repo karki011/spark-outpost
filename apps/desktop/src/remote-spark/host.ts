@@ -5,11 +5,24 @@ import {
 } from '@spark-outpost/contracts';
 import type { AppLockGate } from '../app-lock-gate.ts';
 import type { BridgePort, WorkerBridge } from '../browser/bridge.ts';
-import { clearRemoteSparkSession, type RemoteSparkGuards } from './partition.ts';
+import { endRemoteSession } from './end-session.ts';
+import {
+  clearRemoteSparkSession,
+  remoteSparkSession,
+  type RemoteSparkGuards,
+} from './partition.ts';
 import { startRemoteSparkWatcher } from './watcher.ts';
 import { openRemoteSparkWindow, type RemoteSparkOpen, type RemoteSparkWindow } from './window.ts';
 
+type SleepEvent = 'suspend' | 'resume';
+
+interface SleepSource {
+  on(event: SleepEvent, listener: () => void): unknown;
+  off(event: SleepEvent, listener: () => void): unknown;
+}
+
 export interface RemoteSparkHostOptions extends RemoteSparkGuards {
+  power: SleepSource;
   openExternal(url: string): void;
   gate?: AppLockGate;
 }
@@ -21,6 +34,7 @@ export interface RemoteSparkHost {
 
 export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSparkHost {
   const windows = new Map<string, RemoteSparkWindow>();
+  const hostnames = new Map<string, string>();
   const ports = new Set<BridgePort>();
 
   const tell = (message: RemoteSparkBridgeFromHost) => {
@@ -34,8 +48,11 @@ export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSpa
     signedOut: (id) => tell({ kind: 'remote-spark:signed-out', id }),
   });
   let watchPort: BridgePort | null = null;
+  options.power.on('suspend', watcher.pause);
+  options.power.on('resume', watcher.resume);
 
   const open = (spark: RemoteSparkOpen) => {
+    hostnames.set(spark.id, spark.hostname);
     const existing = windows.get(spark.id);
     if (existing) {
       existing.focus();
@@ -55,11 +72,23 @@ export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSpa
     windows.set(id, window);
   };
 
-  const close = (id: string) => {
+  const endSession = async (id: string) => {
+    const hostname = hostnames.get(id);
+    hostnames.delete(id);
+    if (hostname === undefined) return;
+    try {
+      await endRemoteSession(remoteSparkSession(id, hostname, options), hostname);
+    } catch {
+      return;
+    }
+  };
+
+  const close = async (id: string) => {
     watcher.forget(id);
     windows.get(id)?.close();
     windows.delete(id);
-    clearRemoteSparkSession(id).catch(() =>
+    await endSession(id);
+    await clearRemoteSparkSession(id).catch(() =>
       options.log('Could not clear a remote Spark window session.'),
     );
   };
@@ -73,9 +102,10 @@ export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSpa
           ports.add(port);
           try {
             if (parsed.data.kind === 'remote-spark:open') open(parsed.data);
-            else if (parsed.data.kind === 'remote-spark:close') close(parsed.data.id);
+            else if (parsed.data.kind === 'remote-spark:close') void close(parsed.data.id);
             else {
               watchPort = port;
+              for (const spark of parsed.data.sparks) hostnames.set(spark.id, spark.hostname);
               watcher.watch(parsed.data.sparks);
             }
           } catch (error) {
@@ -91,6 +121,8 @@ export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSpa
       };
     },
     dispose() {
+      options.power.off('suspend', watcher.pause);
+      options.power.off('resume', watcher.resume);
       watcher.stop();
       for (const window of windows.values()) window.close();
       windows.clear();

@@ -72,6 +72,20 @@ export interface FakeResponse {
   json(): Promise<unknown>;
 }
 
+interface FakeFetchInit {
+  method?: string;
+  credentials?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  signal?: AbortSignal;
+}
+
+interface FakeEndRequest {
+  url: string;
+  init: FakeFetchInit | undefined;
+  clearedBefore: number;
+}
+
 function answered(status: number, body: unknown): FakeResponse {
   return {
     status,
@@ -85,12 +99,18 @@ export class FakeSession extends EventEmitter {
   cleared = 0;
   sessionStatus = 200;
   readonly fetched: string[] = [];
+  readonly ended: FakeEndRequest[] = [];
   attention: FakeAnswer = { status: 200, body: { items: [] } };
+  end: FakeAnswer = { status: 200, body: { ok: true } };
 
-  fetch(url: string, init?: { signal?: AbortSignal }): Promise<FakeResponse> {
-    this.fetched.push(url);
-    if (!url.endsWith('/api/attention')) return Promise.resolve(answered(this.sessionStatus, null));
-    const answer = this.attention;
+  fetch(url: string, init?: FakeFetchInit): Promise<FakeResponse> {
+    const ending = url.endsWith('/api/remote/session/end');
+    if (ending) this.ended.push({ url, init, clearedBefore: this.cleared });
+    else this.fetched.push(url);
+    if (!ending && !url.endsWith('/api/attention')) {
+      return Promise.resolve(answered(this.sessionStatus, null));
+    }
+    const answer = ending ? this.end : this.attention;
     if (answer === 'unreachable') return Promise.reject(new Error('net::ERR_NAME_NOT_RESOLVED'));
     if (answer === 'silent') {
       return new Promise((_resolve, reject) => {
@@ -174,7 +194,26 @@ function prevention() {
 
 export class FakeContents extends EventEmitter {
   readonly loaded: string[] = [];
+  focused = 0;
+  closed = false;
   private opener: ((details: { url: string }) => { action: string }) | null = null;
+
+  loadURL(url: string): Promise<void> {
+    this.loaded.push(url);
+    return Promise.resolve();
+  }
+
+  focus(): void {
+    this.focused += 1;
+  }
+
+  close(): void {
+    this.closed = true;
+  }
+
+  isDestroyed(): boolean {
+    return this.closed;
+  }
 
   setWindowOpenHandler(handler: (details: { url: string }) => { action: string }): void {
     this.opener = handler;
@@ -203,38 +242,58 @@ export class FakeContents extends EventEmitter {
   }
 }
 
-export interface FakeWindowOptions {
-  title: string;
+interface FakeBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface FakeViewOptions {
   webPreferences: Record<string, unknown> & { session: FakeSession };
 }
 
-export class FakeWindow extends EventEmitter {
+export class FakeView {
   readonly webContents = new FakeContents();
+  bounds: FakeBounds | null = null;
+
+  constructor(readonly options: FakeViewOptions) {}
+
+  setBounds(bounds: FakeBounds): void {
+    this.bounds = bounds;
+  }
+}
+
+export interface FakeWindowOptions {
+  title: string;
+  width: number;
+  height: number;
+}
+
+export class FakeWindow extends EventEmitter {
+  readonly views: FakeView[] = [];
+  readonly contentView = { addChildView: (view: FakeView) => void this.views.push(view) };
   title: string;
   visible = true;
   destroyed = false;
   minimized = false;
   focused = 0;
+  private size: [number, number];
 
   constructor(readonly options: FakeWindowOptions) {
     super();
     this.title = options.title;
+    this.size = [options.width, options.height];
     desk.windows.push(this);
   }
 
-  loadURL(url: string): Promise<void> {
-    this.webContents.loaded.push(url);
-    return Promise.resolve();
+  getContentSize(): number[] {
+    return [...this.size];
   }
 
-  setTitle(title: string): void {
-    this.title = title;
-  }
-
-  pageTitle(title: string): void {
-    const event = prevention();
-    this.emit('page-title-updated', event, title);
-    if (!event.prevented) this.title = title;
+  resizeTo(width: number, height: number): void {
+    this.size = [width, height];
+    this.emit('resize');
   }
 
   isDestroyed(): boolean {
@@ -268,6 +327,7 @@ export class FakeWindow extends EventEmitter {
 
   focus(): void {
     this.focused += 1;
+    this.emit('focus');
   }
 
   destroy(): void {
@@ -275,6 +335,16 @@ export class FakeWindow extends EventEmitter {
     this.destroyed = true;
     this.visible = false;
     this.emit('closed');
+  }
+}
+
+export class FakePower extends EventEmitter {
+  sleeps(): void {
+    this.emit('suspend');
+  }
+
+  wakes(): void {
+    this.emit('resume');
   }
 }
 
@@ -293,7 +363,8 @@ export const desk = {
 };
 
 export const fakeElectron = {
-  BrowserWindow: FakeWindow,
+  BaseWindow: FakeWindow,
+  WebContentsView: FakeView,
   session: {
     defaultSession,
     fromPartition(partition: string): FakeSession {

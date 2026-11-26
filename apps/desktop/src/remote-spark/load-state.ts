@@ -14,7 +14,7 @@ export function answerFailed(httpCode: number): boolean {
   return httpCode >= 500 || httpCode === NOT_SERVED;
 }
 
-function escaped(text: string): string {
+export function escaped(text: string): string {
   return text
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')

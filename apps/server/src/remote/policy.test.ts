@@ -39,6 +39,12 @@ describe('remote policy', () => {
     }
   });
 
+  it('lets a paired device end its own session whatever the switches say', () => {
+    expect(remoteDecision('POST', '/api/remote/session/end', ALL_OFF).kind).toBe('allow');
+    expect(remoteDecision('DELETE', '/api/remote/session', ALL_ON).kind).toBe('refuse');
+    expect(remoteDecision('POST', `/api/remote/session/end/${ID}`, ALL_ON).kind).toBe('refuse');
+  });
+
   it('lets a paired device follow live runs on the shared run stream, with the switches off', () => {
     expect(remoteDecision('GET', '/api/run-events', ALL_OFF).kind).toBe('allow');
     expect(remoteDecision('POST', '/api/run-events', ALL_ON).kind).toBe('refuse');

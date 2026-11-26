@@ -178,6 +178,33 @@ describe('SparkSwitcher', () => {
     );
   });
 
+  it('shows a failed open as one visible message', async () => {
+    const message = 'Other Sparks open from the Mac app.';
+    const list = { available: true, local: LOCAL, sparks: [STUDIO] };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: unknown, init?: RequestInit) =>
+        init?.method === 'POST'
+          ? new Response(JSON.stringify({ error: message }), {
+              status: 409,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          : new Response(JSON.stringify(list), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            }),
+      ),
+    );
+    await show();
+    fireEvent.click(within(openMenu().menu).getByRole('menuitem', { name: /Studio Mac/ }));
+    const status = await screen.findByRole('status', undefined, SETTLE);
+    expect(status.textContent).toBe(message);
+    expect(status.closest('.sr-only')).toBeNull();
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('closes on Esc and on this Mac without opening anything', async () => {
     const calls = serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     await show();
