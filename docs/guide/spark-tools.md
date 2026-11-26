@@ -16,7 +16,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | Spend, activity, analytics, morning brief                | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                                                     |
 | Pull requests, checks, reviews                           | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                                               |
 | Setup and projects                                       | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects`                             |
-| The Map, what breaks if a file changes                   | `spark_map`                                                                                                           |
+| The Map, an area, what breaks if a file changes          | `spark_map`                                                                                                           |
 | Where code lives; a repo here or on GitHub               | `spark_find`, `spark_find_repo`, `spark_github_repos`, `spark_research_repo`                                          |
 | MCP servers and where each is on                         | `spark_mcp_servers`                                                                                                   |
 | Open terminals                                           | `spark_terminals`                                                                                                     |
@@ -50,7 +50,7 @@ summary: What agents can look up about Spark, the confirm card they show before 
 | Sign in, or hand you the tab (always asks)                                                              | `spark_browser_sign_in`                                                                                 |
 | Use a [Mac app](mac-control.md)                                                                         | `spark_mac_apps`, `spark_mac_read`, `spark_mac_act`                                                     |
 | Run a command past the turn                                                                             | `spark_terminal_run`                                                                                    |
-| Show a page beside the chat                                                                             | `spark_artifact`                                                                                        |
+| Show a page beside the chat; save a Map area note                                                       | `spark_artifact`, `spark_map_note`                                                                      |
 | Change a calendar event, invite, reply                                                                  | `spark_calendar_edit`                                                                                   |
 | [Change or delete Jira](jira-tools.md); change ServiceNow                                               | `spark_jira_edit`, `spark_servicenow_edit`                                                              |
 | Change Confluence pages                                                                                 | `spark_confluence_edit`                                                                                 |

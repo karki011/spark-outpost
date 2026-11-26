@@ -121,6 +121,19 @@ function Facts({ action }: { action: SparkAction }) {
       return <TeammateFacts action={action} />;
     case 'prepare_setup':
       return <SetupFacts action={action} />;
+    case 'save_map_note':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Project">{action.project}</Fact>
+          <Fact label="Area">{action.area}</Fact>
+          <Fact label="Explanation">{action.text}</Fact>
+          <Fact label="Cites">
+            {action.sources
+              .map((source) => `${source.path} ${source.startLine}-${source.endLine}`)
+              .join(', ')}
+          </Fact>
+        </dl>
+      );
     case 'add_mcp_server':
     case 'update_mcp_server':
     case 'switch_mcp_server':

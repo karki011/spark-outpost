@@ -42,7 +42,7 @@ const GROUPS: [keyof SparkAvailability, string[]][] = [
     ['spark_pull_requests', 'spark_pr', 'spark_pr_follow_up', 'spark_pr_follow_up_round'],
   ],
   ['github', ['spark_github_repos', 'spark_research_repo', 'spark_clone_repo']],
-  ['project', ['spark_map', 'spark_find', 'spark_terminal_run']],
+  ['project', ['spark_map', 'spark_map_note', 'spark_find', 'spark_terminal_run']],
   ['publish', ['spark_push']],
   ['pull_request_create', ['spark_pull_request']],
   [
