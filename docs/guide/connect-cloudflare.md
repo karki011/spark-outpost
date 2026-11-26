@@ -8,13 +8,13 @@ summary: Set up a free Cloudflare account and connect it so shared artifacts liv
 
 Keep shared artifacts in your own Cloudflare account. About 10 minutes. Until then, **Share…** uses Spark's shared service with 1-day links.
 
-You need a free Cloudflare account and a GitHub or GitLab account.
+You need a free Cloudflare account and a GitHub or GitLab account. Cloudflare copies the share service into a new repository there.
 
 1. Open **Settings → Connectors → Cloudflare**.
 2. No Cloudflare account? Select **Create a free account** and sign up in your browser.
 3. Select **Deploy to Cloudflare**. Sign in, connect GitHub or GitLab when asked, and keep the suggested names.
 4. In a terminal, run `openssl rand -hex 32` twice. Paste one result as `UPLOAD_KEY` and the other as `SIGNING_KEY`, then deploy.
-5. Copy the address Cloudflare shows, like `https://spark-share.you.workers.dev`.
+5. Copy the address Cloudflare shows, like `https://spark-outpost-share.you.workers.dev`.
 6. Back in Spark, paste it into **Service address**, paste the `UPLOAD_KEY` value into **Upload key**, and select **Connect**.
 
 The card reads **Connected**. **Share…** now says **Your Cloudflare account** and offers 7 days.
@@ -29,6 +29,6 @@ The card reads **Connected**. **Share…** now says **Your Cloudflare account** 
 
 **Check again** tests the address and key. **Disconnect…** deletes the key from this computer; pages already shared stay up until they expire or you stop sharing them.
 
-Cloudflare may ask for a payment method before it creates the storage bucket.
+The storage bucket needs R2 added to your Cloudflare account. R2 is free to start, and its checkout may ask for a payment method.
 
 **Next:** [Share an artifact](share-an-artifact.md)

@@ -11,7 +11,7 @@ Give someone a page an agent made. About 1 minute.
 1. Open the artifact from its card in the chat. It opens in the Work panel.
 2. Pick the version in the version menu, then select **Share…**.
 3. Turn on **Require a passcode** if the page is private. Spark makes the code.
-4. Pick when **Link ends after**. Spark's shared service allows 1 day; [your own Cloudflare account](connect-cloudflare.md) allows 7.
+4. With [your own Cloudflare account](connect-cloudflare.md), pick **Link ends after**: 1 day or 7 days. Links from Spark's shared service always expire in 1 day.
 5. Select **Create link**. Spark copies the link; select **Copy code** if there is one, and send the code separately from the link.
 6. Select **Done**. The button now reads **Shared**.
 

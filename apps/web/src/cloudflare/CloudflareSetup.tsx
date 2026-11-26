@@ -83,7 +83,7 @@ function ConnectForm() {
           type="text"
           inputMode="url"
           value={address}
-          placeholder="https://spark-share.example.workers.dev"
+          placeholder="https://spark-outpost-share.example.workers.dev"
           disabled={connect.isPending}
           autoComplete="off"
           spellCheck={false}
