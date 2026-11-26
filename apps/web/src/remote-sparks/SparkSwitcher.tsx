@@ -19,7 +19,7 @@ import {
   waitingTotal,
 } from './remote-sparks-copy.ts';
 import { SparkIcon } from './SparkIcon.tsx';
-import { SparkStatus } from './SparkStatus.tsx';
+import { CustomDomainTag, SparkStatus } from './SparkStatus.tsx';
 
 const POLL_MS = 5000;
 const GAP = 8;
@@ -107,7 +107,12 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
               key={spark.id}
               icon={<SparkIcon icon={spark.icon} size={MENU_ICON_SIZE} name={spark.name} />}
               label={spark.name}
-              trailing={<SparkStatus spark={spark} />}
+              trailing={
+                <>
+                  <CustomDomainTag spark={spark} />
+                  <SparkStatus spark={spark} />
+                </>
+              }
               onSelect={() => {
                 closeMenu();
                 open.mutate(spark.id);

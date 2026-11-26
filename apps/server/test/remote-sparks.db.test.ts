@@ -35,8 +35,8 @@ afterEach(async () => {
 const UNKNOWN = '0198c0de-0000-7000-8000-000000000001';
 const UNNAMED = { name: null, defaultName: THIS_MAC, icon: null };
 
-const add = (address: string, name = 'Studio Mac', on = app) =>
-  localClient(on).send('post', '/api/remote-sparks', { address, name });
+const add = (address: string, name = 'Studio Mac', on = app, trusted?: boolean) =>
+  localClient(on).send('post', '/api/remote-sparks', { address, name, trusted });
 
 const list = async (on = app) =>
   remoteSparkListSchema.parse((await localClient(on).get('/api/remote-sparks').expect(200)).body);
@@ -96,7 +96,7 @@ describe('saved Sparks', () => {
       [`https://${STUDIO}/chats`, 'shape'],
       [`https://me:pw@${STUDIO}`, 'shape'],
       [`https://${STUDIO}/?next=1`, 'shape'],
-      ['https://studio.example.com', 'reach'],
+      ['https://studio.example.com', 'untrusted'],
       ['https://127.0.0.1', 'host'],
       [`https://${REMOTE_HOST}`, 'own'],
     ];
@@ -112,6 +112,31 @@ describe('saved Sparks', () => {
     await add(`https://${STUDIO}`, 'n'.repeat(61)).expect(400);
     expect((await list()).sparks).toEqual([]);
     expect(desktop.posted).toEqual([]);
+  });
+
+  it('adds a Spark at a custom domain only once it is trusted', async () => {
+    const address = 'https://studio.example.com/#code=ABCD-EFGH-JKLM';
+    for (const trusted of [undefined, false]) {
+      const refused = await add(address, 'Studio Mac', app, trusted).expect(400);
+      expect(refused.body).toEqual({
+        error: SPARK_ADDRESS_PROBLEMS.untrusted,
+        problem: 'untrusted',
+      });
+    }
+    expect((await list()).sparks).toEqual([]);
+    expect(desktop.posted).toEqual([]);
+
+    const saved = await add(address, 'Studio Mac', app, true).expect(201);
+    expect(saved.body).toMatchObject({ hostname: 'studio.example.com', reach: 'custom' });
+    expect(desktop.posted).toMatchObject([
+      { kind: 'remote-spark:open', hostname: 'studio.example.com', code: 'ABCD-EFGH-JKLM' },
+    ]);
+    expect((await list()).sparks).toMatchObject([{ reach: 'custom' }]);
+  });
+
+  it('adds a Tailscale Spark whatever the trusted flag says', async () => {
+    const saved = await add(`https://${STUDIO}`, 'Studio Mac', app, false).expect(201);
+    expect(saved.body).toMatchObject({ hostname: STUDIO, reach: 'tailscale' });
   });
 
   it('renames a saved Spark', async () => {

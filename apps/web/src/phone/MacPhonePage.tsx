@@ -1,10 +1,12 @@
 import { useEffect, useId, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { RemoteSession } from '@spark-outpost/contracts';
+import type { RemoteReach, RemoteSession, TailscaleState } from '@spark-outpost/contracts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
 import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { usePageHidden } from '../ui/use-page-hidden.ts';
+import { REPLACES_CUSTOM } from './custom-domain.ts';
+import { CustomDomainSetup } from './CustomDomainSetup.tsx';
 import { activationOf, turnFailure } from './pair-flow.ts';
 import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
@@ -12,6 +14,7 @@ import { PhoneActivity } from './PhoneActivity.tsx';
 import { PhoneDevices } from './PhoneDevices.tsx';
 import { PhoneRail } from './PhoneRail.tsx';
 import { PhoneStatus } from './PhoneStatus.tsx';
+import { ReachChoice } from './ReachChoice.tsx';
 import { PhoneSwitches } from './PhoneSwitches.tsx';
 import { PhoneCardAnswering } from './PhoneCardAnswering.tsx';
 import { PushContact } from './PushContact.tsx';
@@ -23,11 +26,16 @@ const STATE_POLL_MS = 10_000;
 const LIST_POLL_MS = 5000;
 const FRESH_MS = 9000;
 
+function customDomainState(hostname: string): TailscaleState {
+  return { status: 'on', hostname, address: `https://${hostname}`, message: null };
+}
+
 export function MacPhonePage({ session }: { session: RemoteSession }) {
   const queryClient = useQueryClient();
   const hidden = usePageHidden();
   const now = useMinuteClock();
   const [freshAfter, setFreshAfter] = useState<number | null>(null);
+  const [picked, setPicked] = useState<RemoteReach | null>(null);
   const inboundTitle = useId();
   const outboundTitle = useId();
   const tailscale = useQuery({
@@ -35,6 +43,7 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
     queryFn: phoneApi.tailscale,
     refetchInterval: hidden ? false : STATE_POLL_MS,
   });
+  const access = useQuery({ queryKey: phoneKeys.access, queryFn: phoneApi.access });
   const listPoll = hidden ? false : freshAfter === null ? LIST_POLL_MS : 1000;
   const devices = useQuery({
     queryKey: phoneKeys.devices,
@@ -53,6 +62,14 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
       void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
     },
   });
+  const turnOffCustom = useMutation({
+    mutationFn: () => phoneApi.setAccess({ hostname: null }),
+    onSuccess: (next) => {
+      setPicked('custom');
+      queryClient.setQueryData(phoneKeys.access, next);
+      void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
+    },
+  });
   const failure = turnFailure(turn.error, turn.data);
 
   useEffect(() => {
@@ -61,16 +78,21 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
     return () => clearTimeout(timer);
   }, [freshAfter]);
 
-  if (!tailscale.data) {
+  if (!tailscale.data || !access.data) {
     return (
-      <QueryWait query={tailscale} what="remote control">
+      <QueryWait query={tailscale.data ? access : tailscale} what="remote control">
         <Skeleton label="Loading remote control" shape="cards" rows={3} />
       </QueryWait>
     );
   }
-  const state = tailscale.data;
-  const setup = setupSteps(state.status) !== null;
-  const wanted = session.address !== null;
+  const customHost = access.data.reach === 'custom' ? access.data.hostname : null;
+  const reach = picked ?? (customHost === null ? 'tailscale' : 'custom');
+  const live = tailscale.data;
+  const state = customHost === null ? live : customDomainState(customHost);
+  const shown = reach === 'custom' ? state : live;
+  const setup = reach === 'custom' ? customHost === null : setupSteps(live.status) !== null;
+  const wanted = customHost === null && session.address !== null;
+  const choice = <ReachChoice reach={reach} onChange={setPicked} />;
   const pair = (
     <PairPhone
       tailscale={state}
@@ -91,25 +113,54 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
     <div className="ph-cols" data-setup={setup || undefined}>
       {setup ? (
         <div className="ph-area ph-area-setup">
-          <PhoneStatus
-            state={state}
-            checking={tailscale.isFetching}
-            turning={turn.isPending}
-            on={state.status === 'on' || (state.status === 'error' && wanted)}
-            failure={failure}
-            onCheck={() => void tailscale.refetch()}
-            onTurn={(to) => turn.mutate(to)}
-          />
+          {reach === 'custom' ? (
+            <CustomDomainSetup
+              choice={choice}
+              forwardTo={access.data.forwardTo}
+              replacesTailscale={live.status === 'on'}
+              onSaved={(next) => {
+                setPicked(null);
+                queryClient.setQueryData(phoneKeys.access, next);
+                void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
+              }}
+            />
+          ) : (
+            <PhoneStatus
+              state={live}
+              checking={tailscale.isFetching}
+              turning={turn.isPending}
+              on={live.status === 'on' || (live.status === 'error' && wanted)}
+              failure={failure}
+              choice={choice}
+              notice={customHost === null ? null : REPLACES_CUSTOM}
+              onCheck={() => void tailscale.refetch()}
+              onTurn={(to) => turn.mutate(to)}
+            />
+          )}
         </div>
+      ) : reach === 'custom' ? (
+        <PhoneRail
+          state={shown}
+          wanted={false}
+          devices={devices.data}
+          switches={session.switches}
+          lastRequest={audit.data?.[0]?.at ?? null}
+          turning={turnOffCustom.isPending}
+          failure={turnOffCustom.error?.message ?? null}
+          choice={choice}
+          custom
+          onTurn={() => turnOffCustom.mutate()}
+        />
       ) : (
         <PhoneRail
-          state={state}
+          state={shown}
           wanted={wanted}
           devices={devices.data}
           switches={session.switches}
           lastRequest={audit.data?.[0]?.at ?? null}
           turning={turn.isPending}
           failure={failure}
+          choice={choice}
           onTurn={(to) => turn.mutate(to)}
         />
       )}

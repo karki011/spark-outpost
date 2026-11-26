@@ -1,0 +1,73 @@
+.ph-reach {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.ph-reach .seg {
+  width: min(320px, 100%);
+}
+.ph-reach .seg button {
+  min-height: 28px;
+  font-size: 13px;
+}
+.ph-reach-label,
+.ph-field-label {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.ph-reach-label {
+  color: var(--muted);
+  font-weight: 600;
+}
+.ph-custom {
+  max-width: 620px;
+}
+.ph-custom .field .ph-field-label {
+  margin-bottom: 6px;
+}
+.ph-custom .field .ph-error {
+  margin-top: 6px;
+}
+.ph-forward {
+  display: grid;
+  gap: 6px;
+}
+.ph-forward-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ph-forward code {
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: calc(var(--r-sm) - 2px);
+  background: var(--code);
+  color: var(--text);
+  font:
+    13px/1.5 'Geist Mono',
+    ui-monospace,
+    monospace;
+  overflow-wrap: anywhere;
+}
+.ph-custom-actions {
+  display: flex;
+  gap: 8px;
+}
+.ph-reach-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--text);
+}
+.ph-reach-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--warn);
+}
+.ph-custom-on {
+  display: grid;
+  gap: 4px;
+}

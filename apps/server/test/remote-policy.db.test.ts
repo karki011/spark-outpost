@@ -13,6 +13,7 @@ import { createTestApp, localClient } from './app-support.ts';
 import { doRun } from './approval-support.ts';
 import { registeredRoutes } from './remote-routes-support.ts';
 import {
+  REMOTE_ORIGIN,
   pairDevice,
   remoteClient,
   setSwitches,
@@ -247,7 +248,7 @@ describe('switches', () => {
       remote: true,
       host: process.platform === 'win32' ? 'windows' : 'mac',
       device: { id: device.id, name: 'Test phone' },
-      address: 'https://mac.tail1234.ts.net',
+      address: REMOTE_ORIGIN,
       switches: REMOTE_SWITCH_DEFAULTS,
       cardAnswering: REMOTE_CARD_ANSWERING_DEFAULT,
       passkey: false,

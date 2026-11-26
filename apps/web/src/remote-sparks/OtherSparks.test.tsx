@@ -124,6 +124,24 @@ describe('OtherSparks', () => {
     expect(within(rows[3]!).getByText('2 waiting')).toBeTruthy();
   });
 
+  it('tags a custom domain with an icon and words, and says it is not checked', async () => {
+    const cabin: RemoteSpark = {
+      ...STUDIO,
+      id: CELLAR_ID,
+      name: 'Cabin Mac',
+      hostname: 'spark.example.com',
+      reach: 'custom',
+    };
+    serve({ available: true, local: LOCAL, sparks: [STUDIO, cabin] });
+    await show();
+    const [studio, custom] = screen.getAllByRole('listitem').slice(1);
+    const tag = within(custom!).getByText('Custom domain');
+    expect(tag.querySelector('svg')).toBeTruthy();
+    expect(within(custom!).getByText('spark.example.com · Not checked by Spark')).toBeTruthy();
+    expect(within(studio!).queryByText('Custom domain')).toBeNull();
+    expect(within(studio!).queryByText(/Not checked by Spark/)).toBeNull();
+  });
+
   it('opens the Add dialog when it was asked for from elsewhere', async () => {
     serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     requestAddSpark();

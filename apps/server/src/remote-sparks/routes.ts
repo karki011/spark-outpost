@@ -62,7 +62,7 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkL
       id: row.id,
       name: row.name,
       hostname: row.hostname,
-      reach: reachOfHostname(row.hostname) ?? 'tailscale',
+      reach: reachOfHostname(row.hostname),
       paired,
       ...link.stateOf(row.id, paired),
       icon: iconPathOf(row.id, row.icon_version),
@@ -108,6 +108,10 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkL
       res
         .status(400)
         .json({ error: SPARK_ADDRESS_PROBLEMS[address.problem], problem: address.problem });
+      return;
+    }
+    if (address.reach === 'custom' && body.trusted !== true) {
+      res.status(400).json({ error: SPARK_ADDRESS_PROBLEMS.untrusted, problem: 'untrusted' });
       return;
     }
     let row: RemoteSparkRow;

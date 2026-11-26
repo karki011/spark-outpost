@@ -79,8 +79,8 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
 
   await address.fill(`http://${STUDIO}`);
   await expect(dialog.getByText('The address must start with https://.')).toBeVisible();
-  await address.fill('https://studio.example.com');
-  await expect(dialog.getByText(/the address must end in \.ts\.net/)).toBeVisible();
+  await address.fill('https://203.0.113.7');
+  await expect(dialog.getByText(/That is not an address Spark can reach\./)).toBeVisible();
 
   await address.fill(`https://${STUDIO}/#code=ABCD-EFGH-JKLM`);
   await expect(dialog.getByText(`Opens ${STUDIO} with its pairing code filled in.`)).toBeVisible();

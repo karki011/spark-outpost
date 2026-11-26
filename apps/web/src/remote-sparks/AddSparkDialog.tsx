@@ -3,8 +3,18 @@ import { useId, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { REMOTE_SPARK_NAME_MAX } from '@spark-outpost/contracts';
 import { ModalFrame } from '../ui/ModalFrame.tsx';
+import { ConfirmCheck, WarningNote } from '../ui/WarningNote.tsx';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
-import { ADD_SPARK, NAME_PROBLEM, addressHint, addressProblem } from './remote-sparks-copy.ts';
+import {
+  ADD_SPARK,
+  NAME_PROBLEM,
+  TRUST_LABEL,
+  UNTRUSTED_LEAD,
+  UNTRUSTED_TEXT,
+  addressHint,
+  addressProblem,
+  needsTrust,
+} from './remote-sparks-copy.ts';
 
 interface AddSparkDialogProps {
   ownHostname: string | null;
@@ -17,13 +27,20 @@ export function AddSparkDialog({ ownHostname, onClose }: AddSparkDialogProps) {
   const [address, setAddress] = useState('');
   const [name, setName] = useState('');
   const [tried, setTried] = useState(false);
+  const [trusted, setTrusted] = useState(false);
   const addressField = useRef<HTMLInputElement>(null);
   const typed = address.trim() !== '';
   const problem = typed || tried ? addressProblem(address, ownHostname) : null;
   const hint = addressHint(address, ownHostname);
+  const custom = needsTrust(address, ownHostname);
   const nameProblem = tried && name.trim() === '' ? NAME_PROBLEM : null;
   const add = useMutation({
-    mutationFn: () => remoteSparksApi.add({ address: address.trim(), name: name.trim() }),
+    mutationFn: () =>
+      remoteSparksApi.add({
+        address: address.trim(),
+        name: name.trim(),
+        ...(custom ? { trusted: true } : {}),
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: remoteSparkKeys.all });
       onClose();
@@ -34,7 +51,7 @@ export function AddSparkDialog({ ownHostname, onClose }: AddSparkDialogProps) {
     event.preventDefault();
     setTried(true);
     const ready = addressProblem(address, ownHostname) === null && name.trim() !== '';
-    if (ready && !add.isPending) add.mutate();
+    if (ready && (!custom || trusted) && !add.isPending) add.mutate();
   };
   const formId = `${ids}-form`;
   return (
@@ -49,7 +66,12 @@ export function AddSparkDialog({ ownHostname, onClose }: AddSparkDialogProps) {
           <button type="button" className="btn line sm" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" form={formId} className="btn primary sm" disabled={add.isPending}>
+          <button
+            type="submit"
+            form={formId}
+            className="btn primary sm"
+            disabled={add.isPending || (custom && !trusted)}
+          >
             {add.isPending ? 'Adding…' : ADD_SPARK}
           </button>
         </>
@@ -72,12 +94,28 @@ export function AddSparkDialog({ ownHostname, onClose }: AddSparkDialogProps) {
             maxLength={400}
             aria-invalid={problem !== null}
             aria-describedby={`${ids}-address-note`}
-            onChange={(event) => setAddress(event.target.value)}
+            onChange={(event) => {
+              setAddress(event.target.value);
+              setTrusted(false);
+            }}
           />
           <p id={`${ids}-address-note`} className={problem ? 'rs-problem' : 'rs-hint'}>
             {problem ?? hint ?? 'Copy it from Remote control on the other Mac.'}
           </p>
         </div>
+        {custom && (
+          <>
+            <WarningNote id={`${ids}-warning`} lead={UNTRUSTED_LEAD}>
+              {UNTRUSTED_TEXT}
+            </WarningNote>
+            <ConfirmCheck
+              label={TRUST_LABEL}
+              checked={trusted}
+              describedBy={`${ids}-warning`}
+              onChange={setTrusted}
+            />
+          </>
+        )}
         <div className="field">
           <label htmlFor={`${ids}-name`}>Name</label>
           <input

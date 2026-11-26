@@ -4,10 +4,10 @@ import type { RemoteSpark } from '@spark-outpost/contracts';
 import { MenuItem } from '../conversations/MenuShell.tsx';
 import { ActionsMenu, useActionsButton } from './ActionsMenu.tsx';
 import { remoteSparkKeys, remoteSparksApi } from './remote-sparks-api.ts';
-import { CHANGE_ICON_ITEM, REMOVE_ICON_ITEM, lastOpenedLine } from './remote-sparks-copy.ts';
+import { CHANGE_ICON_ITEM, REMOVE_ICON_ITEM, summaryLine } from './remote-sparks-copy.ts';
 import { RenameForm } from './RenameForm.tsx';
 import { SparkIcon } from './SparkIcon.tsx';
-import { SparkStatus } from './SparkStatus.tsx';
+import { CustomDomainTag, SparkStatus } from './SparkStatus.tsx';
 import { useSparkIcon } from './use-spark-icon.tsx';
 
 export const ROW_ICON_SIZE = 28;
@@ -47,11 +47,10 @@ export function SparkRow({ spark, now, onRemove }: SparkRowProps) {
           <>
             <div className="ph-device-line">
               <b>{spark.name}</b>
+              <CustomDomainTag spark={spark} />
               <SparkStatus spark={spark} />
             </div>
-            <span className="ph-device-summary">
-              {spark.hostname} · {lastOpenedLine(spark, now)}
-            </span>
+            <span className="ph-device-summary">{summaryLine(spark, now)}</span>
           </>
         )}
       </div>

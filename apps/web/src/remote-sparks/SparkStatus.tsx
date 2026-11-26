@@ -1,6 +1,10 @@
 import './spark-status.css';
-import { REMOTE_SPARK_STATUS_LABELS, type RemoteSpark } from '@spark-outpost/contracts';
-import { CheckIcon, ClockIcon, OfflineIcon, SpinnerIcon } from '../ui/icons.tsx';
+import {
+  REMOTE_REACH_LABELS,
+  REMOTE_SPARK_STATUS_LABELS,
+  type RemoteSpark,
+} from '@spark-outpost/contracts';
+import { CheckIcon, ClockIcon, OfflineIcon, SpinnerIcon, WarnIcon } from '../ui/icons.tsx';
 import { waitingWord } from './remote-sparks-copy.ts';
 
 const STATUS_ICONS = {
@@ -19,5 +23,15 @@ export function SparkStatus({ spark }: { spark: Pick<RemoteSpark, 'status' | 'ne
       </span>
       {spark.needsYou > 0 && <span className="rs-needs">{waitingWord(spark.needsYou)}</span>}
     </>
+  );
+}
+
+export function CustomDomainTag({ spark }: { spark: Pick<RemoteSpark, 'reach'> }) {
+  if (spark.reach !== 'custom') return null;
+  return (
+    <span className="rs-tag">
+      <WarnIcon />
+      {REMOTE_REACH_LABELS.custom}
+    </span>
   );
 }

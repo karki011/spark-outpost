@@ -22,6 +22,7 @@ export interface TailscaleServe {
   state(): Promise<TailscaleState>;
   turnOn(): Promise<TailscaleState>;
   turnOff(): Promise<TailscaleState>;
+  release(): Promise<void>;
   reconcile(): Promise<void>;
 }
 
@@ -64,14 +65,17 @@ export function tailscaleServe(deps: TailscaleServeDeps): TailscaleServe {
 
   const setHostname = async (hostname: string | null, reason: string) => {
     const before = await remoteAccess(db, workspaceId);
-    if (before.hostname === hostname) return;
-    await saveRemoteHostname(db, workspaceId, hostname);
+    if (before.hostname === hostname && before.reach === 'tailscale') return;
+    await saveRemoteHostname(db, workspaceId, hostname, 'tailscale');
     streams.closeAll();
     await recordRemoteAudit(db, workspaceId, {
       action: 'hostname_changed',
-      detail: { on: hostname !== null, reason },
+      detail: { on: hostname !== null, reason, reach: 'tailscale' },
     });
   };
+
+  const isCustom = async (): Promise<boolean> =>
+    (await remoteAccess(db, workspaceId)).reach === 'custom';
 
   const ours = async (handler: string | null): Promise<boolean> =>
     handler !== null && (handler === target || handler === (await serveTarget(db, workspaceId)));
@@ -80,7 +84,9 @@ export function tailscaleServe(deps: TailscaleServeDeps): TailscaleServe {
     const [reading, access] = await Promise.all([cli.read(), remoteAccess(db, workspaceId)]);
     if (reading.kind !== 'ready') return notReady(reading, notice);
     const { hostname } = reading;
-    if (!access.hostname) return { status: 'off', hostname, address: null, message: notice };
+    if (!access.hostname || access.reach === 'custom') {
+      return { status: 'off', hostname, address: null, message: notice };
+    }
     if (reading.funnel) return failed(hostname, FUNNEL_ON);
     if (reading.handler !== target || access.hostname !== hostname) {
       return failed(hostname, DRIFTED);
@@ -104,6 +110,17 @@ export function tailscaleServe(deps: TailscaleServeDeps): TailscaleServe {
     return null;
   };
 
+  const stopOurs = async (): Promise<TailscaleState | null> => {
+    const reading = await cli.read();
+    if (reading.kind !== 'ready') return notReady(reading);
+    if (await ours(reading.handler)) {
+      const error = await cli.stopServing();
+      if (error) return failed(reading.hostname, error);
+    }
+    await saveServeTarget(db, workspaceId, null);
+    return null;
+  };
+
   return {
     state,
 
@@ -119,20 +136,18 @@ export function tailscaleServe(deps: TailscaleServeDeps): TailscaleServe {
 
     async turnOff() {
       notice = null;
-      await setHostname(null, 'turned_off');
-      const reading = await cli.read();
-      if (reading.kind !== 'ready') return notReady(reading);
-      if (await ours(reading.handler)) {
-        const error = await cli.stopServing();
-        if (error) return failed(reading.hostname, error);
-      }
-      await saveServeTarget(db, workspaceId, null);
-      return state();
+      if (!(await isCustom())) await setHostname(null, 'turned_off');
+      return (await stopOurs()) ?? state();
+    },
+
+    async release() {
+      notice = null;
+      await stopOurs();
     },
 
     async reconcile() {
       const access = await remoteAccess(db, workspaceId);
-      if (!access.hostname) return;
+      if (!access.hostname || access.reach === 'custom') return;
       const reading = await cli.read();
       if (reading.kind !== 'ready') return;
       const stale = reading.handler !== target && (await ours(reading.handler));

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SPARK_ADDRESS_PROBLEMS } from '@spark-outpost/contracts';
 import { AddSparkDialog } from './AddSparkDialog.tsx';
-import { NAME_PROBLEM } from './remote-sparks-copy.ts';
+import { NAME_PROBLEM, TRUST_LABEL, UNTRUSTED_LEAD } from './remote-sparks-copy.ts';
 
 const SETTLE = { timeout: 3000 };
 const OWN = 'mine.tail1234.ts.net';
@@ -81,7 +81,7 @@ describe('AddSparkDialog', () => {
   it.each([
     ['http://studio.tail1234.ts.net', SPARK_ADDRESS_PROBLEMS.scheme],
     ['https://studio.tail1234.ts.net:8443', SPARK_ADDRESS_PROBLEMS.shape],
-    ['https://studio.example.com', SPARK_ADDRESS_PROBLEMS.reach],
+    ['https://203.0.113.7', SPARK_ADDRESS_PROBLEMS.host],
     [`https://${OWN}`, SPARK_ADDRESS_PROBLEMS.own],
   ])('explains what is wrong with %s while typing', (address, problem) => {
     serve(201, SAVED);
@@ -121,6 +121,43 @@ describe('AddSparkDialog', () => {
     fireEvent.submit(screen.getByLabelText(ADDRESS).closest('form')!);
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1), SETTLE);
     expect(sent).toEqual([{ address: 'https://studio.tail1234.ts.net', name: 'Studio Mac' }]);
+  });
+
+  it('has no warning or trust box for a Tailscale address', () => {
+    serve(201, SAVED);
+    show();
+    type(ADDRESS, 'studio.tail1234.ts.net');
+    expect(screen.queryByText(UNTRUSTED_LEAD)).toBeNull();
+    expect(screen.queryByLabelText(TRUST_LABEL)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add a Spark' })).toHaveProperty('disabled', false);
+  });
+
+  it('asks to trust a custom domain before it can be added', async () => {
+    const sent = serve(201, { ...SAVED, hostname: 'spark.example.com', reach: 'custom' });
+    const onClose = show();
+    type(ADDRESS, 'https://spark.example.com');
+    type('Name', 'Cabin Mac');
+    expect(screen.getByText(UNTRUSTED_LEAD).tagName).toBe('B');
+    const add = screen.getByRole('button', { name: 'Add a Spark' });
+    expect(add).toHaveProperty('disabled', true);
+    fireEvent.submit(screen.getByLabelText(ADDRESS).closest('form')!);
+    expect(sent).toHaveLength(0);
+    fireEvent.click(screen.getByLabelText(TRUST_LABEL));
+    expect(add).toHaveProperty('disabled', false);
+    fireEvent.submit(screen.getByLabelText(ADDRESS).closest('form')!);
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1), SETTLE);
+    expect(sent).toEqual([
+      { address: 'https://spark.example.com', name: 'Cabin Mac', trusted: true },
+    ]);
+  });
+
+  it('asks again when the address changes after the tick', () => {
+    serve(201, SAVED);
+    show();
+    type(ADDRESS, 'spark.example.com');
+    fireEvent.click(screen.getByLabelText(TRUST_LABEL));
+    type(ADDRESS, 'other.example.com');
+    expect(screen.getByLabelText(TRUST_LABEL)).toHaveProperty('checked', false);
   });
 
   it('shows what the server refused in one line and stays open', async () => {

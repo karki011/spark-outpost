@@ -116,6 +116,22 @@ describe('SparkSwitcher', () => {
     expect(calls).toHaveLength(0);
   });
 
+  it('tags a custom domain in the menu and leaves Tailscale rows alone', async () => {
+    const cabin: RemoteSpark = {
+      ...CELLAR,
+      name: 'Cabin Mac',
+      hostname: 'spark.example.com',
+      reach: 'custom',
+    };
+    serve({ available: true, local: LOCAL, sparks: [STUDIO, cabin] });
+    await show();
+    const { menu } = openMenu();
+    const custom = within(menu).getByRole('menuitem', { name: /Cabin Mac/ });
+    expect(within(custom).getByText('Custom domain').querySelector('svg')).toBeTruthy();
+    const studio = within(menu).getByRole('menuitem', { name: /Studio Mac/ });
+    expect(within(studio).queryByText('Custom domain')).toBeNull();
+  });
+
   it('names this Mac and totals the requests waiting on other Sparks', async () => {
     serve({ available: true, local: LOCAL, sparks: [STUDIO, ATTIC, CELLAR] });
     await show();

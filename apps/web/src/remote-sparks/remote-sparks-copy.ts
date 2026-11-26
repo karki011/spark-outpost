@@ -51,6 +51,20 @@ export function lastOpenedLine(spark: Pick<RemoteSpark, 'lastOpenedAt'>, now: nu
     : `Last opened ${relativeTime(spark.lastOpenedAt, now)}`;
 }
 
+export const UNTRUSTED_LEAD = "This isn't a Tailscale address.";
+export const UNTRUSTED_TEXT =
+  "Spark can't check who runs it. Its page opens in a window of its own and can't reach this computer, but only add an address you trust, and never type a password into that window.";
+export const TRUST_LABEL = 'I trust this address';
+export const NOT_CHECKED = 'Not checked by Spark';
+
+export function summaryLine(
+  spark: Pick<RemoteSpark, 'hostname' | 'reach' | 'lastOpenedAt'>,
+  now: number,
+): string {
+  const detail = spark.reach === 'custom' ? NOT_CHECKED : lastOpenedLine(spark, now);
+  return `${spark.hostname} · ${detail}`;
+}
+
 export function removeCopy(name: string): DisconnectCopy {
   return {
     title: `Remove ${name}?`,
@@ -61,6 +75,11 @@ export function removeCopy(name: string): DisconnectCopy {
 export function addressProblem(address: string, ownHostname: string | null): string | null {
   const parsed = parseSparkAddress(address, ownHostname);
   return parsed.ok ? null : SPARK_ADDRESS_PROBLEMS[parsed.problem];
+}
+
+export function needsTrust(address: string, ownHostname: string | null): boolean {
+  const parsed = parseSparkAddress(address, ownHostname);
+  return parsed.ok && parsed.reach === 'custom';
 }
 
 export function addressHint(address: string, ownHostname: string | null): string | null {
