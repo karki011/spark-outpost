@@ -148,7 +148,7 @@ Shares from your own copy can last 1 or 7 days. To allow only 1, add `MAX_EXPIRY
 
 Cloudflare's documentation for the button does not list Workers Analytics Engine among the resources it sets up. If the deploy stops at the `EVENTS` binding, delete the `[[analytics_engine_datasets]]` block from `wrangler.toml` in your copy: the worker runs the same without it and writes no events.
 
-The button has not been run against this folder yet. The steps under [Set up and deploy](#set-up-and-deploy) do the same by hand; add `openssl rand -hex 32 | npx wrangler@4 secret put UPLOAD_KEY` to them.
+The button has not been run against this folder yet. The steps under [Set up and deploy](#set-up-and-deploy) do the same by hand; for your own copy also run `openssl rand -hex 32`, keep the output to paste into Spark Outpost, then run `npx wrangler@4 secret put UPLOAD_KEY` and paste that same value when asked.
 
 ## The hosted copy
 
