@@ -27,3 +27,11 @@
 .rs-switch-menu button {
   min-height: 28px;
 }
+
+.rs-switch .rbadge {
+  top: 1px;
+  right: 3px;
+}
+.rs-switch[aria-expanded='true'] {
+  background: var(--accent-soft);
+}

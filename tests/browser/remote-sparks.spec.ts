@@ -61,6 +61,9 @@ test('another Mac’s Spark is added, listed, renamed and removed', async ({ pag
   await expand(main, 'Other Sparks');
   const card = main.getByRole('region', { name: 'Other Sparks' });
   await expect(card.getByText('No other Spark is saved yet.')).toBeVisible();
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: /^This Mac/ }),
+  ).toHaveCount(0);
 
   const add = card.getByRole('button', { name: 'Add a Spark' });
   await add.click();
@@ -157,6 +160,26 @@ test('saved Sparks show their status, what waits there, and open from their row'
   await studio.getByRole('button', { name: 'Open Studio Mac' }).click();
   await expect.poll(() => opened).toHaveLength(1);
   expect(opened[0]).toMatch(/^\/api\/remote-sparks\/[0-9a-f-]{36}\/open$/);
+
+  const rail = page.getByRole('navigation', { name: 'Main' });
+  const switcher = rail.getByRole('button', {
+    name: 'This Mac. 2 requests waiting on other Sparks',
+  });
+  await expect(rail.getByRole('button').nth(1)).toHaveAccessibleName(/^This Mac/);
+  await switcher.click();
+  const menu = page.getByRole('menu', { name: 'Sparks' });
+  await expect(menu.getByRole('menuitemradio', { name: /This Mac/ })).toBeChecked();
+  await expect(menu.getByRole('menuitem', { name: /Studio Mac/ })).toContainText('Online');
+  await expect(menu.getByRole('menuitem', { name: /Studio Mac/ })).toContainText('2 waiting');
+  await expect(menu.getByRole('menuitem', { name: /Attic Mac/ })).toContainText('Offline');
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(switcher).toBeFocused();
+
+  await switcher.click();
+  await menu.getByRole('menuitem', { name: /Attic Mac/ }).click();
+  await expect.poll(() => opened).toHaveLength(2);
+  await expect(menu).toBeHidden();
 });
 
 test('outside the Mac app the card only says where other Sparks open', async ({ page }) => {

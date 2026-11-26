@@ -1,13 +1,13 @@
 import './spark-status.css';
 import { REMOTE_SPARK_STATUS_LABELS, type RemoteSpark } from '@spark-outpost/contracts';
-import { CheckIcon, ClockIcon, SpinnerIcon, WarnIcon } from '../ui/icons.tsx';
+import { CheckIcon, ClockIcon, OfflineIcon, SpinnerIcon } from '../ui/icons.tsx';
 import { waitingWord } from './remote-sparks-copy.ts';
 
 const STATUS_ICONS = {
   'not-paired': <ClockIcon />,
   checking: <SpinnerIcon />,
   online: <CheckIcon />,
-  offline: <WarnIcon />,
+  offline: <OfflineIcon />,
 } as const satisfies Record<RemoteSpark['status'], unknown>;
 
 export function SparkStatus({ spark }: { spark: Pick<RemoteSpark, 'status' | 'needsYou'> }) {

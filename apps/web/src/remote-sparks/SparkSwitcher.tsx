@@ -78,7 +78,7 @@ export function SparkSwitcher({ onManage }: { onManage: () => void }) {
       <button
         ref={button}
         type="button"
-        className={anchor ? 'rail-btn on' : 'rail-btn'}
+        className="rail-btn rs-switch"
         aria-haspopup="menu"
         aria-expanded={anchor !== null}
         aria-label={switcherName(computer, total)}
