@@ -162,7 +162,7 @@ The morning brief (Settings → Spark → Morning brief, with a time) is written
     keywords: ['map', 'project map', 'areas', 'repo map', 'core impact', 'unmatched'],
     text: `The Map page draws each linked repository as a sky of files grouped into areas, with links between areas and between repositories (front end to back end, shared packages, env keys). Filter areas by category (Core, Shared, Feature), files by kind, and links between projects; open a file for Jev's label, a preview, what depends on it, its imports and its history. With 2+ projects it lists unmatched API: routes nothing calls and calls that reach no route.
 
-The Map builds in the worker at low priority, pauses while an agent runs, and updates as commits land. Areas are labelled by rule or, with Jev, by one call per area using only non-secret files. Changes that touch Core areas are highlighted as Core impact in the Changes pane and the PR description. spark_map returns a project's areas. spark_find ranks files for a request.`,
+The Map builds in the worker at low priority, pauses while an agent runs, and updates as commits land. Areas are labelled by rule or, with Jev, by one call per area using only non-secret files. Changes that touch Core areas are highlighted as Core impact in the Changes pane and the PR description. spark_map returns a project's areas, or one area's entry points, related areas and saved explanation; spark_map_note saves one. spark_find ranks files for a request.`,
   },
   {
     id: 'mcp-servers',

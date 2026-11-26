@@ -148,6 +148,10 @@ the web app draws it (see [The UI page](#the-ui-page)).
   never the request; 7-day TTL, pruned on write.
 - `map_link_pairs`, `map_links`: links per unordered repo pair, stored apart from either map.
 
+- `map_area_notes` (0285): one agent-written explanation per **root path and area id** (like
+  overrides, it survives rebuilds): `body` (≤ 4,000 characters, through `redactText`), `sources`
+  (path, line range and the file's `content_hash` when it was written) and the chat that wrote it.
+
 Reset empties all of these (it truncates every table it finds in `information_schema`).
 
 ## API
@@ -189,6 +193,24 @@ Reset empties all of these (it truncates every table it finds in `information_sc
 Live updates: the worker sends `{ kind: 'map', mapId }` on the existing `changes` channel when a
 build starts a phase, every 500 ms of progress, on pause and resume, and when it finishes, so the
 app event stream can refresh a map as its constellations appear.
+
+## Area pages for agents
+
+`spark_map` with `area` (a name, id or folder) returns one area's page (`map/area-page.ts`): the
+area's facts, up to 12 **entry points** (declarations in its 8 most important files, most
+referenced first, each with its file and line range from the code index), the areas it
+**depends on** and is **used by** (from `map_area_edges`, by import count) and the saved
+explanation. Everything but the explanation comes from the index, so it is rebuilt with the map
+and costs no model call.
+
+`spark_map_note` (`map/area-notes.ts`, `acts`, so it follows the agent's mode and is not offered
+to read-only turns) saves the explanation. Every source must be a file on the map with a line
+range inside it, at least one must be in the area, and a secret or `.sparkignore` path is
+refused. Saving replaces the area's earlier explanation. On read, a source whose file's
+`content_hash` differs from the saved one (or is gone) is listed as changed, and the tool result
+says the explanation is out of date and that the code is the authority. The result also marks the
+text as notes from an earlier chat, not instructions. Nothing is sent off the computer and Jev is
+not involved.
 
 ## Measured
 
