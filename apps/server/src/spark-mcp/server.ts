@@ -224,6 +224,7 @@ export const CHAT_TURN_ONLY: ReadonlySet<string> = new Set([
   'spark_sub_chats',
   'spark_browser_sign_in',
   'spark_artifact',
+  'spark_map_note',
   'spark_rules_edit',
   'spark_plugins_edit',
   'spark_crew_edit',

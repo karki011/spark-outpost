@@ -74,7 +74,7 @@ Discovery is labelled **Finding Code Mode tools**; execution is **Combining tool
 
 ## Ask Spark
 
-Ask Spark's hidden chat gets every tool above except the chat-turn tools (`CHAT_TURN_ONLY` in `spark-mcp/server.ts`: `spark_push`, `spark_pull_request`, `spark_pr_follow_up`, `spark_pr_follow_up_round`, `spark_terminal_run`, `spark_sub_chats`, `spark_browser_sign_in`, `spark_artifact`), keeps `spark_send_to_chat` and `spark_stop_chat` on its own path (any chat, following **When Ask Spark acts**), plus its own tools (`assistantOnly`): `spark_start_chat`, `spark_archive_chat`, `spark_answer_card`, `spark_pause`, `spark_start_ticket`, `spark_clear_finished`, `spark_set_aside` and `spark_meeting`. Its tools that ask follow **When Ask Spark acts** (Manual: a card; Act: at once) instead of an agent mode (`assistantPath` in `actions/ask-spark-limits.ts`).
+Ask Spark's hidden chat gets every tool above except the chat-turn tools (`CHAT_TURN_ONLY` in `spark-mcp/server.ts`: `spark_push`, `spark_pull_request`, `spark_pr_follow_up`, `spark_pr_follow_up_round`, `spark_terminal_run`, `spark_sub_chats`, `spark_browser_sign_in`, `spark_artifact`, `spark_map_note`), keeps `spark_send_to_chat` and `spark_stop_chat` on its own path (any chat, following **When Ask Spark acts**), plus its own tools (`assistantOnly`): `spark_start_chat`, `spark_archive_chat`, `spark_answer_card`, `spark_pause`, `spark_start_ticket`, `spark_clear_finished`, `spark_set_aside` and `spark_meeting`. Its tools that ask follow **When Ask Spark acts** (Manual: a card; Act: at once) instead of an agent mode (`assistantPath` in `actions/ask-spark-limits.ts`).
 
 ## User guide
 
