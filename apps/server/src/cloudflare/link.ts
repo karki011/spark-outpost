@@ -10,7 +10,12 @@ export interface CloudflareLinkDeps {
 
 export interface CloudflareLink {
   inTurn<T>(work: () => Promise<T>): Promise<T>;
-  save(origin: string, uploadKey: string, maxDays: number): Promise<boolean>;
+  save(
+    origin: string,
+    uploadKey: string,
+    maxDays: number,
+    wanted?: () => boolean,
+  ): Promise<boolean>;
 }
 
 export function createCloudflareLink(deps: CloudflareLinkDeps): CloudflareLink {
@@ -32,8 +37,9 @@ export function createCloudflareLink(deps: CloudflareLinkDeps): CloudflareLink {
 
   return {
     inTurn,
-    save: (origin, uploadKey, maxDays) =>
+    save: (origin, uploadKey, maxDays, wanted = () => true) =>
       inTurn(async () => {
+        if (!wanted()) return false;
         let previous: string | null;
         try {
           previous = await secrets.get(CLOUDFLARE_UPLOAD_KEY_SECRET);

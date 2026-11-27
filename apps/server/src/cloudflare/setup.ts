@@ -53,6 +53,7 @@ import {
   newShareKeys,
   shareWorkerOrigin,
   shareWorkerUpload,
+  type ShareKeys,
 } from './share-install.ts';
 
 export const CLOUDFLARE_SIGN_IN_TTL_MS = 10 * 60_000;
@@ -90,6 +91,7 @@ interface Pending {
 interface Progress {
   account: CloudflareAccount | null;
   granted: string[] | null;
+  pendingKeys: ShareKeys | null;
   uploadKey: string | null;
   origin: string | null;
 }
@@ -113,6 +115,7 @@ const freshSteps = () => CLOUDFLARE_SETUP_STEPS.map(todo);
 const freshProgress = (): Progress => ({
   account: null,
   granted: null,
+  pendingKeys: null,
   uploadKey: null,
   origin: null,
 });
@@ -185,30 +188,32 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
       );
     }
     if (!progress.uploadKey) {
-      if (await scriptExists(workers, id, SHARE_WORKER_NAME)) {
-        throw new StepFailure(SETUP_WORKER_EXISTS, null);
+      const exists = await scriptExists(workers, id, SHARE_WORKER_NAME);
+      if (exists && !progress.pendingKeys) throw new StepFailure(SETUP_WORKER_EXISTS, null);
+      if (!exists) {
+        const module = await deps.readWorker(client!.workerFile).catch(() => {
+          throw new StepFailure(SETUP_NO_WORKER_FILE, null);
+        });
+        progress.pendingKeys ??= newShareKeys();
+        await uploadScript(workers, id, shareWorkerUpload(module, progress.pendingKeys));
       }
-      const module = await deps.readWorker(client!.workerFile).catch(() => {
-        throw new StepFailure(SETUP_NO_WORKER_FILE, null);
-      });
-      const keys = newShareKeys();
-      await uploadScript(workers, id, shareWorkerUpload(module, keys));
-      progress.uploadKey = keys.uploadKey;
+      progress.uploadKey = progress.pendingKeys!.uploadKey;
+      progress.pendingKeys = null;
     }
     await setSchedule(workers, id, SHARE_WORKER_NAME, SHARE_WORKER_CRON);
     await enableWorkersDev(workers, id, SHARE_WORKER_NAME);
     progress.origin = shareWorkerOrigin(subdomain);
   };
 
-  const connect = async () => {
+  const connect = async (mine: number) => {
     const { origin, uploadKey } = progress;
     if (!origin || !uploadKey) throw new StepFailure(SETUP_NOT_ANSWERING, 'retry');
-    for (let attempt = 1; attempt <= ANSWER_TRIES; attempt += 1) {
+    const current = () => mine === generation;
+    for (let attempt = 1; attempt <= ANSWER_TRIES && current(); attempt += 1) {
       const checked = await checkShareService(deps.check, origin, uploadKey);
       if (checked.problem === null) {
-        if (!(await deps.link.save(origin, uploadKey, checked.maxDays))) {
-          throw new StepFailure(SETUP_KEY_NOT_SAVED, 'retry');
-        }
+        const saved = await deps.link.save(origin, uploadKey, checked.maxDays, current);
+        if (!saved && current()) throw new StepFailure(SETUP_KEY_NOT_SAVED, 'retry');
         return;
       }
       if (attempt < ANSWER_TRIES) await sleep(ANSWER_WAIT_MS);
@@ -216,7 +221,7 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
     throw new StepFailure(SETUP_NOT_ANSWERING, 'retry');
   };
 
-  const WORK: Record<Exclude<CloudflareSetupStepId, 'signIn'>, () => Promise<void>> = {
+  const WORK: Record<Exclude<CloudflareSetupStepId, 'signIn'>, (mine: number) => Promise<void>> = {
     bucket: () => createBucket(api('storage'), accountId(), SHARE_BUCKET_NAME),
     worker: installWorker,
     connect,
@@ -228,7 +233,7 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
       if (steps.find((step) => step.id === id)?.state === 'done') continue;
       set(id, { state: 'working' });
       try {
-        await WORK[id]();
+        await WORK[id](mine);
       } catch (error) {
         if (mine !== generation) return;
         stop(id, stepFailure(error, STEP_PERMISSION[id], progress.account?.id ?? null));
@@ -271,6 +276,7 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
       progress = { ...progress, account, granted: fresh.scopes };
     } catch (error) {
       if (mine !== generation) return;
+      await dropToken();
       const failure =
         error instanceof CloudflareSignInError
           ? new StepFailure(error.message, 'allow')

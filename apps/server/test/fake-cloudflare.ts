@@ -23,6 +23,8 @@ export class FakeCloudflare {
   subdomain: string | null = 'hazel';
   scriptExists = false;
   answersAfter = 0;
+  loseUploadAnswer = false;
+  onServiceAsked: (() => Promise<void>) | null = null;
   readonly calls: string[] = [];
   readonly revoked: string[] = [];
   uploadedKey: string | null = null;
@@ -33,7 +35,10 @@ export class FakeCloudflare {
   readonly fetch: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? 'GET';
-    if (url.origin === FAKE_ORIGIN) return this.service(init);
+    if (url.origin === FAKE_ORIGIN) {
+      await this.onServiceAsked?.();
+      return this.service(init);
+    }
     if (url.pathname === '/oauth2/token') {
       this.tokens += 1;
       return jsonResponse(200, {
@@ -75,6 +80,10 @@ export class FakeCloudflare {
       this.uploadedKey = metadata.bindings.find((b) => b.name === 'UPLOAD_KEY')?.text ?? null;
       this.uploadedModule = await (form.get(metadata.main_module) as Blob).text();
       this.scriptExists = true;
+      if (this.loseUploadAnswer) {
+        this.loseUploadAnswer = false;
+        throw new Error('The answer was lost.');
+      }
       return ok({ id: 'spark-outpost-share' });
     }
     if (path === `${script}/schedules` || path === `${script}/subdomain`) return ok({});

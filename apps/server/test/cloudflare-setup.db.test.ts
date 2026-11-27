@@ -207,6 +207,51 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
     expect((await client.get('/api/cloudflare').expect(200)).body.connected).toBe(false);
   });
 
+  it('finishes with the same key when the answer to the upload was lost', async () => {
+    cloudflare.loseUploadAnswer = true;
+    const client = localClient(app());
+    const { setup } = await approve(client);
+    expect(failed(setup)).toMatchObject({ id: 'worker', fix: 'retry' });
+    const key = cloudflare.uploadedKey;
+
+    await client.send('post', SETUP).expect(200);
+    expect((await settled(client)).status).toBe('done');
+    expect(cloudflare.uploadedKey).toBe(key);
+    expect(await secrets.get(CLOUDFLARE_UPLOAD_KEY_SECRET)).toBe(key);
+  });
+
+  it('connects nothing when the set-up is cancelled while the service is being asked', async () => {
+    const client = localClient(app());
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let asked = () => {};
+    const asking = new Promise<void>((resolve) => (asked = resolve));
+    cloudflare.onServiceAsked = () => {
+      asked();
+      return held;
+    };
+    const started = (await client.send('post', SETUP).expect(200)).body as CloudflareSetup;
+    const authorize = new URL(started.authorizeUrl!);
+    const back = new URL(authorize.searchParams.get('redirect_uri')!);
+    back.searchParams.set('code', 'code-from-cloudflare');
+    back.searchParams.set('state', authorize.searchParams.get('state')!);
+    await fetch(back);
+    await asking;
+
+    expect((await client.send('delete', SETUP).expect(200)).body.status).toBe('idle');
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await secrets.get(CLOUDFLARE_UPLOAD_KEY_SECRET)).toBeNull();
+    expect((await client.get('/api/cloudflare').expect(200)).body.connected).toBe(false);
+  });
+
+  it('revokes the sign-in when the account can’t be read', async () => {
+    cloudflare.scopes = 'workers-r2.write workers-scripts.admin';
+    const { setup } = await approve(localClient(app()));
+    expect(failed(setup)).toMatchObject({ id: 'signIn', fix: 'allow' });
+    expect(cloudflare.revoked).toEqual(['token-1-0123456789']);
+  });
+
   it('points at Cloudflare when the account has no workers.dev address', async () => {
     cloudflare.subdomain = null;
     const { setup } = await approve(localClient(app()));
