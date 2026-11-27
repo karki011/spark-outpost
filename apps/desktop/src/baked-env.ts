@@ -1,4 +1,9 @@
 import { readBakedManifest } from './baked-manifest.ts';
+import {
+  cloudflareClientEnv,
+  cloudflareClientFromManifest,
+  readDevCloudflareClient,
+} from './cloudflare-client.ts';
 import { gitHubAppEnv, gitHubAppFromManifest } from './github-app.ts';
 import { googleClientEnv, googleClientFromManifest, readDevGoogleClient } from './google-client.ts';
 import {
@@ -18,6 +23,8 @@ interface DevSignInFiles {
   googleClientFile: string | null;
   microsoftClientFile?: string | null;
   zoomClientFile?: string | null;
+  cloudflareClientFile?: string | null;
+  shareWorkerFile?: string | null;
   slackClientIdFile: string | null;
 }
 
@@ -35,12 +42,16 @@ export async function bakedServerEnv(
     (await readDevMicrosoftClient(devFiles.microsoftClientFile ?? null));
   const zoom =
     zoomClientFromManifest(manifest) ?? (await readDevZoomClient(devFiles.zoomClientFile ?? null));
+  const cloudflare =
+    cloudflareClientFromManifest(manifest) ??
+    (await readDevCloudflareClient(devFiles.cloudflareClientFile ?? null));
   return {
     ...gitHubAppEnv(gitHubAppFromManifest(manifest)),
     ...(slack ? { [SLACK_CLIENT_ID_ENV]: slack } : {}),
     ...googleClientEnv(google),
     ...microsoftClientEnv(microsoft),
     ...zoomClientEnv(zoom),
+    ...(await cloudflareClientEnv(cloudflare, devFiles.shareWorkerFile ?? null)),
     ...shareEnvFromManifest(manifest),
   };
 }

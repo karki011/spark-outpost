@@ -8,6 +8,7 @@ import {
   CLOUDFLARE_PROBLEMS,
   guideLink,
   type CloudflareConnection,
+  type CloudflareSetup,
   type RemoteSession,
 } from '@spark-outpost/contracts';
 import { phoneApi } from '../phone/phone-api.ts';
@@ -43,8 +44,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function show(connection: CloudflareConnection, remote = false) {
+const NO_SETUP: CloudflareSetup = {
+  available: false,
+  status: 'idle',
+  authorizeUrl: null,
+  account: null,
+  permissions: [],
+  steps: [],
+};
+
+function show(connection: CloudflareConnection, remote = false, setup = NO_SETUP) {
   vi.spyOn(phoneApi, 'session').mockResolvedValue({ remote } as RemoteSession);
+  vi.spyOn(cloudflareApi, 'setup').mockResolvedValue(setup);
   const load = vi.spyOn(cloudflareApi, 'connection').mockResolvedValue(connection);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
@@ -67,7 +78,7 @@ describe('Cloudflare, not connected', () => {
     await screen.findByText(
       'Share artifacts from your own Cloudflare account. Shared pages are stored there and served from your address.',
     );
-    const needs = screen.getByRole('region', { name: 'What you need' });
+    const needs = await screen.findByRole('region', { name: 'What you need' });
     expect(needs.textContent).toContain('A free Cloudflare account.');
     expect(needs.textContent).toContain(
       'A GitHub or GitLab account. Cloudflare’s Deploy button copies the share service into it.',
@@ -209,5 +220,104 @@ describe('Cloudflare on a paired device', () => {
     await waitFor(() => expect(phoneApi.session).toHaveBeenCalled());
     await waitFor(() => expect(view.container.querySelector('li')).toBeNull());
     expect(load).not.toHaveBeenCalled();
+  });
+});
+
+const step = (
+  id: CloudflareSetup['steps'][number]['id'],
+  state: CloudflareSetup['steps'][number]['state'],
+  more: Partial<CloudflareSetup['steps'][number]> = {},
+) => ({ id, state, problem: null, fix: null, fixUrl: null, ...more });
+
+const OFFERED: CloudflareSetup = {
+  available: true,
+  status: 'idle',
+  authorizeUrl: null,
+  account: null,
+  permissions: [
+    { id: 'account', state: 'needed' },
+    { id: 'storage', state: 'needed' },
+    { id: 'workers', state: 'needed' },
+  ],
+  steps: [
+    step('signIn', 'todo'),
+    step('bucket', 'todo'),
+    step('worker', 'todo'),
+    step('connect', 'todo'),
+  ],
+};
+
+describe('setting Cloudflare up for the user', () => {
+  it('lists what it asks Cloudflare for before sending the user there', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const authorizeUrl = 'https://dash.cloudflare.com/oauth2/auth?client_id=x';
+    const start = vi
+      .spyOn(cloudflareApi, 'startSetup')
+      .mockResolvedValue({ ...OFFERED, status: 'waiting', authorizeUrl });
+    show(NOT_CONNECTED, false, OFFERED);
+
+    const asks = await screen.findByRole('list', { name: 'What Spark asks Cloudflare for' });
+    expect(within(asks).getAllByRole('listitem')).toHaveLength(3);
+    expect(asks.textContent).toContain('Workers: Admin');
+    expect(asks.textContent).toContain('changes no other');
+    expect(screen.getByText('Set it up by hand instead')).toBeTruthy();
+    expect(open).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Allow on Cloudflare/ }));
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(open).toHaveBeenCalledWith(authorizeUrl, '_blank', 'noopener,noreferrer'),
+    );
+    expect(await screen.findByRole('status')).toHaveProperty(
+      'textContent',
+      'Waiting for you to allow Spark in Cloudflare.',
+    );
+  });
+
+  it('shows a stopped set-up as a checklist with a fix for the step that needs the user', async () => {
+    const stopped: CloudflareSetup = {
+      ...OFFERED,
+      status: 'stopped',
+      account: 'Hazel’s account',
+      steps: [
+        step('signIn', 'done'),
+        step('bucket', 'failed', {
+          problem: 'R2 storage isn’t turned on in this Cloudflare account.',
+          fix: 'cloudflare',
+          fixUrl: 'https://dash.cloudflare.com/acc/r2/overview',
+        }),
+        step('worker', 'todo'),
+        step('connect', 'todo'),
+      ],
+    };
+    const start = vi.spyOn(cloudflareApi, 'startSetup').mockResolvedValue(stopped);
+    show(NOT_CONNECTED, false, stopped);
+
+    const steps = await screen.findByRole('list', { name: 'Set-up steps' });
+    const [signIn, bucket] = within(steps).getAllByRole('listitem');
+    expect(signIn!.textContent).toContain('Done');
+    expect(bucket!.textContent).toContain('Needs you');
+    expect(within(bucket!).getByRole('alert').textContent).toContain('R2 storage');
+    expect(within(bucket!).getByRole('link', { name: /^Open Cloudflare/ })).toHaveProperty(
+      'href',
+      'https://dash.cloudflare.com/acc/r2/overview',
+    );
+    expect(screen.getByRole('status').textContent).toBe(
+      '1 of 4 steps done in Hazel’s account. Finished steps are kept.',
+    );
+    fireEvent.click(within(bucket!).getByRole('button', { name: 'Check again' }));
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('button', { name: 'Start over' })).toBeTruthy();
+  });
+
+  it('offers to try again when the set-up state can’t be loaded, then shows the form once', async () => {
+    show(NOT_CONNECTED);
+    const load = vi.spyOn(cloudflareApi, 'setup').mockRejectedValueOnce(new Error('No answer.'));
+    expect((await screen.findByRole('alert')).textContent).toBe('No answer.');
+    expect(screen.queryByLabelText('Service address')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByLabelText('Service address')).toBeTruthy();
+    expect(load).toHaveBeenCalledTimes(2);
   });
 });

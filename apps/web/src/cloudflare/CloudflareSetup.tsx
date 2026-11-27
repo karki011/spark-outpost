@@ -10,8 +10,9 @@ import {
 import { outsideTarget } from '../browser/outside-link.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { BookIcon, ExternalLinkIcon } from '../ui/icons.tsx';
+import { CloudflareAuto } from './CloudflareAuto.tsx';
 import { cloudflareApi } from './cloudflare-api.ts';
-import { useCloudflareSaved } from './use-cloudflare.ts';
+import { useCloudflareSaved, useCloudflareSetup } from './use-cloudflare.ts';
 
 const CLOUDFLARE_SIGN_UP_URL = 'https://dash.cloudflare.com/sign-up';
 const CLOUDFLARE_GUIDE_PAGE = 'connect-cloudflare';
@@ -147,12 +148,11 @@ function ConnectForm() {
   );
 }
 
-export function CloudflareSetup({ deployUrl }: { deployUrl: string }) {
+function ByHand({ deployUrl }: { deployUrl: string }) {
   const needsId = useId();
   const docs = use(DocsReachable);
   return (
-    <div className="cx-body cf-setup">
-      <p>{CLOUDFLARE_LEDE}</p>
+    <>
       <section className="cf-needs" aria-labelledby={needsId}>
         <h4 id={needsId}>What you need</h4>
         <ul>
@@ -185,6 +185,52 @@ export function CloudflareSetup({ deployUrl }: { deployUrl: string }) {
           <ConnectForm />
         </Step>
       </ol>
+    </>
+  );
+}
+
+export function CloudflareSetup({ deployUrl }: { deployUrl: string }) {
+  const auto = useCloudflareSetup();
+  const setup = auto.setup;
+  if (auto.loading) {
+    return (
+      <div className="cx-body cf-setup">
+        <p>{CLOUDFLARE_LEDE}</p>
+        <p role="status">Checking how this build can set it up…</p>
+      </div>
+    );
+  }
+  if (auto.loadError) {
+    return (
+      <div className="cx-body cf-setup">
+        <p>{CLOUDFLARE_LEDE}</p>
+        <p className="gh-err" role="alert">
+          {auto.loadError.message}
+        </p>
+        <div className="cx-actions">
+          <button type="button" className="btn line sm" onClick={auto.reload}>
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (!setup?.available) {
+    return (
+      <div className="cx-body cf-setup">
+        <p>{CLOUDFLARE_LEDE}</p>
+        <ByHand deployUrl={deployUrl} />
+      </div>
+    );
+  }
+  return (
+    <div className="cx-body cf-setup">
+      <p>{CLOUDFLARE_LEDE}</p>
+      <CloudflareAuto setup={setup} auto={auto} />
+      <details className="cf-hand">
+        <summary>Set it up by hand instead</summary>
+        <ByHand deployUrl={deployUrl} />
+      </details>
     </div>
   );
 }

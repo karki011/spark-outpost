@@ -35,3 +35,33 @@ export type ConnectCloudflareRequest = z.infer<typeof connectCloudflareRequestSc
 
 export const updateCloudflareRequestSchema = z.object({ shareArtifacts: z.boolean() });
 export type UpdateCloudflareRequest = z.infer<typeof updateCloudflareRequestSchema>;
+
+export const CLOUDFLARE_SHARE_PERMISSIONS = ['account', 'storage', 'workers'] as const;
+export type CloudflareSharePermission = (typeof CLOUDFLARE_SHARE_PERMISSIONS)[number];
+
+export const CLOUDFLARE_SETUP_STEPS = ['signIn', 'bucket', 'worker', 'connect'] as const;
+export type CloudflareSetupStepId = (typeof CLOUDFLARE_SETUP_STEPS)[number];
+
+export const cloudflareSetupStepSchema = z.object({
+  id: z.enum(CLOUDFLARE_SETUP_STEPS),
+  state: z.enum(['todo', 'working', 'done', 'failed']),
+  problem: z.string().nullable(),
+  fix: z.enum(['allow', 'retry', 'cloudflare']).nullable(),
+  fixUrl: z.string().nullable(),
+});
+export type CloudflareSetupStep = z.infer<typeof cloudflareSetupStepSchema>;
+
+export const cloudflareSetupSchema = z.object({
+  available: z.boolean(),
+  status: z.enum(['idle', 'waiting', 'working', 'stopped', 'done']),
+  authorizeUrl: z.string().nullable(),
+  account: z.string().nullable(),
+  permissions: z.array(
+    z.object({
+      id: z.enum(CLOUDFLARE_SHARE_PERMISSIONS),
+      state: z.enum(['needed', 'allowed', 'missing']),
+    }),
+  ),
+  steps: z.array(cloudflareSetupStepSchema),
+});
+export type CloudflareSetup = z.infer<typeof cloudflareSetupSchema>;

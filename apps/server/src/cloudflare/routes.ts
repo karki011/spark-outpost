@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { Router, type Response } from 'express';
 import {
   CLOUDFLARE_DEPLOY_URL,
@@ -12,6 +13,10 @@ import { storedUploadKey } from '../artifacts/share-target.ts';
 import { BadRequestError, parseBody } from '../api/validation.ts';
 import type { Db } from '../persistence/db.ts';
 import { CLOUDFLARE_UPLOAD_KEY_SECRET, type SecretStore } from '../setup/secrets.ts';
+import type { CloudflareClientConfig } from './client.ts';
+import { createCloudflareLink } from './link.ts';
+import { createCloudflareSetup, type CloudflareSetupDeps } from './setup.ts';
+import { SETUP_KEY_NOT_SAVED, StepFailure } from './setup-problems.ts';
 import {
   checkShareService,
   CLOUDFLARE_CHECK_TIMEOUT_MS,
@@ -23,7 +28,6 @@ import {
   deleteCloudflare,
   liveSharesOn,
   recordCloudflareCheck,
-  saveCloudflare,
   setCloudflareSharing,
 } from './store.ts';
 
@@ -32,10 +36,11 @@ export interface CloudflareRouteDeps {
   workspaceId: string;
   secrets: SecretStore;
   cloudflareCheck?: ServiceCheck;
+  cloudflareClient?: CloudflareClientConfig | null;
+  cloudflareSetup?: Partial<Pick<CloudflareSetupDeps, 'fetch' | 'readWorker' | 'sleep'>>;
 }
 
 const NOT_CONNECTED = 'Cloudflare is not connected.';
-const KEY_NOT_SAVED = 'Spark couldn’t save the upload key in your keychain. Try again.';
 const PROBLEM_STATUS: Record<CloudflareProblem, number> = {
   address: 400,
   key: 400,
@@ -56,20 +61,16 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
   const { db, workspaceId, secrets } = deps;
   const check = deps.cloudflareCheck ?? { fetch, timeoutMs: CLOUDFLARE_CHECK_TIMEOUT_MS };
   const router = Router();
-  let turn: Promise<unknown> = Promise.resolve();
-
-  const inTurn = <T>(work: () => Promise<T>): Promise<T> => {
-    const next = turn.then(work, work);
-    turn = next.catch(() => undefined);
-    return next;
-  };
-
-  const restoreKey = async (previous: string | null) => {
-    const restore = previous
-      ? secrets.set(CLOUDFLARE_UPLOAD_KEY_SECRET, previous)
-      : secrets.delete(CLOUDFLARE_UPLOAD_KEY_SECRET);
-    await restore.catch(() => undefined);
-  };
+  const link = createCloudflareLink({ db, workspaceId, secrets });
+  const { inTurn } = link;
+  const setup = createCloudflareSetup({
+    client: deps.cloudflareClient ?? null,
+    fetch,
+    readWorker: (file) => readFile(file, 'utf8'),
+    ...deps.cloudflareSetup,
+    link,
+    check,
+  });
 
   const connection = async (): Promise<CloudflareConnection> => {
     const row = await cloudflareRow(db, workspaceId);
@@ -111,24 +112,9 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
       refuse(res, checked.problem);
       return;
     }
-    const saved = await inTurn(async () => {
-      let previous: string | null;
-      try {
-        previous = await secrets.get(CLOUDFLARE_UPLOAD_KEY_SECRET);
-        await secrets.set(CLOUDFLARE_UPLOAD_KEY_SECRET, parsed.data.uploadKey);
-      } catch {
-        return false;
-      }
-      try {
-        await saveCloudflare(db, workspaceId, origin, checked.maxDays);
-      } catch (error) {
-        await restoreKey(previous);
-        throw error;
-      }
-      return true;
-    });
+    const saved = await link.save(origin, parsed.data.uploadKey, checked.maxDays);
     if (!saved) {
-      res.status(500).json({ error: KEY_NOT_SAVED });
+      res.status(500).json({ error: SETUP_KEY_NOT_SAVED });
       return;
     }
     await answer(res);
@@ -159,7 +145,27 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
     await answer(res);
   });
 
+  router.get('/cloudflare/setup', (_req, res) => {
+    res.set('Cache-Control', 'no-store').json(setup.view());
+  });
+
+  router.post('/cloudflare/setup', async (_req, res) => {
+    try {
+      res.set('Cache-Control', 'no-store').json(await setup.start());
+    } catch (error) {
+      if (error instanceof StepFailure) throw new BadRequestError(error.message);
+      throw error;
+    }
+  });
+
+  router.delete('/cloudflare/setup', async (_req, res) => {
+    const cancelled = await setup.cancel();
+    await inTurn(() => Promise.resolve());
+    res.set('Cache-Control', 'no-store').json(cancelled);
+  });
+
   router.delete('/cloudflare', async (_req, res) => {
+    await setup.cancel();
     await inTurn(async () => {
       await secrets.delete(CLOUDFLARE_UPLOAD_KEY_SECRET);
       await deleteCloudflare(db, workspaceId);

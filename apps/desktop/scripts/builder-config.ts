@@ -14,6 +14,7 @@ import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 import { SLACK_CLIENT_ID_ENV, slackClientId } from '../src/slack-sign-in.ts';
 import { googleClientFromDownload, type GoogleClient } from '../src/google-client.ts';
 import { microsoftClientFromFile } from '../src/microsoft-client.ts';
+import { cloudflareClientFromFile } from '../src/cloudflare-client.ts';
 import { zoomClientFromFile } from '../src/zoom-client.ts';
 import { checkTmuxBinary } from './tmux-bundle.ts';
 import { MAC_CONTROL_BINARY, macControlCheck } from './mac-control-bundle.ts';
@@ -126,6 +127,23 @@ export function packagedZoomClient(
   if (!clientId) {
     throw new Error(
       `${ZOOM_CLIENT_FILE_ENV} must name a JSON file holding the Zoom app's public client ID ({"client_id": "<public client id>"}).`,
+    );
+  }
+  return clientId;
+}
+
+export const CLOUDFLARE_CLIENT_FILE_ENV = 'SPARK_CLOUDFLARE_CLIENT_FILE';
+
+export function packagedCloudflareClient(
+  env: Env,
+  read: (file: string) => string = (file) => readFileSync(file, 'utf8'),
+): string | null {
+  const file = (env[CLOUDFLARE_CLIENT_FILE_ENV] ?? '').trim();
+  if (file === '') return null;
+  const clientId = cloudflareClientFromFile(read(file));
+  if (!clientId) {
+    throw new Error(
+      `${CLOUDFLARE_CLIENT_FILE_ENV} must name a JSON file holding the Cloudflare OAuth client ID ({"client_id": "<client id>"}).`,
     );
   }
   return clientId;
@@ -280,6 +298,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const google = packagedGoogleClient(options.env);
   const microsoft = packagedMicrosoftClient(options.env);
   const zoom = packagedZoomClient(options.env);
+  const cloudflare = packagedCloudflareClient(options.env);
   const shared: Configuration = {
     appId: options.appId ?? prod.appId,
     productName: prod.appName,
@@ -302,6 +321,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
         : {}),
       ...(microsoft ? { microsoftApp: { client_id: microsoft } } : {}),
       ...(zoom ? { zoomApp: { client_id: zoom } } : {}),
+      ...(cloudflare ? { cloudflareApp: { client_id: cloudflare } } : {}),
     },
     directories: { output: options.outputDir },
     npmRebuild: false,

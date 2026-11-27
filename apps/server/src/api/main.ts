@@ -70,6 +70,7 @@ import { fakeMeetingSource } from '../meetings/fake-source.ts';
 import { meetingNotesWriter } from '../meetings/notes.ts';
 import { createMeetingService } from '../meetings/service.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
+import { cloudflareClientConfig } from '../cloudflare/client.ts';
 import { startCloudCalendars } from '../calendar/cloud-sources.ts';
 import { microsoftClientConfig } from '../calendar/microsoft/config.ts';
 import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/access.ts';
@@ -366,6 +367,7 @@ const { app, reconcileRemote } = createAppParts({
   calendarHost: desktopCalendar,
   googleCalendar,
   zoom: clouds?.zoom ?? null,
+  cloudflareClient: cloudflareClientConfig(config),
   microsoftCalendar,
   meetings,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE
