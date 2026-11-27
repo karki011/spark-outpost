@@ -159,7 +159,9 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
   });
 
   router.delete('/cloudflare/setup', async (_req, res) => {
-    res.set('Cache-Control', 'no-store').json(await setup.cancel());
+    const cancelled = await setup.cancel();
+    await inTurn(() => Promise.resolve());
+    res.set('Cache-Control', 'no-store').json(cancelled);
   });
 
   router.delete('/cloudflare', async (_req, res) => {
