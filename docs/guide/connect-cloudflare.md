@@ -6,22 +6,22 @@ order: 335
 summary: Sign in to Cloudflare once so shared artifacts live in your own account and links last 7 days.
 ---
 
-Keep shared artifacts in your own Cloudflare account. About 2 minutes. Until then, **Share…** uses Spark's shared service with 1-day links.
+Keep shared artifacts in your own Cloudflare account. About 2 minutes. Until then, **Share…** gives 1-day links.
 
-You need a free Cloudflare account with R2 storage added. Its checkout may ask for a payment method.
+You need a free Cloudflare account with R2 storage added, which may ask for a payment method.
 
 1. Open **Settings → Connectors → Cloudflare**.
-2. Under **Set it up for me**, read what Spark asks Cloudflare for, then select **Allow on Cloudflare**.
+2. Under **Set it up for me**, read what Spark asks for, then select **Allow on Cloudflare**.
 3. In your browser, sign in to Cloudflare and allow Spark Outpost.
 4. In Spark, wait for the four steps to read **Done**.
 
-The card reads **Connected**. **Share…** now says **Your Cloudflare account** and offers 7 days.
+The card reads **Connected**. **Share…** now offers 7 days.
 
-A step that reads **Needs you** says why and offers its fix. Finished steps are kept.
+A step that reads **Needs you** says why and offers its fix. Finished steps are kept. Spark stays signed in for up to an hour; **Start over** ends that.
 
 Spark asks to see the account, create a storage bucket, and create the share service. The last is Cloudflare's **Workers: Admin**, which covers every worker; Spark changes no other. The sign-in ends when set-up finishes.
 
-No **Set it up for me**? Select **Set it up by hand instead**, about 10 minutes.
+No **Set it up for me**? Select **Set it up by hand instead**:
 
 1. Run `openssl rand -hex 32` twice.
 2. Select **Deploy to Cloudflare**, connect GitHub or GitLab, and paste one value as `UPLOAD_KEY` and the other as `SIGNING_KEY`.
