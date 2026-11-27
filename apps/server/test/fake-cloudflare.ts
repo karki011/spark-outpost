@@ -25,6 +25,7 @@ export class FakeCloudflare {
   answersAfter = 0;
   loseUploadAnswer = false;
   onServiceAsked: (() => Promise<void>) | null = null;
+  onTokenAsked: (() => Promise<void>) | null = null;
   readonly calls: string[] = [];
   readonly revoked: string[] = [];
   uploadedKey: string | null = null;
@@ -40,6 +41,7 @@ export class FakeCloudflare {
       return this.service(init);
     }
     if (url.pathname === '/oauth2/token') {
+      await this.onTokenAsked?.();
       this.tokens += 1;
       return jsonResponse(200, {
         access_token: `token-${this.tokens}-0123456789`,

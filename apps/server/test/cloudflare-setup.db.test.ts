@@ -275,6 +275,32 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
     expect((await client.get('/api/cloudflare').expect(200)).body.connected).toBe(false);
   });
 
+  it('revokes and never uses a token that arrives after the set-up was cancelled', async () => {
+    const client = localClient(app());
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let asked = () => {};
+    const exchanging = new Promise<void>((resolve) => (asked = resolve));
+    cloudflare.onTokenAsked = () => {
+      asked();
+      return held;
+    };
+    const started = (await client.send('post', SETUP).expect(200)).body as CloudflareSetup;
+    const authorize = new URL(started.authorizeUrl!);
+    const back = new URL(authorize.searchParams.get('redirect_uri')!);
+    back.searchParams.set('code', 'code-from-cloudflare');
+    back.searchParams.set('state', authorize.searchParams.get('state')!);
+    await fetch(back);
+    await exchanging;
+
+    await client.send('delete', SETUP).expect(200);
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(cloudflare.revoked).toEqual(['token-1-0123456789']);
+    expect(cloudflare.calls).toEqual([]);
+    expect((await client.get(SETUP).expect(200)).body.status).toBe('idle');
+  });
+
   it('revokes the sign-in when the account can’t be read', async () => {
     cloudflare.scopes = 'workers-r2.write workers-scripts.admin';
     const { setup } = await approve(localClient(app()));
