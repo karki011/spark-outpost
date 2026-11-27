@@ -268,11 +268,15 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
     await fetch(back);
     await reached;
 
+    let answered = false;
     const cancelling = client
       .send('delete', SETUP)
       .expect(200)
-      .then(() => undefined);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+      .then(() => {
+        answered = true;
+      });
+    expect((await settled(client)).status).toBe('idle');
+    expect(answered).toBe(false);
     release();
     await cancelling;
     await new Promise((resolve) => setTimeout(resolve, 100));
