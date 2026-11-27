@@ -136,7 +136,9 @@ function progressLine(setup: CloudflareSetup): string {
   if (setup.status === 'stopped') {
     return `${done} of ${setup.steps.length} steps done${account}. Finished steps are kept.`;
   }
-  return `Setting up${account}…`;
+  const active = setup.steps.find((step) => step.state === 'working');
+  const doing = active ? `: ${STEPS[active.id].toLowerCase()}` : '';
+  return `Setting up${account}${doing}. ${done} of ${setup.steps.length} steps done.`;
 }
 
 export function CloudflareAuto({ setup, auto }: { setup: CloudflareSetup; auto: Auto }) {

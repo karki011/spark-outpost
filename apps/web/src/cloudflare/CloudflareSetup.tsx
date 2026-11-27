@@ -192,6 +192,14 @@ function ByHand({ deployUrl }: { deployUrl: string }) {
 export function CloudflareSetup({ deployUrl }: { deployUrl: string }) {
   const auto = useCloudflareSetup();
   const setup = auto.setup;
+  if (auto.loading) {
+    return (
+      <div className="cx-body cf-setup">
+        <p>{CLOUDFLARE_LEDE}</p>
+        <p role="status">Checking how this build can set it up…</p>
+      </div>
+    );
+  }
   if (!setup?.available) {
     return (
       <div className="cx-body cf-setup">

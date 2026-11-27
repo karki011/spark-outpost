@@ -48,12 +48,15 @@ export function useCloudflareSetup() {
     queryFn: cloudflareApi.setup,
     refetchInterval: (state) => (setupMoving(state.state.data) ? SETUP_POLL_MS : false),
   });
-  const keep = (setup: CloudflareSetup) => queryClient.setQueryData(cloudflareKeys.setup, setup);
+  const keep = async (setup: CloudflareSetup) => {
+    await queryClient.cancelQueries({ queryKey: cloudflareKeys.setup });
+    queryClient.setQueryData(cloudflareKeys.setup, setup);
+  };
   const start = useMutation({
     mutationFn: cloudflareApi.startSetup,
-    onSuccess: (setup) => {
-      keep(setup);
+    onSuccess: async (setup) => {
       if (setup.authorizeUrl) openOutside(setup.authorizeUrl);
+      await keep(setup);
     },
   });
   const cancel = useMutation({ mutationFn: cloudflareApi.cancelSetup, onSuccess: keep });
@@ -65,6 +68,7 @@ export function useCloudflareSetup() {
   }, [done, queryClient]);
   return {
     setup: query.data,
+    loading: query.isPending,
     busy: start.isPending || cancel.isPending,
     error: start.error ?? cancel.error,
     start: () => {

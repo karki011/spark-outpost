@@ -78,7 +78,7 @@ describe('Cloudflare, not connected', () => {
     await screen.findByText(
       'Share artifacts from your own Cloudflare account. Shared pages are stored there and served from your address.',
     );
-    const needs = screen.getByRole('region', { name: 'What you need' });
+    const needs = await screen.findByRole('region', { name: 'What you need' });
     expect(needs.textContent).toContain('A free Cloudflare account.');
     expect(needs.textContent).toContain(
       'A GitHub or GitLab account. Cloudflare’s Deploy button copies the share service into it.',

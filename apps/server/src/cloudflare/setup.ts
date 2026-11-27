@@ -130,6 +130,7 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
   let token: CloudflareToken | null = null;
   let pending: Pending | null = null;
   let generation = 0;
+  let signInAttempt = 0;
   let work: Promise<void> = Promise.resolve();
 
   const set = (id: CloudflareSetupStepId, change: Partial<CloudflareSetupStep>) => {
@@ -264,8 +265,14 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
         { code: callback.code, verifier: waiting.verifier, redirectUri: waiting.redirectUri },
         now(),
       );
-      if (mine !== generation) return;
+      const stale = async () => {
+        if (mine === generation) return false;
+        await revokeCloudflareToken({ fetch: deps.fetch, client }, fresh.accessToken);
+        return true;
+      };
+      if (await stale()) return;
       await dropToken();
+      if (await stale()) return;
       token = fresh;
       const account = await firstAccount(api('account'));
       if (mine !== generation) return;
@@ -292,6 +299,7 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
     clearPending();
     const pkce = newPkce();
     const mine = generation;
+    const attempt = (signInAttempt += 1);
     let waiting: Pending | null = null;
     const loopback = await startLoopback(
       'Cloudflare',
@@ -303,6 +311,10 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
       },
       CLOUDFLARE_CALLBACK_PATH,
     );
+    if (mine !== generation || attempt !== signInAttempt) {
+      loopback.close();
+      return;
+    }
     const timer = setTimeout(() => {
       if (pending !== waiting) return;
       clearPending();
