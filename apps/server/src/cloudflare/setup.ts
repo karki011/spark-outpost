@@ -265,14 +265,16 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
         { code: callback.code, verifier: waiting.verifier, redirectUri: waiting.redirectUri },
         now(),
       );
-      const stale = async () => {
-        if (mine === generation) return false;
-        await revokeCloudflareToken({ fetch: deps.fetch, client }, fresh.accessToken);
-        return true;
-      };
-      if (await stale()) return;
+      const abandon = () => revokeCloudflareToken({ fetch: deps.fetch, client }, fresh.accessToken);
+      if (mine !== generation) {
+        await abandon();
+        return;
+      }
       await dropToken();
-      if (await stale()) return;
+      if (mine !== generation) {
+        await abandon();
+        return;
+      }
       token = fresh;
       const account = await firstAccount(api('account'));
       if (mine !== generation) return;

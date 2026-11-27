@@ -200,6 +200,21 @@ export function CloudflareSetup({ deployUrl }: { deployUrl: string }) {
       </div>
     );
   }
+  if (auto.loadError) {
+    return (
+      <div className="cx-body cf-setup">
+        <p>{CLOUDFLARE_LEDE}</p>
+        <p className="gh-err" role="alert">
+          {auto.loadError.message}
+        </p>
+        <div className="cx-actions">
+          <button type="button" className="btn line sm" onClick={auto.reload}>
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (!setup?.available) {
     return (
       <div className="cx-body cf-setup">

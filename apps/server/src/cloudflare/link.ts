@@ -47,6 +47,10 @@ export function createCloudflareLink(deps: CloudflareLinkDeps): CloudflareLink {
         } catch {
           return false;
         }
+        if (!wanted()) {
+          await restoreKey(previous);
+          return false;
+        }
         try {
           await saveCloudflare(db, workspaceId, origin, maxDays);
         } catch (error) {

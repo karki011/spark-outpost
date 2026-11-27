@@ -245,6 +245,36 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
     expect((await client.get('/api/cloudflare').expect(200)).body.connected).toBe(false);
   });
 
+  it('puts the keychain back when the set-up is cancelled while the key is being saved', async () => {
+    const store = memorySecretStore();
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let saving = () => {};
+    const reached = new Promise<void>((resolve) => (saving = resolve));
+    secrets = {
+      ...store,
+      set: async (name, value) => {
+        saving();
+        await held;
+        await store.set(name, value);
+      },
+    };
+    const client = localClient(app());
+    const started = (await client.send('post', SETUP).expect(200)).body as CloudflareSetup;
+    const authorize = new URL(started.authorizeUrl!);
+    const back = new URL(authorize.searchParams.get('redirect_uri')!);
+    back.searchParams.set('code', 'code-from-cloudflare');
+    back.searchParams.set('state', authorize.searchParams.get('state')!);
+    await fetch(back);
+    await reached;
+
+    await client.send('delete', SETUP).expect(200);
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await store.get(CLOUDFLARE_UPLOAD_KEY_SECRET)).toBeNull();
+    expect((await client.get('/api/cloudflare').expect(200)).body.connected).toBe(false);
+  });
+
   it('revokes the sign-in when the account can’t be read', async () => {
     cloudflare.scopes = 'workers-r2.write workers-scripts.admin';
     const { setup } = await approve(localClient(app()));

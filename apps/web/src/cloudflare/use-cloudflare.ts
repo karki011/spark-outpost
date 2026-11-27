@@ -69,6 +69,8 @@ export function useCloudflareSetup() {
   return {
     setup: query.data,
     loading: query.isPending,
+    loadError: query.data === undefined ? query.error : null,
+    reload: () => void query.refetch(),
     busy: start.isPending || cancel.isPending,
     error: start.error ?? cancel.error,
     start: () => {

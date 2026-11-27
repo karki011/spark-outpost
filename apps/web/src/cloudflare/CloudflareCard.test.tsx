@@ -309,4 +309,15 @@ describe('setting Cloudflare up for the user', () => {
     await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('button', { name: 'Start over' })).toBeTruthy();
   });
+
+  it('offers to try again when the set-up state can’t be loaded, then shows the form once', async () => {
+    show(NOT_CONNECTED);
+    const load = vi.spyOn(cloudflareApi, 'setup').mockRejectedValueOnce(new Error('No answer.'));
+    expect((await screen.findByRole('alert')).textContent).toBe('No answer.');
+    expect(screen.queryByLabelText('Service address')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByLabelText('Service address')).toBeTruthy();
+    expect(load).toHaveBeenCalledTimes(2);
+  });
 });
