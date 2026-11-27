@@ -350,6 +350,7 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
     status,
     authorizeUrl: pending?.authorizeUrl ?? null,
     account: progress.account?.name ?? null,
+    signedIn: tokenLive(),
     permissions: CLOUDFLARE_SHARE_PERMISSIONS.map((id) => ({
       id,
       state: !progress.granted
