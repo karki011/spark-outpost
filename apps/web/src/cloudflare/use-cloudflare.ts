@@ -59,7 +59,13 @@ export function useCloudflareSetup() {
       await keep(setup);
     },
   });
-  const cancel = useMutation({ mutationFn: cloudflareApi.cancelSetup, onSuccess: keep });
+  const cancel = useMutation({
+    mutationFn: cloudflareApi.cancelSetup,
+    onSuccess: async (setup) => {
+      await keep(setup);
+      void queryClient.invalidateQueries({ queryKey: cloudflareKeys.connection });
+    },
+  });
   const done = query.data?.status === 'done';
   useEffect(() => {
     if (!done) return;
