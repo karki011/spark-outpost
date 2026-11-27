@@ -3,7 +3,7 @@ window.BootParty = (function () {
   var STAGE_WIDTH = 540;
   var STAGE_HEIGHT = 420;
   var SPARK =
-    'M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z';
+    'M48 2.4Q48.9 2.4 49.5 3L53.5 7Q54.6 8.5 53.5 10L49.5 14Q48 15.1 46.5 14L42.5 10Q41.4 8.5 42.5 7L46.5 3Q47.1 2.4 48 2.4Z';
 
   var random = Math.random;
   var root = null;
