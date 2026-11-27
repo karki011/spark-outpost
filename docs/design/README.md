@@ -11,6 +11,8 @@
   - `blob-scout-mark-black.svg`, `blob-scout-mark-white.svg`: one color, with the eyes cut out
   - `blob-scout-lockup-dark.svg`, `blob-scout-lockup-light.svg`: mark with the "spark outpost" wordmark
   - `blob-scout-logo-guide.html`: the logo guide, with moods, colors, and usage rules
+  - `outpost-mark*.svg`: the secondary Outpost mark (a fort plan with an ember), full colour for dark and light, a small cut, and one colour
+  - `README.md`: the logo rules: which mark goes where, the fixed colours, clear space, sizes and what not to do
 - `tickets/`: the Tickets + Home-brief reference plan (`TICKETS_SCREEN_PLAN.md`) and its two mockups, `tickets-mockup-inbox.html` and `home-brief-mockup.html`.
 - `map/`: the Project Map design target. `project-map-mockup.html` is the mockup, built by `build-map-data.mjs` and loaded by `tests/browser/map-fixture.ts`. To compare the app with it, run `tests/browser/project-map.spec.ts` with `SPARK_SHOTS` set to an output folder.
 - `mocks/calendar-mock.html`: the Calendar design mock in the real app shell (sample data only): Today with the day shape, a clickable week, a merged and filterable timeline, Protect this free block, Join and ⌘J, meeting prep; Home's Upcoming card; the island nudge and capture line; an agent's edit and floor cards in a chat; the Calendar card in Connections → Connectors with first run; the calendar settings in Mac → Notifications; and every empty and error state from the Mock state bar. The design is in `docs/architecture/CALENDAR.md`. Address options: `?theme=dark`, `?view=home`, `chats` or `settings`, `?pane=notifications`, `?state=quiet`, `connect`, `denied`, `none`, `helper` or `web`, `?day=13`, `?time=565` (minutes after midnight), `?island=open`, `?select=standup`, `?protect=1`.
