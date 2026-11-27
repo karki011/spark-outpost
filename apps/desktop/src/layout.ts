@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { GOOGLE_CLIENT_FILE_NAME } from './google-client.ts';
 import { MICROSOFT_CLIENT_FILE_NAME } from './microsoft-client.ts';
+import { CLOUDFLARE_CLIENT_FILE_NAME, SHARE_WORKER_FILE } from './cloudflare-client.ts';
 import { ZOOM_CLIENT_FILE_NAME } from './zoom-client.ts';
 import { SLACK_CLIENT_ID_FILE_NAME } from './slack-sign-in.ts';
 import { WIN_HELPER_EXE } from './win-helper/protocol.ts';
@@ -19,6 +20,8 @@ export interface AppLayout {
   googleClientFile: string | null;
   microsoftClientFile: string | null;
   zoomClientFile: string | null;
+  cloudflareClientFile: string | null;
+  shareWorkerFile: string;
   slackClientIdFile: string | null;
 }
 
@@ -46,6 +49,8 @@ export function appLayout(source: LayoutSource): AppLayout {
       googleClientFile: null,
       microsoftClientFile: null,
       zoomClientFile: null,
+      cloudflareClientFile: null,
+      shareWorkerFile: path.join(appPath, SHARE_WORKER_FILE),
       slackClientIdFile: null,
     };
   }
@@ -64,6 +69,8 @@ export function appLayout(source: LayoutSource): AppLayout {
     googleClientFile: path.join(repoRoot, '.local', GOOGLE_CLIENT_FILE_NAME),
     microsoftClientFile: path.join(repoRoot, '.local', MICROSOFT_CLIENT_FILE_NAME),
     zoomClientFile: path.join(repoRoot, '.local', ZOOM_CLIENT_FILE_NAME),
+    cloudflareClientFile: path.join(repoRoot, '.local', CLOUDFLARE_CLIENT_FILE_NAME),
+    shareWorkerFile: path.join(appPath, SHARE_WORKER_FILE),
     slackClientIdFile: path.join(repoRoot, '.local', SLACK_CLIENT_ID_FILE_NAME),
   };
 }

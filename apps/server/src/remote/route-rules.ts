@@ -257,6 +257,9 @@ PUT /api/cloudflare
 PATCH /api/cloudflare
 POST /api/cloudflare/check
 DELETE /api/cloudflare
+GET /api/cloudflare/setup
+POST /api/cloudflare/setup
+DELETE /api/cloudflare/setup
 GET /api/island/requests
 POST /api/island/requests/:id/claim
 GET /api/remote/access

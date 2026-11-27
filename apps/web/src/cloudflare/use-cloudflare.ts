@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CloudflareConnection } from '@spark-outpost/contracts';
+import type { CloudflareConnection, CloudflareSetup } from '@spark-outpost/contracts';
+import { openOutside } from '../browser/outside-link.ts';
 import { ARTIFACT_SHARE_KEY, cloudflareApi, cloudflareKeys } from './cloudflare-api.ts';
 
 export function useCloudflareConnection(enabled: boolean) {
@@ -28,8 +30,50 @@ export function useCloudflareActions() {
     mutationFn: cloudflareApi.disconnect,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: cloudflareKeys.connection });
+      void queryClient.invalidateQueries({ queryKey: cloudflareKeys.setup });
       void queryClient.invalidateQueries({ queryKey: ARTIFACT_SHARE_KEY });
     },
   });
   return { update, check, disconnect };
+}
+
+const SETUP_POLL_MS = 1500;
+const setupMoving = (setup: CloudflareSetup | undefined) =>
+  setup?.status === 'waiting' || setup?.status === 'working';
+
+export function useCloudflareSetup() {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: cloudflareKeys.setup,
+    queryFn: cloudflareApi.setup,
+    refetchInterval: (state) => (setupMoving(state.state.data) ? SETUP_POLL_MS : false),
+  });
+  const keep = (setup: CloudflareSetup) => queryClient.setQueryData(cloudflareKeys.setup, setup);
+  const start = useMutation({
+    mutationFn: cloudflareApi.startSetup,
+    onSuccess: (setup) => {
+      keep(setup);
+      if (setup.authorizeUrl) openOutside(setup.authorizeUrl);
+    },
+  });
+  const cancel = useMutation({ mutationFn: cloudflareApi.cancelSetup, onSuccess: keep });
+  const done = query.data?.status === 'done';
+  useEffect(() => {
+    if (!done) return;
+    void queryClient.invalidateQueries({ queryKey: cloudflareKeys.connection });
+    void queryClient.invalidateQueries({ queryKey: ARTIFACT_SHARE_KEY });
+  }, [done, queryClient]);
+  return {
+    setup: query.data,
+    busy: start.isPending || cancel.isPending,
+    error: start.error ?? cancel.error,
+    start: () => {
+      cancel.reset();
+      start.mutate();
+    },
+    cancel: () => {
+      start.reset();
+      cancel.mutate();
+    },
+  };
 }

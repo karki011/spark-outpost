@@ -117,6 +117,12 @@ const configSchema = z.object({
     .trim()
     .regex(/^[A-Za-z0-9_-]{0,64}$/)
     .default(''),
+  SPARK_CLOUDFLARE_CLIENT_ID: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9_-]{0,64}$/)
+    .default(''),
+  SPARK_SHARE_WORKER_FILE: z.string().trim().max(1024).default(''),
   SPARK_SHARE_URL: z
     .string()
     .default('')
@@ -132,6 +138,8 @@ const configSchema = z.object({
   MICROSOFT_GRAPH_URL: providerUrl.optional(),
   ZOOM_OAUTH_URL: providerUrl.optional(),
   ZOOM_API_URL: providerUrl.optional(),
+  CLOUDFLARE_OAUTH_URL: providerUrl.optional(),
+  CLOUDFLARE_API_URL: providerUrl.optional(),
   SPARK_LINK_SCHEME: z
     .string()
     .regex(/^[a-z][a-z0-9-]*$/)

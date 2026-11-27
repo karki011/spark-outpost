@@ -130,3 +130,121 @@
   color: var(--text);
   text-decoration: none;
 }
+.cf-auto {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.cf-auto > p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.cf-list {
+  display: grid;
+  margin: 0;
+  padding: 2px 12px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+.cf-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 13px;
+}
+.cf-item + .cf-item {
+  border-top: 1px solid var(--line);
+}
+.cf-mark {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
+.cf-mark svg {
+  width: 14px;
+  height: 14px;
+}
+.cf-item-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cf-item-text b {
+  font-weight: 600;
+  color: var(--text);
+}
+.cf-item-text > span {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.cf-state {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.cf-item[data-state='allowed'] :is(.cf-mark, .cf-state),
+.cf-item[data-state='done'] :is(.cf-mark, .cf-state) {
+  color: var(--success);
+}
+.cf-item[data-state='missing'] :is(.cf-mark, .cf-state),
+.cf-item[data-state='failed'] :is(.cf-mark, .cf-state) {
+  color: var(--warn);
+}
+.cf-item[data-state='failed'] .cf-item-text > span[role='alert'] {
+  color: var(--text);
+}
+.cf-fix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.cf-auto a.btn {
+  color: var(--text);
+  text-decoration: none;
+}
+.cf-hand {
+  display: grid;
+  gap: 12px;
+}
+.cf-hand > summary {
+  width: max-content;
+  min-height: 28px;
+  border-radius: 6px;
+  color: var(--accent-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 28px;
+  cursor: default;
+}
+.cf-hand > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.cf-hand[open] > summary {
+  margin-bottom: 12px;
+}
+.cf-hand > :not(summary) + :not(summary) {
+  margin-top: 16px;
+}
+@media (pointer: coarse) {
+  .cf-hand > summary {
+    min-height: 44px;
+    line-height: 44px;
+  }
+}
+.cf-fix button.btn:not(:disabled) {
+  color: var(--text);
+}

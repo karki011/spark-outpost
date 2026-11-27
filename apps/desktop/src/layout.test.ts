@@ -36,6 +36,8 @@ describe('appLayout', () => {
           googleClientFile: '/repo/.local/google-oauth-client.json',
           microsoftClientFile: '/repo/.local/microsoft-oauth-client.json',
           zoomClientFile: '/repo/.local/zoom-oauth-client.json',
+          cloudflareClientFile: '/repo/.local/cloudflare-oauth-client.json',
+          shareWorkerFile: '/repo/apps/desktop/dist/share-worker.mjs',
           slackClientIdFile: '/repo/.local/slack-client-id',
         },
         path.resolve,
@@ -69,6 +71,9 @@ describe('appLayout', () => {
         googleClientFile: null,
         microsoftClientFile: null,
         zoomClientFile: null,
+        cloudflareClientFile: null,
+        shareWorkerFile:
+          '/Applications/Spark Outpost.app/Contents/Resources/app/dist/share-worker.mjs',
         slackClientIdFile: null,
       }),
     );

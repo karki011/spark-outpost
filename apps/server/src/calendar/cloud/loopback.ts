@@ -32,12 +32,14 @@ function callbackOf(url: URL): LoopbackCallback | null {
 export async function startLoopback(
   service: string,
   onCallback: (callback: LoopbackCallback) => void,
+  callbackPath = '/',
 ): Promise<Loopback> {
   const done = donePage(service);
   let answered = false;
   const server: Server = createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
-    const callback = request.method === 'GET' && url.pathname === '/' ? callbackOf(url) : null;
+    const callback =
+      request.method === 'GET' && url.pathname === callbackPath ? callbackOf(url) : null;
     const headers = {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',
@@ -59,7 +61,7 @@ export async function startLoopback(
   server.unref();
   const { port } = server.address() as AddressInfo;
   return {
-    redirectUri: `http://127.0.0.1:${port}`,
+    redirectUri: `http://127.0.0.1:${port}${callbackPath === '/' ? '' : callbackPath}`,
     close: () => {
       server.close();
       server.closeAllConnections();
