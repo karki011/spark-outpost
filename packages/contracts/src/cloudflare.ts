@@ -56,6 +56,7 @@ export const cloudflareSetupSchema = z.object({
   status: z.enum(['idle', 'waiting', 'working', 'stopped', 'done']),
   authorizeUrl: z.string().nullable(),
   account: z.string().nullable(),
+  signedIn: z.boolean(),
   permissions: z.array(
     z.object({
       id: z.enum(CLOUDFLARE_SHARE_PERMISSIONS),
