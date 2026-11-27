@@ -113,6 +113,7 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
 
     expect(setup.status).toBe('done');
     expect(setup.account).toBe('Hazel’s account');
+    expect(setup.signedIn).toBe(false);
     expect(setup.permissions.map((one) => one.state)).toEqual(['allowed', 'allowed', 'allowed']);
     expect(states(setup)).toEqual({
       signIn: 'done',
@@ -171,6 +172,7 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
       fixUrl: `https://dash.cloudflare.com/${FAKE_ACCOUNT}/r2/overview`,
     });
     expect(states(setup)).toMatchObject({ signIn: 'done', worker: 'todo' });
+    expect(setup.signedIn).toBe(true);
 
     cloudflare.r2Enabled = true;
     const again = (await client.send('post', SETUP).expect(200)).body as CloudflareSetup;
@@ -341,6 +343,7 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
     await approve(client);
     const idle = (await client.send('delete', SETUP).expect(200)).body as CloudflareSetup;
     expect(idle.status).toBe('idle');
+    expect(idle.signedIn).toBe(false);
     expect(states(idle)).toMatchObject({ signIn: 'todo', bucket: 'todo' });
     expect(cloudflare.revoked).toEqual(['token-1-0123456789']);
   });

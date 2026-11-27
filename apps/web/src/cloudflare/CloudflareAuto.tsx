@@ -151,6 +151,12 @@ export function CloudflareAuto({ setup, auto }: { setup: CloudflareSetup; auto: 
         <>
           <p role="status">{progressLine(setup)}</p>
           <Steps setup={setup} auto={auto} />
+          {setup.signedIn && setup.status === 'stopped' && (
+            <p>
+              Spark stays signed in to Cloudflare for up to an hour so it can carry on. Start over
+              ends the sign-in now.
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -160,8 +166,8 @@ export function CloudflareAuto({ setup, auto }: { setup: CloudflareSetup; auto: 
           </p>
           <Permissions setup={setup} />
           <p>
-            Spark asks for nothing else, uses the sign-in for this set-up, then ends it. It keeps no
-            access to your Cloudflare account.
+            Spark asks for nothing else and ends the sign-in when set-up finishes. After that it
+            keeps no access to your Cloudflare account.
           </p>
         </>
       )}

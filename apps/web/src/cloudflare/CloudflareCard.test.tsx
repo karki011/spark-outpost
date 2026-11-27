@@ -49,6 +49,7 @@ const NO_SETUP: CloudflareSetup = {
   status: 'idle',
   authorizeUrl: null,
   account: null,
+  signedIn: false,
   permissions: [],
   steps: [],
 };
@@ -234,6 +235,7 @@ const OFFERED: CloudflareSetup = {
   status: 'idle',
   authorizeUrl: null,
   account: null,
+  signedIn: false,
   permissions: [
     { id: 'account', state: 'needed' },
     { id: 'storage', state: 'needed' },
@@ -279,6 +281,7 @@ describe('setting Cloudflare up for the user', () => {
       ...OFFERED,
       status: 'stopped',
       account: 'Hazel’s account',
+      signedIn: true,
       steps: [
         step('signIn', 'done'),
         step('bucket', 'failed', {
@@ -308,6 +311,7 @@ describe('setting Cloudflare up for the user', () => {
     fireEvent.click(within(bucket!).getByRole('button', { name: 'Check again' }));
     await waitFor(() => expect(start).toHaveBeenCalledTimes(1));
     expect(screen.getByRole('button', { name: 'Start over' })).toBeTruthy();
+    expect(screen.getByText(/stays signed in to Cloudflare for up to an hour/)).toBeTruthy();
   });
 
   it('offers to try again when the set-up state can’t be loaded, then shows the form once', async () => {
