@@ -152,7 +152,7 @@ The button has not been run against this folder yet. The steps under [Set up and
 
 ## The hosted copy
 
-The copy the app falls back to when no own copy is connected takes uploads from every install, so it has no `UPLOAD_KEY` and is held back by the limits below and the Cloudflare rules instead. It keeps pages for a day at most: set `MAX_EXPIRY_DAYS = "1"` under `[vars]` in its `wrangler.toml` (or as a variable in the dashboard) before deploying it. `GET /v1/service` then answers `{ "service": "spark-share", "maxDays": 1, "uploadKey": "none" }`.
+The copy the app falls back to when no own copy is connected takes uploads from every install, so it has no `UPLOAD_KEY` and is held back by the limits below and the Cloudflare rules instead. It keeps pages for a day at most: `wrangler.hosted.toml` sets `MAX_EXPIRY_DAYS = "1"` under `[vars]`. `GET /v1/service` then answers `{ "service": "spark-share", "maxDays": 1, "uploadKey": "none" }`.
 
 ### Spark's own copy
 
