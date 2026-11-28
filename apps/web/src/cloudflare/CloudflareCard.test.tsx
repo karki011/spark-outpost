@@ -172,7 +172,7 @@ describe('Cloudflare, connected', () => {
     expect(screen.getByText('Last checked').nextElementSibling?.textContent).toContain('just now');
     screen.getByText('Share… on an artifact uploads here.');
     screen.getByText(
-      'Usage and any cost are on your Cloudflare account. Spark never sees your Cloudflare sign-in.',
+      'Usage and any cost are on your Cloudflare account. Spark keeps the upload key in this computer’s keychain and no Cloudflare sign-in.',
     );
     expect(screen.queryByRole('note')).toBeNull();
   });
