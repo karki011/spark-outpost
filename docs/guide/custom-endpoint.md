@@ -15,4 +15,20 @@ About 3 minutes. The server must speak the Anthropic Messages API, as Ollama doe
 4. Add an **API key** if the server needs one. **Send the key as** is **Authorization: Bearer**; pick **x-api-key** for a server that reads only that header, such as Anthropic's API.
 5. Select **Test connection**.
 
+## With Ollama
+
+Ollama's default context window is too small for an agent: a chat fails with "Prompt is too long" even though **Test connection** passes.
+
+1. Quit Ollama, then start it from a terminal with a larger window: `OLLAMA_CONTEXT_LENGTH=32768 ollama serve`.
+2. Run `ollama list` and copy the model's name exactly, such as `qwen3:4b-instruct`.
+3. In Spark, enter `http://localhost:11434` as the **Server address** and that name as the **Model**. Leave **API key** empty.
+
+| Fact   | Detail                                                               |
+| ------ | -------------------------------------------------------------------- |
+| Window | The agent's instructions alone take about 13,000 tokens              |
+| Memory | A 4B model with that window used 7.6 GB                              |
+| Speed  | Each reply re-reads them; a small model on a laptop takes a minute   |
+| Tools  | The model must support tool calls to read, write or run anything     |
+| Where  | Messages go to the server address you entered, here on this computer |
+
 **Next:** [Start a chat and link a project](start-a-chat.md)
