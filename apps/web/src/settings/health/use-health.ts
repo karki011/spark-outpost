@@ -4,6 +4,7 @@ import { setupApi, setupKey } from '../../api/setup.ts';
 import { useCalendarStatus } from '../../calendar/use-calendar.ts';
 import { agentConfigQuery } from '../../chat/project/use-agent-config.ts';
 import { useProjects } from '../../chat/project/use-chat-repos.ts';
+import { usePageHidden } from '../../ui/use-page-hidden.ts';
 import { desktopSpeech, useSpeechStatus } from '../../voice/speech-bridge.ts';
 import { useMacControlStatus } from '../mac-control-status.ts';
 import { useSparkRules } from '../spark-rules/use-spark-rules.ts';
@@ -20,6 +21,8 @@ import {
   terminalsHealth,
   type HealthItem,
 } from './health-model.ts';
+
+const CLOUDFLARE_POLL_MS = 30_000;
 
 export type HealthSourceState = 'checking' | 'failed' | 'ready';
 
@@ -84,11 +87,17 @@ function useHelpersSource(): HealthSource {
 }
 
 function useCloudflareSource(): HealthSource {
+  const refetchInterval = usePageHidden() ? false : CLOUDFLARE_POLL_MS;
   const connection = useQuery({
     queryKey: cloudflareKeys.connection,
     queryFn: cloudflareApi.connection,
+    refetchInterval,
   });
-  const reach = useQuery({ queryKey: cloudflareKeys.reach, queryFn: cloudflareApi.reach });
+  const reach = useQuery({
+    queryKey: cloudflareKeys.reach,
+    queryFn: cloudflareApi.reach,
+    refetchInterval,
+  });
   return {
     id: 'cloudflare',
     label: 'Cloudflare',
