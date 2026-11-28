@@ -152,11 +152,11 @@ The button has not been run against this folder yet. The steps under [Set up and
 
 ## The hosted copy
 
-The copy the app falls back to when no own copy is connected takes uploads from every install, so it has no `UPLOAD_KEY` and is held back by the limits below and the Cloudflare rules instead. It keeps pages for a day at most: set `MAX_EXPIRY_DAYS = "1"` under `[vars]` in its `wrangler.toml` (or as a variable in the dashboard) before deploying it. `GET /v1/service` then answers `{ "service": "spark-share", "maxDays": 1, "uploadKey": "none" }`.
+The copy the app falls back to when no own copy is connected takes uploads from every install, so it has no `UPLOAD_KEY` and is held back by the limits below and the Cloudflare rules instead. It keeps pages for a day at most: `wrangler.hosted.toml` sets `MAX_EXPIRY_DAYS = "1"` under `[vars]`. `GET /v1/service` then answers `{ "service": "spark-share", "maxDays": 1, "uploadKey": "none" }`.
 
 ### Spark's own copy
 
-Spark's shared service keeps its first name and bucket, `spark-outpost-share` and `spark-outpost-shares`, so its address and stored pages don't move. They are the `hosted` environment in `wrangler.toml`, which also sets `MAX_EXPIRY_DAYS = "1"`. Deploy it with `npx wrangler@4 deploy --env hosted`; a plain `wrangler deploy` makes a separate `spark-outpost-artifact-share`. In the commands below, use the hosted names when you work on Spark's own copy.
+Spark's shared service keeps its first name and bucket, `spark-outpost-share` and `spark-outpost-shares`, so its address and stored pages don't move. It also answers at `https://share.sparkoutpost.dev`, a custom domain on the same worker; the `workers.dev` address stays on for installs and links that already use it. They are in `wrangler.hosted.toml`, which also sets `MAX_EXPIRY_DAYS = "1"`. Deploy it with `npx wrangler@4 deploy --config wrangler.hosted.toml`; a plain `wrangler deploy` makes a separate `spark-outpost-artifact-share`. In the commands below, use the hosted names when you work on Spark's own copy.
 
 ## Set up and deploy
 
@@ -174,8 +174,8 @@ For Spark's own copy, the same three steps use the hosted names:
 
 ```sh
 npx wrangler@4 r2 bucket create spark-outpost-shares
-openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY --env hosted
-npx wrangler@4 deploy --env hosted
+openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY --config wrangler.hosted.toml
+npx wrangler@4 deploy --config wrangler.hosted.toml
 ```
 
 `package.json` pins the same Wrangler major for the Deploy button and for `npm install && npm run deploy`; it is not part of the repo's pnpm workspace.
