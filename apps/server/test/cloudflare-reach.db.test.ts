@@ -417,6 +417,19 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     });
   });
 
+  it('stops when the existing sign-in page lets some paths skip sign-in', async () => {
+    cloudflare.accessApps.push({
+      id: 'app1',
+      domain: WANTED.hostname,
+      destinations: [{ type: 'public', overrides: [{ path: '/api', behavior: 'public' }] }],
+    });
+    cloudflare.reach.policy = { decision: 'allow', include: [{ email: { email: WANTED.email } }] };
+    const { reach } = await setUp(localClient(app()));
+    expect(failed(reach)).toMatchObject({ id: 'signInPage', fix: 'cloudflare' });
+    expect(failed(reach)?.problem).toContain('skip sign-in');
+    expect(runner.started).toEqual([]);
+  });
+
   it('says so when the tunnel does not connect', async () => {
     runner.connects = false;
     const { reach } = await setUp(localClient(app()));

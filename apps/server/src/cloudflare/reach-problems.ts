@@ -26,6 +26,9 @@ export const REACH_RECORD_TAKEN =
 export const REACH_PAGE_TAKEN =
   'That address already has a sign-in page in Cloudflare that doesn’t let only this email in. Change it in Cloudflare, or start over with another address.';
 
+export const REACH_PAGE_EXEMPTS =
+  'That address already has a sign-in page in Cloudflare that lets some paths skip sign-in. Remove those exemptions in Cloudflare, or start over with another address.';
+
 export const REACH_PAGE_UNCONFIRMED =
   'That address already has a sign-in page with more rules than Spark can check. Trim its rules in Cloudflare, or start over with another address.';
 

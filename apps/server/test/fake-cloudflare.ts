@@ -37,7 +37,7 @@ export class FakeCloudflare {
   tunnelExists = false;
   dnsRecords: { type: string; content: string }[] = [];
   accessOn = true;
-  accessApps: { id: string; domain: string }[] = [];
+  accessApps: { id: string; domain: string; destinations?: unknown[] }[] = [];
   policyFails = false;
   policies: unknown[] | null = null;
   tokenHeld: Promise<void> | null = null;

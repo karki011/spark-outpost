@@ -126,18 +126,34 @@ export async function createCname(
   });
 }
 
-const appsSchema = z.array(z.object({ id, domain: z.string().optional() }));
+const appsSchema = z.array(
+  z.object({
+    id,
+    domain: z.string().optional(),
+    destinations: z.array(z.object({ overrides: z.array(z.unknown()).optional() })).optional(),
+  }),
+);
 
-export async function accessAppId(
+export interface AccessApp {
+  id: string;
+  exemptsPaths: boolean;
+}
+
+export async function accessAppFor(
   api: CloudflareAccountApi,
   zoneId: string,
   hostname: string,
-): Promise<string | null> {
+): Promise<AccessApp | null> {
   const apps = appsSchema.safeParse(
     await cloudflareCall(api, 'GET', `${zone(zoneId)}/access/apps?per_page=100`),
   );
   if (!apps.success) return null;
-  return apps.data.find((app) => app.domain === hostname)?.id ?? null;
+  const app = apps.data.find((candidate) => candidate.domain === hostname);
+  if (!app) return null;
+  const exemptsPaths = (app.destinations ?? []).some(
+    (destination) => (destination.overrides ?? []).length > 0,
+  );
+  return { id: app.id, exemptsPaths };
 }
 
 export async function createAccessApp(

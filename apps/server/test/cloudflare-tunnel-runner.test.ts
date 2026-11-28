@@ -6,7 +6,11 @@ import { createTunnelRunner } from '../src/cloudflare/tunnel-runner.ts';
 class FakeChild extends EventEmitter {
   readonly stderr = Object.assign(new EventEmitter(), { setEncoding: () => undefined });
   killed = false;
-  kill() {
+  stubborn = false;
+  readonly signals: string[] = [];
+  kill(signal = 'SIGTERM') {
+    this.signals.push(signal);
+    if (this.stubborn && signal !== 'SIGKILL') return true;
     this.killed = true;
     queueMicrotask(() => this.emit('exit', null));
     return true;
@@ -57,5 +61,23 @@ describe('the Cloudflare tunnel runner', () => {
     const count = children.length;
     await wait(40);
     expect(children).toHaveLength(count);
+  });
+
+  it('force-stops a child that ignores the first stop, then starts another', async () => {
+    const { children, launch } = fakeSpawn();
+    const runner = createTunnelRunner({
+      bin: 'cloudflared',
+      spawn: launch,
+      readyMs: 20,
+      retryMs: [10],
+      killGraceMs: 20,
+    });
+    const started = runner.start('run-token');
+    children[0]!.stubborn = true;
+    expect(await started).toBe(false);
+    await wait(100);
+    expect(children[0]!.signals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(children.length).toBeGreaterThan(1);
+    runner.stop();
   });
 });
