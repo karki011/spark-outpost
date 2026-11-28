@@ -169,7 +169,7 @@ export function CloudflareReachSetup({ onSaved }: CloudflareReachSetupProps) {
               onChange={(event) => setAddress(event.target.value)}
             />
             <p id={`${ids}-address-help`} className={addressProblem ? 'ph-error' : 'ph-note'}>
-              {addressProblem ?? 'A name on a domain you already have in Cloudflare.'}
+              {addressProblem ?? 'A name on a domain you already have in Cloudflare. No domain? Use Tailscale.'}
             </p>
           </div>
           <div className="field">
