@@ -7,7 +7,7 @@ order: 1015
 summary: Sign in to Cloudflare once and Spark gives this computer a private address on your own domain.
 ---
 
-Use Remote control without Tailscale. About 2 minutes. Needs macOS 15 or later.
+Use Remote control without Tailscale. About 2 minutes. Needs macOS 15 or later, or Windows.
 
 You need a free Cloudflare account with a domain in it, and Zero Trust turned on there (free; may ask for a payment method). A domain bought elsewhere works once you add it to Cloudflare. No domain? Use Tailscale.
 

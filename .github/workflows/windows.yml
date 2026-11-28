@@ -11,6 +11,9 @@ on:
       - 'scripts/windows-installer-smoke.ts'
       - 'apps/desktop/scripts/**'
       - 'apps/server/src/terminal/session-host/**'
+      - 'apps/server/src/cloudflare/tunnel-runner.ts'
+      - 'apps/server/test/cloudflare-tunnel-runner.test.ts'
+      - 'apps/desktop/src/cloudflared*.ts'
       - 'apps/desktop/native/win-helper/**'
       - 'apps/desktop/src/win-helper/**'
       - 'apps/desktop/src/windows-hello*.ts'
@@ -49,6 +52,10 @@ jobs:
         if: always()
         shell: bash
         run: pnpm exec vitest run --project unit apps/server/src/terminal/session-host apps/server/src/terminal/kept-choice.test.ts apps/server/src/terminal/windows-cli.test.ts apps/server/src/terminal/native-hook-command.test.ts apps/server/src/terminal/chat-port-windows.test.ts
+      - name: Cloudflare tunnel
+        if: always()
+        shell: bash
+        run: pnpm exec vitest run --project unit apps/server/test/cloudflare-tunnel-runner.test.ts apps/desktop/src/cloudflared.test.ts apps/desktop/scripts/cloudflared-bundle.test.ts apps/desktop/scripts/builder-config.test.ts
       - name: Unit tests
         if: always()
         continue-on-error: true

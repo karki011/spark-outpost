@@ -106,6 +106,7 @@ async function stageArch(stageDir: string, arch: MacArch, platform: BuildPlatfor
   });
   if (platform === 'win') {
     await stageWinHelper(repoRoot, arch, archDir);
+    await stageCloudflared(await buildCloudflared(repoRoot, arch, 'win'), arch, archDir, 'win');
     return;
   }
   await stageTmux(await buildTmux(repoRoot, arch), arch, archDir);

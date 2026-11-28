@@ -5,6 +5,7 @@ import { CLOUDFLARE_CLIENT_FILE_NAME, SHARE_WORKER_FILE } from './cloudflare-cli
 import { ZOOM_CLIENT_FILE_NAME } from './zoom-client.ts';
 import { SLACK_CLIENT_ID_FILE_NAME } from './slack-sign-in.ts';
 import { WIN_HELPER_EXE } from './win-helper/protocol.ts';
+import { cloudflaredFile, cloudflaredFolder } from './cloudflared.ts';
 
 export interface AppLayout {
   serverDir: string;
@@ -31,16 +32,19 @@ export interface LayoutSource {
   appPath: string;
   resourcesPath: string;
   arch?: string;
+  platform?: NodeJS.Platform;
 }
 
 export function appLayout(source: LayoutSource): AppLayout {
   const { isPackaged, appPath, resourcesPath, arch = process.arch } = source;
+  const platform = source.platform ?? process.platform;
+  const cloudflared = path.join('bin', cloudflaredFile(platform));
   if (isPackaged) {
     return {
       serverDir: path.join(resourcesPath, 'server'),
       webRoot: path.join(resourcesPath, 'web'),
       tmuxBin: path.join(resourcesPath, 'tmux/bin/tmux'),
-      cloudflaredBin: path.join(resourcesPath, 'cloudflared/bin/cloudflared'),
+      cloudflaredBin: path.join(resourcesPath, 'cloudflared', cloudflared),
       macControlBin: path.join(resourcesPath, 'mac-control/bin/spark-mac-control'),
       calendarBin: path.join(resourcesPath, 'calendar/bin/spark-calendar'),
       calendarSeedBin: null,
@@ -61,7 +65,12 @@ export function appLayout(source: LayoutSource): AppLayout {
     serverDir: path.join(repoRoot, 'apps/server'),
     webRoot: path.join(repoRoot, 'apps/web/dist'),
     tmuxBin: path.join(repoRoot, '.local/tmux', arch, 'bin/tmux'),
-    cloudflaredBin: path.join(repoRoot, '.local/cloudflared', arch, 'bin/cloudflared'),
+    cloudflaredBin: path.join(
+      repoRoot,
+      '.local/cloudflared',
+      cloudflaredFolder(platform, arch),
+      cloudflared,
+    ),
     macControlBin: path.join(repoRoot, '.local/mac-control', arch, 'spark-mac-control'),
     calendarBin: path.join(repoRoot, '.local/calendar', arch, 'spark-calendar'),
     calendarSeedBin: path.join(repoRoot, '.local/calendar', arch, 'spark-calendar-seed'),

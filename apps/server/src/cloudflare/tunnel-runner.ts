@@ -15,6 +15,7 @@ export interface TunnelRunnerDeps {
   readyMs?: number;
   retryMs?: number[];
   killGraceMs?: number;
+  platform?: NodeJS.Platform;
 }
 
 const CONNECTED = /Registered tunnel connection/;
@@ -27,6 +28,7 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
   const readyMs = deps.readyMs ?? READY_MS;
   const retryMs = deps.retryMs ?? RETRY_MS;
   const killGraceMs = deps.killGraceMs ?? KILL_GRACE_MS;
+  const forcedOnly = (deps.platform ?? process.platform) === 'win32';
   let state: TunnelState = 'off';
   let child: ChildProcess | null = null;
   let wanted: string | null = null;
@@ -38,11 +40,16 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
     const started = launch(deps.bin, ['tunnel', '--no-autoupdate', 'run'], {
       env: { ...process.env, TUNNEL_TOKEN: token },
       stdio: ['ignore', 'ignore', 'pipe'],
+      windowsHide: true,
     });
     child = started;
     let force: NodeJS.Timeout | null = null;
     const deadline = setTimeout(() => {
       if (child !== started || state !== 'starting') return;
+      if (forcedOnly) {
+        started.kill('SIGKILL');
+        return;
+      }
       started.kill('SIGTERM');
       force = setTimeout(() => started.kill('SIGKILL'), killGraceMs);
       force.unref();
@@ -81,7 +88,7 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
     retry = null;
     const running = child;
     child = null;
-    running?.kill('SIGTERM');
+    running?.kill(forcedOnly ? 'SIGKILL' : 'SIGTERM');
     state = 'off';
   };
 
