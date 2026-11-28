@@ -14,6 +14,7 @@ export interface TunnelRunnerDeps {
   spawn?: typeof spawn;
   readyMs?: number;
   retryMs?: number[];
+  killGraceMs?: number;
 }
 
 const CONNECTED = /Registered tunnel connection/;
@@ -25,6 +26,7 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
   const launch = deps.spawn ?? spawn;
   const readyMs = deps.readyMs ?? READY_MS;
   const retryMs = deps.retryMs ?? RETRY_MS;
+  const killGraceMs = deps.killGraceMs ?? KILL_GRACE_MS;
   let state: TunnelState = 'off';
   let child: ChildProcess | null = null;
   let wanted: string | null = null;
@@ -42,7 +44,7 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
     const deadline = setTimeout(() => {
       if (child !== started || state !== 'starting') return;
       started.kill('SIGTERM');
-      force = setTimeout(() => started.kill('SIGKILL'), KILL_GRACE_MS);
+      force = setTimeout(() => started.kill('SIGKILL'), killGraceMs);
       force.unref();
     }, readyMs);
     deadline.unref();

@@ -17,7 +17,7 @@ import { revokeCloudflareToken, type CloudflareToken } from './oauth.ts';
 import {
   ACCESS_POLICY_PAGE,
   accessPolicies,
-  accessAppId,
+  accessAppFor,
   allowEmail,
   createAccessApp,
   letsInOnly,
@@ -33,6 +33,7 @@ import {
 import {
   REACH_BUSY,
   REACH_NOT_CONNECTED,
+  REACH_PAGE_EXEMPTS,
   REACH_PAGE_TAKEN,
   REACH_PAGE_UNCONFIRMED,
   REACH_NO_TUNNEL_PROGRAM,
@@ -252,8 +253,12 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       const hostname = need(progress.hostname);
       const zone = need(progress.zone);
       const access = api('access');
+      const existing = await accessAppFor(access, zone.id, hostname);
+      if (existing?.exemptsPaths) {
+        throw new StepFailure(REACH_PAGE_EXEMPTS, 'cloudflare', ZERO_TRUST_URL);
+      }
       const appId =
-        (await accessAppId(access, zone.id, hostname)) ??
+        existing?.id ??
         (await createAccessApp(access, zone.id, { name: 'Spark Outpost', hostname }));
       const email = need(progress.email);
       const policies = await accessPolicies(access, zone.id, appId);
