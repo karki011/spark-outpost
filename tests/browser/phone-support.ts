@@ -124,11 +124,34 @@ export async function openPhone(page: Page) {
   return page.getByRole('main');
 }
 
+const SECTION_TABS: Record<string, string> = {
+  Devices: 'Devices',
+  'Recent remote activity': 'Devices',
+  'What paired devices can do': 'Permissions',
+  Everyday: 'Permissions',
+  'Set up work': 'Permissions',
+  'High risk': 'Permissions',
+  'Cards can be answered from': 'Permissions',
+  'Other computers': 'Other computers',
+};
+
+export async function openTab(scope: Page | Locator, name: string): Promise<void> {
+  const page = 'page' in scope ? scope.page() : scope;
+  const tab = page.getByRole('tab', { name, exact: true });
+  await expect(page.locator('.ph-tabbed, #ph-status-title').first()).toBeVisible();
+  if ((await tab.count()) === 0) return;
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+}
+
 export async function turnOn(page: Page) {
+  await openTab(page, 'Set up');
   await page.getByRole('switch', { name: 'Remote control' }).click();
-  await expect(page.getByRole('heading', { name: 'Remote control is on' })).toBeVisible({
-    timeout: REMOTE_TURN_MS,
-  });
+  await expect(page.getByRole('tab', { name: 'Devices', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+    { timeout: REMOTE_TURN_MS },
+  );
 }
 
 export async function chooseDeviceAction(page: Page, device: string, action: string) {
@@ -141,6 +164,7 @@ export async function startPairing(
   button: string | RegExp = 'Pair a device',
 ): Promise<string> {
   const code = page.locator('.ph-code-text');
+  await openTab(page, 'Devices');
   await page.getByRole('button', { name: button }).click();
   await expect(code).toHaveText(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
   return (await code.textContent()) ?? '';
@@ -162,6 +186,8 @@ export async function openPairingPage(
 }
 
 export async function expand(scope: Page | Locator, name: string): Promise<void> {
+  const tab = SECTION_TABS[name];
+  if (tab) await openTab(scope, tab);
   const button = scope.getByRole('button', { name, exact: true, expanded: false });
   if ((await button.count()) > 0) await button.click();
   await expect(scope.getByRole('button', { name, exact: true, expanded: true })).toBeVisible();

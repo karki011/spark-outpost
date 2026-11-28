@@ -62,17 +62,17 @@ describe('At a glance', () => {
       local: LOCAL,
       sparks: [SPARK, { ...SPARK, id: '22222222-2222-4222-8222-222222222222' }],
     });
-    const term = glance.getByText('Other Sparks');
+    const term = glance.getByText('Other computers');
     expect(term.tagName).toBe('DT');
     expect(term.nextElementSibling?.textContent).toBe('2');
   });
 
-  it('has no Other Sparks row with none saved or outside the Mac app', async () => {
+  it('has no Other computers row with none saved or outside the Mac app', async () => {
     const empty = await show({ available: true, local: LOCAL, sparks: [] });
     expect(empty.getByText('Paired')).toBeTruthy();
-    expect(empty.queryByText('Other Sparks')).toBeNull();
+    expect(empty.queryByText('Other computers')).toBeNull();
     cleanup();
     const elsewhere = await show({ available: false, local: LOCAL, sparks: [SPARK] });
-    expect(elsewhere.queryByText('Other Sparks')).toBeNull();
+    expect(elsewhere.queryByText('Other computers')).toBeNull();
   });
 });

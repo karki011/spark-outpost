@@ -80,7 +80,7 @@ async function show(onManage = vi.fn(), onAdd = vi.fn()) {
 function openMenu() {
   const button = screen.getByRole('button', { name: /^This computer/ });
   fireEvent.click(button);
-  return { button, menu: screen.getByRole('menu', { name: 'Sparks' }) };
+  return { button, menu: screen.getByRole('menu', { name: 'Computers' }) };
 }
 
 afterEach(() => {
@@ -132,11 +132,11 @@ describe('SparkSwitcher', () => {
     expect(within(studio).queryByText('Custom domain')).toBeNull();
   });
 
-  it('names this computer and totals the requests waiting on other Sparks', async () => {
+  it('names this computer and totals the requests waiting on other computers', async () => {
     serve({ available: true, local: LOCAL, sparks: [STUDIO, ATTIC, CELLAR] });
     await show();
     const button = screen.getByRole('button', {
-      name: 'This computer. 3 requests waiting on other Sparks',
+      name: 'This computer. 3 requests waiting on other computers',
     });
     expect(button.textContent).toBe('Computers3');
     expect(button.getAttribute('aria-haspopup')).toBe('menu');
@@ -150,7 +150,7 @@ describe('SparkSwitcher', () => {
     serve({ available: true, local: LOCAL, sparks: [ATTIC] });
     await show();
     expect(
-      screen.getByRole('button', { name: 'This computer. 1 request waiting on other Sparks' }),
+      screen.getByRole('button', { name: 'This computer. 1 request waiting on other computers' }),
     ).toBeTruthy();
   });
 
@@ -166,8 +166,8 @@ describe('SparkSwitcher', () => {
       'SStudio MacOnline2 waiting',
       'AAttic MacOffline1 waiting',
       'CCellar MacNot paired yet',
-      'Add a Spark…',
-      'Manage Sparks…',
+      'Add a computer…',
+      'Manage computers…',
     ]);
     expect(within(menu).getByRole('separator')).toBeTruthy();
     expect(items[0]!.querySelector('[data-status="online"] svg')).toBeTruthy();
@@ -195,7 +195,7 @@ describe('SparkSwitcher', () => {
   });
 
   it('shows a failed open as one visible message', async () => {
-    const message = 'Other Sparks open from the Spark Outpost app.';
+    const message = 'Other computers open from the Spark Outpost app.';
     const list = { available: true, local: LOCAL, sparks: [STUDIO] };
     vi.stubGlobal(
       'fetch',
@@ -238,10 +238,10 @@ describe('SparkSwitcher', () => {
   it('goes to the page for Manage, and also asks for the Add dialog for Add', async () => {
     serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     const { onManage, onAdd } = await show();
-    fireEvent.click(within(openMenu().menu).getByRole('menuitem', { name: 'Manage Sparks…' }));
+    fireEvent.click(within(openMenu().menu).getByRole('menuitem', { name: 'Manage computers…' }));
     expect(onManage).toHaveBeenCalledTimes(1);
     expect(onAdd).not.toHaveBeenCalled();
-    fireEvent.click(within(openMenu().menu).getByRole('menuitem', { name: 'Add a Spark…' }));
+    fireEvent.click(within(openMenu().menu).getByRole('menuitem', { name: 'Add a computer…' }));
     expect(onManage).toHaveBeenCalledTimes(2);
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
@@ -257,13 +257,13 @@ describe('SparkSwitcher', () => {
     });
     await show();
     const button = screen.getByRole('button', {
-      name: `${name}. 3 requests waiting on other Sparks`,
+      name: `${name}. 3 requests waiting on other computers`,
     });
     expect(button.querySelector('img')?.getAttribute('src')).toBe(icon);
     expect(button.querySelector('.rs-switch-name')?.textContent).toBe('Computers');
     expect(button.getAttribute('title')).toBe(name);
     fireEvent.click(button);
-    const menu = screen.getByRole('menu', { name: 'Sparks' });
+    const menu = screen.getByRole('menu', { name: 'Computers' });
     const own = within(menu).getByRole('menuitemradio', { name });
     expect(own.querySelector('img')?.getAttribute('src')).toBe(icon);
     const [studio, attic] = within(menu).getAllByRole('menuitem');
@@ -276,7 +276,7 @@ describe('SparkSwitcher', () => {
     serve({ available: true, local: { ...LOCAL, name: 'Hazel’s Mac' }, sparks: [STUDIO] });
     await show();
     const named = screen.getByRole('button', {
-      name: 'Hazel’s Mac. 2 requests waiting on other Sparks',
+      name: 'Hazel’s Mac. 2 requests waiting on other computers',
     });
     expect(named.querySelector('.rs-icon')?.textContent).toBe('H');
     expect(named.querySelector('.rs-switch-name')?.textContent).toBe('Computers');

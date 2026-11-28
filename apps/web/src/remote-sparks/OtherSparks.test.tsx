@@ -89,14 +89,14 @@ describe('OtherSparks', () => {
     await show();
     expect(screen.getByText(OTHER_SPARKS_INTRO)).toBeTruthy();
     expect(screen.getByText(OTHER_SPARKS_EMPTY)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Add a Spark' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add a computer' })).toBeTruthy();
   });
 
   it('shows one line and no Add button outside the Mac app', async () => {
     serve({ available: false, local: LOCAL, sparks: [STUDIO] });
     await show();
     expect(screen.getByText(OTHER_SPARKS_UNAVAILABLE)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Add a Spark' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add a computer' })).toBeNull();
     expect(screen.queryByText('Studio Mac')).toBeNull();
   });
 
@@ -146,7 +146,7 @@ describe('OtherSparks', () => {
     serve({ available: true, local: LOCAL, sparks: [STUDIO] });
     requestAddSpark();
     await show();
-    expect(screen.getByRole('dialog', { name: 'Add a Spark' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Add a computer' })).toBeTruthy();
   });
 
   it('shows a paired and a waiting Spark with their state in words', async () => {

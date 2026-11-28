@@ -3,6 +3,8 @@
   gap: 4px;
   margin: 0 0 10px;
   border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
 .page-tab {
@@ -14,6 +16,8 @@
   color: var(--muted);
   font: inherit;
   font-weight: 400;
+  white-space: nowrap;
+  flex: none;
   cursor: pointer;
 }
 
@@ -40,4 +44,10 @@
   color: var(--muted);
   font-size: 12px;
   font-weight: 500;
+}
+
+@media (pointer: coarse) {
+  .page-tab {
+    min-height: 44px;
+  }
 }

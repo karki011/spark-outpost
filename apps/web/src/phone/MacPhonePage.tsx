@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RemoteReach, RemoteSession, TailscaleState } from '@spark-outpost/contracts';
 import { QueryWait } from '../ui/loading/QueryWait.tsx';
@@ -12,12 +12,13 @@ import { PairPhone } from './PairPhone.tsx';
 import { phoneApi, phoneKeys } from './phone-api.ts';
 import { PhoneActivity } from './PhoneActivity.tsx';
 import { PhoneDevices } from './PhoneDevices.tsx';
-import { PhoneRail } from './PhoneRail.tsx';
+import { DisconnectAll, PhoneRail } from './PhoneRail.tsx';
 import { PhoneStatus } from './PhoneStatus.tsx';
 import { ReachChoice } from './ReachChoice.tsx';
 import { PhoneSwitches } from './PhoneSwitches.tsx';
 import { PhoneCardAnswering } from './PhoneCardAnswering.tsx';
 import { PushContact } from './PushContact.tsx';
+import { RemoteTabs } from './RemoteTabs.tsx';
 import { setupSteps } from './setup-steps.ts';
 import { OtherSparks } from '../remote-sparks/OtherSparks.tsx';
 import { cloudflareApi, cloudflareKeys } from '../cloudflare/cloudflare-api.ts';
@@ -37,8 +38,6 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
   const now = useMinuteClock();
   const [freshAfter, setFreshAfter] = useState<number | null>(null);
   const [picked, setPicked] = useState<RemoteReach | null>(null);
-  const inboundTitle = useId();
-  const outboundTitle = useId();
   const tailscale = useQuery({
     queryKey: phoneKeys.tailscale,
     queryFn: phoneApi.tailscale,
@@ -116,103 +115,111 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
     />
   );
   return (
-    <div className="ph-cols" data-setup={setup || undefined}>
-      {setup ? (
-        <div className="ph-area ph-area-setup">
-          {reach === 'custom' ? (
-            <CustomDomainSetup
-              choice={choice}
-              forwardTo={access.data.forwardTo}
-              replacesTailscale={live.status === 'on'}
-              onSaved={(next) => {
-                setPicked(null);
-                queryClient.setQueryData(phoneKeys.access, next);
-                void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
-              }}
+    <RemoteTabs
+      setup={setup}
+      panels={{
+        setup: (
+          <>
+            {setup ? (
+              <div className="ph-area ph-area-setup">
+                {reach === 'custom' ? (
+                  <CustomDomainSetup
+                    choice={choice}
+                    forwardTo={access.data.forwardTo}
+                    replacesTailscale={live.status === 'on'}
+                    onSaved={(next) => {
+                      setPicked(null);
+                      queryClient.setQueryData(phoneKeys.access, next);
+                      void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
+                    }}
+                  />
+                ) : (
+                  <PhoneStatus
+                    state={live}
+                    checking={tailscale.isFetching}
+                    turning={turn.isPending}
+                    on={live.status === 'on' || (live.status === 'error' && wanted)}
+                    failure={failure}
+                    choice={choice}
+                    notice={customHost === null ? null : REPLACES_CUSTOM}
+                    onCheck={() => void tailscale.refetch()}
+                    onTurn={(to) => turn.mutate(to)}
+                  />
+                )}
+              </div>
+            ) : reach === 'custom' ? (
+              <PhoneRail
+                state={shown}
+                wanted={false}
+                devices={devices.data}
+                switches={session.switches}
+                lastRequest={audit.data?.[0]?.at ?? null}
+                turning={turnOffCustom.isPending}
+                failure={turnOffCustom.error?.message ?? null}
+                choice={
+                  <>
+                    {choice}
+                    {customHost && <CloudflareTunnelLine hostname={customHost} />}
+                  </>
+                }
+                custom
+                onTurn={() => turnOffCustom.mutate()}
+              />
+            ) : (
+              <PhoneRail
+                state={shown}
+                wanted={wanted}
+                devices={devices.data}
+                switches={session.switches}
+                lastRequest={audit.data?.[0]?.at ?? null}
+                turning={turn.isPending}
+                failure={failure}
+                choice={choice}
+                onTurn={(to) => turn.mutate(to)}
+              />
+            )}
+          </>
+        ),
+        devices: (
+          <>
+            <PhoneDevices
+              devices={devices.data}
+              freshAfter={freshAfter}
+              passkeysAllowed={session.switches.passkeys}
+              pair={pair}
+              wait={
+                <QueryWait query={devices} what="devices">
+                  <Skeleton label="Loading devices" shape="list" rows={2} />
+                </QueryWait>
+              }
             />
-          ) : (
-            <PhoneStatus
-              state={live}
-              checking={tailscale.isFetching}
-              turning={turn.isPending}
-              on={live.status === 'on' || (live.status === 'error' && wanted)}
-              failure={failure}
-              choice={choice}
-              notice={customHost === null ? null : REPLACES_CUSTOM}
-              onCheck={() => void tailscale.refetch()}
-              onTurn={(to) => turn.mutate(to)}
+            {(devices.data ?? []).some((device) => !device.revokedAt) && <DisconnectAll />}
+            <PhoneActivity
+              entries={audit.data}
+              now={now}
+              wait={
+                <QueryWait query={audit} what="remote activity">
+                  <Skeleton label="Loading remote activity" shape="list" rows={3} />
+                </QueryWait>
+              }
             />
-          )}
-        </div>
-      ) : reach === 'custom' ? (
-        <PhoneRail
-          state={shown}
-          wanted={false}
-          devices={devices.data}
-          switches={session.switches}
-          lastRequest={audit.data?.[0]?.at ?? null}
-          turning={turnOffCustom.isPending}
-          failure={turnOffCustom.error?.message ?? null}
-          choice={
-            <>
-              {choice}
-              {customHost && <CloudflareTunnelLine hostname={customHost} />}
-            </>
-          }
-          custom
-          onTurn={() => turnOffCustom.mutate()}
-        />
-      ) : (
-        <PhoneRail
-          state={shown}
-          wanted={wanted}
-          devices={devices.data}
-          switches={session.switches}
-          lastRequest={audit.data?.[0]?.at ?? null}
-          turning={turn.isPending}
-          failure={failure}
-          choice={choice}
-          onTurn={(to) => turn.mutate(to)}
-        />
-      )}
-      <div className="ph-area ph-area-main">
-        <div className="ph-zone" role="group" aria-labelledby={inboundTitle}>
-          <p id={inboundTitle} className="ph-zone-title">
-            Control this computer
-          </p>
-          <PhoneDevices
-            devices={devices.data}
-            freshAfter={freshAfter}
-            passkeysAllowed={session.switches.passkeys}
-            pair={pair}
-            wait={
-              <QueryWait query={devices} what="devices">
-                <Skeleton label="Loading devices" shape="list" rows={2} />
-              </QueryWait>
-            }
-          />
-          <PhoneSwitches
-            switches={session.switches}
-            notificationsExtra={<PushContact poll={hidden ? false : LIST_POLL_MS} />}
-            cards={<PhoneCardAnswering answering={session.cardAnswering} />}
-          />
-          <PhoneActivity
-            entries={audit.data}
-            now={now}
-            wait={
-              <QueryWait query={audit} what="remote activity">
-                <Skeleton label="Loading remote activity" shape="list" rows={3} />
-              </QueryWait>
-            }
-          />
-        </div>
-        <div className="ph-zone" role="group" aria-labelledby={outboundTitle}>
-          <p id={outboundTitle} className="ph-zone-title">
-            Control another computer
-          </p>
-          <OtherSparks ownHostname={state.hostname} />
-        </div>
-      </div>
-    </div>
+          </>
+        ),
+        permissions: (
+          <>
+            <PhoneSwitches
+              switches={session.switches}
+              notificationsExtra={<PushContact poll={hidden ? false : LIST_POLL_MS} />}
+              cards={<PhoneCardAnswering answering={session.cardAnswering} />}
+            />
+          </>
+        ),
+        others: (
+          <>
+            <OtherSparks ownHostname={state.hostname} />
+          </>
+        ),
+      }}
+    />
   );
 }

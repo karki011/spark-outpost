@@ -96,8 +96,14 @@ async function show(served: Served) {
       <MacPhonePage session={session} />
     </QueryClientProvider>,
   );
+  await screen.findByRole('tablist', { name: 'Remote control' }, SETTLE);
+  openSetUp();
   await screen.findByRole('radiogroup', { name: 'How devices reach this computer' }, SETTLE);
   return puts;
+}
+
+function openSetUp() {
+  fireEvent.click(screen.getByRole('tab', { name: 'Set up' }));
 }
 
 function choose(name: string) {
@@ -183,6 +189,11 @@ describe('how devices reach this computer', () => {
       target: { value: ' https://spark.example.com ' },
     });
     fireEvent.click(turnOn);
+    await waitFor(
+      () => expect(screen.getByRole('tab', { name: 'Devices' }).ariaSelected).toBe('true'),
+      SETTLE,
+    );
+    openSetUp();
     await screen.findByText(CUSTOM_ON_NOTE, undefined, SETTLE);
     expect(puts).toEqual([{ hostname: 'spark.example.com', confirmed: true }]);
     expect(screen.getByText(PAIR_AGAIN_NOTE)).toBeTruthy();

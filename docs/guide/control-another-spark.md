@@ -16,7 +16,7 @@ On the other computer:
 
 On this computer:
 
-3. Open **Remote control**. Under **Other Sparks**, select **Add a Spark**.
+3. Open **Remote control → Other computers** and select **Add a computer**.
 4. Paste the link into **Address or pairing link** and give it a **Name**.
 5. A window titled **Remote control** opens with the code filled in.
 

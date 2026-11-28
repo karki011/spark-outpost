@@ -180,7 +180,7 @@ On the host Mac (nothing new except one copy button):
 
 On the controlling Mac:
 
-4. Open **Remote control**. A new card, **Other Sparks**, lists saved Sparks. Select **Add a Spark**.
+4. Open **Remote control**. A new card, **Other computers**, lists saved Sparks. Select **Add a computer**.
 5. Paste the host's address or the pairing link. Give it a name, for example "Studio Mac". Spark checks the address and saves the name and hostname.
 6. A window opens, titled **Remote control · Studio Mac · studio.tail1234.ts.net**. It shows the host's pairing page. The code is filled in when a pairing link was pasted. The device name is filled in with this Mac's name.
 7. The pairing page shows a six-digit matching code.
@@ -192,7 +192,7 @@ Back on the host Mac:
 On the controlling Mac:
 
 9. The window loads the host's Spark. The user works there: reads chats, sends messages, answers cards.
-10. Later, **Other Sparks → Studio Mac → Open** opens the window again, already signed in.
+10. Later, **Other computers → Studio Mac → Open** opens the window again, already signed in.
 
 The pairing rules do not change. Pairing starts on the host Mac and is confirmed on the host Mac. A wrong, used or expired code gets the same refusal as today.
 
@@ -226,7 +226,7 @@ It is a paired device. Nothing more.
 - No terminal, no Browser pane, no preview, no Finder actions, no diagnostics export, no updates on the host.
 - It can answer the cards an agent's browsing raises on the host (open a site, read a page, click and type, and the hold card for a secret value), like any other card; only the saved sign-in card sits behind a switch. See `PHONE_REMOTE.md`.
 - It cannot change switches, pair or revoke devices, or touch Tailscale on the host.
-- It cannot add a remote Spark of its own. The **Other Sparks** card is shown only in a local desktop window, and its routes are `never` for a remote device. So there is no chain from Mac to Mac to Mac.
+- It cannot add a remote Spark of its own. The **Other computers** card is shown only in a local desktop window, and its routes are `never` for a remote device. So there is no chain from Mac to Mac to Mac.
 - No new route on the host is needed for (a). Any route added later needs a rule or the policy test fails, as today.
 
 Routes this design adds, all on the controlling Mac, all `never` in `route-rules.ts`:
@@ -324,7 +324,7 @@ Small files, one owner each. S1 goes first; the rest run in parallel.
 | S3   | Controlling-side API: the five routes, keychain read, write and delete, reset cleanup, five `never` rules                | `apps/server/src/remote-sparks/routes.ts`, `secrets.ts`; edits `remote/route-rules.ts`, `reset/reset.ts`                         |
 | S4   | Host pairing: the page reads name and kind from the link; pairing carries `kind`                                         | edits `remote/pairing-page.ts`, `remote/pairing.ts`, `remote/routes.ts`                                                          |
 | S5   | Desktop window: partition and guard, window and title, one-origin lock, cookie set and capture                           | `apps/desktop/src/remote-spark/partition.ts`, `window.ts`, `navigation.ts`, `cookie.ts`; edits `browser/bridge.ts`, `preload.ts` |
-| S6   | Controlling-side UI: the Other Sparks card, the add dialog, the query hooks                                              | `apps/web/src/remote-sparks/OtherSparks.tsx`, `AddSparkDialog.tsx`, `remote-sparks-api.ts`; one line in the Remote control page  |
+| S6   | Controlling-side UI: the Other computers card, the add dialog, the query hooks                                           | `apps/web/src/remote-sparks/OtherSparks.tsx`, `AddSparkDialog.tsx`, `remote-sparks-api.ts`; one line in the Remote control page  |
 | S7   | Host UI: kind on a device row and in the confirm scene, **Copy pairing link**                                            | edits `PhoneDevices.tsx`, `PairScene.tsx`, `pair-flow.ts`                                                                        |
 | S8   | Docs: guide page section, `whats-new.md` row, "what leaves the computer", pointers in `PHONE_REMOTE.md` and `BROWSER.md` | `docs/guide/remote-control.md` and friends                                                                                       |
 

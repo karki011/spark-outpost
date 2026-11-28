@@ -3,12 +3,13 @@ import { useRef } from 'react';
 
 interface PageTabsProps {
   ariaLabel: string;
+  idBase?: string;
   options: readonly { id: string; label: string; count?: number | null }[];
   value: string;
   onChange: (id: string) => void;
 }
 
-export function PageTabs({ ariaLabel, options, value, onChange }: PageTabsProps) {
+export function PageTabs({ ariaLabel, idBase, options, value, onChange }: PageTabsProps) {
   const tabs = useRef(new Map<string, HTMLButtonElement>());
   const move = (step: number) => {
     const index = options.findIndex((option) => option.id === value);
@@ -28,6 +29,8 @@ export function PageTabs({ ariaLabel, options, value, onChange }: PageTabsProps)
           }}
           type="button"
           role="tab"
+          id={idBase && `${idBase}-tab-${option.id}`}
+          aria-controls={idBase && `${idBase}-panel-${option.id}`}
           aria-selected={option.id === value}
           tabIndex={option.id === value ? 0 : -1}
           className="page-tab"

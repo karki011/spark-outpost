@@ -1,0 +1,1 @@
+change: In Remote control, another computer is now called a computer, not a Spark: **Other computers**, **Add a computer** and a **Computers** menu, so it is not mistaken for the Sparks in the left bar
