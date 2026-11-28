@@ -58,15 +58,18 @@ function definedMeta(
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
+  const home = policy.roots[0]?.path ?? null;
   if (changing && stepEdits) {
-    return definition.projectSessionMeta?.(roots, repo, false, true, true) ?? null;
+    return definition.projectSessionMeta?.(roots, repo, false, true, true, home) ?? null;
   }
   if (changing) {
     const gitControl = gitControlGlobs(policy.roots);
-    return definition.doSessionMeta?.(roots, repo, changesProject, gitControl) ?? null;
+    return definition.doSessionMeta?.(roots, repo, changesProject, gitControl, home) ?? null;
   }
   const commands = approvals !== undefined;
-  return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;
+  return (
+    definition.projectSessionMeta?.(roots, repo, planning === true, commands, false, home) ?? null
+  );
 }
 
 export function sessionMeta(...args: Parameters<typeof definedMeta>) {
