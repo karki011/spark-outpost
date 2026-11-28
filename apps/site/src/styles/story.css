@@ -1,0 +1,156 @@
+.story {
+  position: relative;
+  padding-top: 72px;
+}
+
+.story-rail {
+  position: sticky;
+  top: calc(50vh - 136px);
+  z-index: 3;
+  display: none;
+  flex-direction: column;
+  height: 0;
+  margin-left: 24px;
+}
+
+.story-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  width: max-content;
+  min-height: 34px;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-decoration: none;
+  transition:
+    color 300ms var(--out),
+    border-color 300ms var(--out);
+}
+
+.story-name {
+  opacity: 0;
+  translate: -6px 0;
+  transition:
+    opacity 300ms var(--out),
+    translate 300ms var(--out);
+}
+
+.story-link:hover,
+.story-link:focus-visible,
+.story-link[aria-current] {
+  color: var(--text);
+}
+
+.story-link[aria-current] {
+  border-left-color: var(--brand);
+  font-weight: 600;
+}
+
+.story-link:hover .story-name,
+.story-link:focus-visible .story-name,
+.story-link[aria-current] .story-name {
+  opacity: 1;
+  translate: 0 0;
+}
+
+.chapter {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 64px;
+  align-items: start;
+  min-height: 105vh;
+  scroll-margin-top: 96px;
+}
+
+.chapter-copy {
+  position: sticky;
+  top: 26vh;
+  padding-bottom: 18vh;
+}
+
+.chapter-copy p {
+  margin: 0 0 14px;
+  color: var(--muted);
+}
+
+.chapter-number {
+  display: block;
+  margin-bottom: 16px;
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.chapter .demo {
+  position: sticky;
+  top: 17vh;
+  margin-bottom: 12vh;
+}
+
+@media (min-width: 1500px) {
+  .story-rail {
+    display: flex;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) and (min-width: 861px) and (min-height: 761px) {
+    .chapter .demo {
+      animation: demo-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+
+    .chapter-copy {
+      animation: copy-in linear both;
+      animation-timeline: view();
+      animation-range: entry 10% entry 90%;
+    }
+
+    @keyframes demo-in {
+      from {
+        opacity: 0;
+        scale: 0.9;
+        translate: 0 60px;
+      }
+    }
+
+    @keyframes copy-in {
+      from {
+        opacity: 0;
+        translate: -30px 0;
+      }
+    }
+  }
+}
+
+@media (max-width: 860px), (max-height: 760px) {
+  .story {
+    padding-top: 24px;
+  }
+
+  .chapter {
+    min-height: 0;
+    padding-block: 56px;
+  }
+
+  .chapter-copy,
+  .chapter .demo {
+    position: static;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .chapter {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}

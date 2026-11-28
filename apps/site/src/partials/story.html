@@ -1,0 +1,134 @@
+<div class="story" data-story>
+  <section class="chapter wrap" data-chapter="Modes" id="agents" aria-labelledby="agents-title">
+    <div class="chapter-copy">
+      <h2 id="agents-title">Your agent, in the mode you pick.</h2>
+      <p>
+        Choose Claude Code or Codex and one of its own permission modes, shown with the agent's own
+        names, or run chats on a local model through Ollama, LM Studio or any server that speaks the
+        Anthropic Messages API. When the mode asks, you get a card with the agent's reason.
+      </p>
+      <p>
+        Each chat keeps its agent running between messages. Its sub-agents show as cards with what
+        each one is doing, and the agent can start sub-chats when the work splits into pieces.
+      </p>
+      <p>
+        Spark's recommended rules guard secret files, git hooks and config, and publishing: only the
+        chat's own <code>spark/</code> branch is pushed, plain force pushes are refused and
+        <code>--force-with-lease</code> asks with hold to confirm. With no rules, the agent's mode
+        decides. Where a mode never asks, Spark can't stop a step; it marks it ran without review
+        and flags any crossing of your rules.
+      </p>
+    </div>
+    <div class="demo" data-demo="modes"></div>
+  </section>
+
+  <section class="chapter wrap" data-chapter="Branches" id="ship" aria-labelledby="ship-title">
+    <div class="chapter-copy">
+      <h2 id="ship-title">From a chat to a pull request.</h2>
+      <p>
+        Each chat works on its own <code>spark/</code> branch in a worktree. At
+        <strong>Full auto → PR</strong>, the agent pushes and opens the pull request, then follows
+        up on review comments.
+      </p>
+      <p>Nothing ever merges for you. That click stays yours.</p>
+    </div>
+    <div class="demo" data-demo="branch"></div>
+  </section>
+
+  <section class="chapter wrap" data-chapter="Browser" id="browser" aria-labelledby="browser-title">
+    <div class="chapter-copy">
+      <h2 id="browser-title">A browser your agent can debug.</h2>
+      <p>
+        Open your app beside the chat. The agent reads the page, console errors with stacks, and a
+        network log with each request's start and end, so overlapping requests stand out.
+      </p>
+      <p>
+        It can click, type, inspect and run scripts, following your mode. It never sees password or
+        card fields, and your own tabs always ask.
+      </p>
+    </div>
+    <div class="demo" data-demo="waterfall"></div>
+  </section>
+
+  <section class="chapter wrap" data-chapter="Mac apps" id="mac" aria-labelledby="mac-title">
+    <div class="chapter-copy">
+      <h2 id="mac-title">Mac apps, and terminals that keep running.</h2>
+      <p>
+        Turn on Mac control and an agent can read another app and press its buttons and menus, one
+        app per chat, on macOS 14 or later. A first use, a send or a delete asks in every mode;
+        purchases, passwords and System Settings are refused.
+      </p>
+      <p>
+        Terminal sessions run Claude Code, Codex, Gemini CLI, OpenCode or Amp under tmux and survive
+        restarts, updates and crashes.
+      </p>
+    </div>
+    <div class="demo" data-demo="mac"></div>
+  </section>
+
+  <section
+    class="chapter wrap"
+    data-chapter="Calendar"
+    id="calendar"
+    aria-labelledby="calendar-title"
+  >
+    <div class="chapter-copy">
+      <h2 id="calendar-title">Scout keeps you on time.</h2>
+      <p>
+        Connect Mac Calendar or Google Calendar. A minute before a meeting, Scout lowers a card to
+        the middle of your screen on a thread: <strong>Join</strong>,
+        <strong>Snooze 1 min</strong> or <strong>Dismiss</strong>.
+      </p>
+      <p>
+        Today shows your month and day with your reply on each event. Join opens Zoom, Meet, Teams
+        or Webex links in your browser. Try it.
+      </p>
+    </div>
+    <div class="demo" data-demo="meeting"></div>
+  </section>
+
+  <section
+    class="chapter wrap"
+    data-chapter="Connectors"
+    id="connectors"
+    aria-labelledby="connectors-title"
+  >
+    <div class="chapter-copy">
+      <h2 id="connectors-title">Bring your tickets and your team.</h2>
+      <p>
+        Connect GitHub, Atlassian (Jira and Confluence), ServiceNow, Linear and Slack, or add an MCP
+        server. Start a chat from a ticket and move it to In review when the pull request opens.
+      </p>
+      <p>Every connection is optional, and Spark actions follow the agent's mode.</p>
+    </div>
+    <div class="demo" data-demo="connectors"></div>
+  </section>
+
+  <section class="chapter wrap" data-chapter="Phone" id="phone" aria-labelledby="phone-title">
+    <div class="chapter-copy">
+      <h2 id="phone-title">Answer from your phone.</h2>
+      <p>
+        Pair a phone over Tailscale to follow chats, answer approval cards and get a push when a
+        chat needs you. Pairing is confirmed on the Mac, and the work stays there.
+      </p>
+      <p>Mac control, the Browser pane and starting Terminal sessions stay on the Mac.</p>
+    </div>
+    <div class="demo" data-demo="phone"></div>
+  </section>
+
+  <section class="chapter wrap" data-chapter="Privacy" id="privacy" aria-labelledby="privacy-title">
+    <div class="chapter-copy">
+      <h2 id="privacy-title">Local-first, said honestly.</h2>
+      <p>
+        Your chats, settings and code stay on your Mac, and keys live in your Keychain. Spark has no
+        account for you to create.
+      </p>
+      <p>
+        What leaves is what the work needs: your AI provider receives your messages and what the
+        agent reads, and connected tools get what you or the agent send them. Select a line to see
+        it.
+      </p>
+    </div>
+    <div class="demo" data-demo="privacy"></div>
+  </section>
+</div>

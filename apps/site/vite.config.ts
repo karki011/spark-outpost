@@ -7,6 +7,8 @@ import { docsPlugin } from './src/docs/plugin.ts';
 const CHANGELOG = resolve(import.meta.dirname, '../desktop/CHANGELOG.md');
 const RELEASES_SLOT = '<ol class="releases" data-releases></ol>';
 const SPRITE = resolve(import.meta.dirname, 'src/scout-sprite.svg');
+const PARTIALS = resolve(import.meta.dirname, 'src/partials');
+const PARTIAL_SLOT = /<div data-partial="([a-z-]+)"><\/div>/g;
 const SPRITE_SLOT = '<svg class="sprite" data-sprite></svg>';
 
 function spritePlugin(): Plugin {
@@ -20,6 +22,25 @@ function spritePlugin(): Plugin {
       server.watcher.add(SPRITE);
       server.watcher.on('change', (file) => {
         if (file === SPRITE) server.ws.send({ type: 'full-reload' });
+      });
+    },
+  };
+}
+
+function partialsPlugin(): Plugin {
+  return {
+    name: 'spark-partials',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html) =>
+        html.replace(PARTIAL_SLOT, (_slot, name: string) =>
+          readFileSync(resolve(PARTIALS, `${name}.html`), 'utf8').trim(),
+        ),
+    },
+    configureServer(server) {
+      server.watcher.add(PARTIALS);
+      server.watcher.on('change', (file) => {
+        if (file.startsWith(PARTIALS)) server.ws.send({ type: 'full-reload' });
       });
     },
   };
@@ -43,7 +64,7 @@ function changelogPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [spritePlugin(), changelogPlugin(), docsPlugin()],
+  plugins: [partialsPlugin(), spritePlugin(), changelogPlugin(), docsPlugin()],
   build: {
     rolldownOptions: {
       input: {

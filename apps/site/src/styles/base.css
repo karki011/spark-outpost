@@ -6,6 +6,7 @@
   --amber: var(--accent);
   --glow: color-mix(in srgb, var(--brand) 34%, transparent);
   --dot: color-mix(in srgb, var(--text) 13%, transparent);
+  --out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 *,
@@ -104,6 +105,28 @@ code {
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 30px color-mix(in srgb, var(--jet) 10%, transparent);
   pointer-events: auto;
+  position: relative;
+  transition:
+    width 500ms var(--out),
+    min-height 500ms var(--out),
+    background-color 500ms var(--out);
+}
+
+.nav.condensed {
+  width: min(840px, 100% - 2 * var(--gutter));
+  min-height: 52px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.nav::after {
+  content: '';
+  position: absolute;
+  inset: auto 28px 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--brand);
+  transform: scaleX(var(--read, 0));
+  transform-origin: 0 50%;
 }
 
 .brand {
@@ -214,24 +237,6 @@ h2 {
   font-size: 14px;
 }
 
-.feature {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 56px;
-  align-items: center;
-  padding-block: 96px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
-}
-
-.feature.flip .feature-copy {
-  order: 2;
-}
-
-.feature-copy p {
-  color: var(--muted);
-  margin: 0 0 14px;
-}
-
 .demo {
   min-width: 0;
 }
@@ -309,7 +314,7 @@ h2 {
 
 .cta {
   text-align: center;
-  padding-block: 96px 72px;
+  padding-block: 120px 88px;
   border-top: 1px solid color-mix(in srgb, var(--line) 55%, transparent);
 }
 
@@ -385,16 +390,6 @@ h2 {
 }
 
 @media (max-width: 860px) {
-  .feature {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 32px;
-    padding-block: 64px;
-  }
-
-  .feature.flip .feature-copy {
-    order: 0;
-  }
-
   .more-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
