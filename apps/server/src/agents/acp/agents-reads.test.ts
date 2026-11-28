@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { toGatePath } from '../../approvals/gate-path.ts';
-import { claudeSessionMeta } from './agents.ts';
+import type { PathPolicy } from '../../projects/path-policy.ts';
+import { agentDefinitions, claudeSessionMeta } from './agents.ts';
+import { sessionMeta } from './session-start.ts';
 
 type Permissions = { blockReadsOutsideWorkingDirectories: boolean; deny: string[] };
 
@@ -38,5 +40,23 @@ describe('where a Claude session may read', () => {
     const permissions = permissionsOf(claudeSessionMeta(['Read'], [own]));
     expect(permissions.blockReadsOutsideWorkingDirectories).toBe(true);
     expect(permissions.deny).not.toContain(`Read(/${toGatePath(data)}/*/chats/**)`);
+  });
+
+  it('lets a chat with no project use its own folder when that folder is where the session starts', () => {
+    const own = join(data, 'dev', 'chats', 'c1', 'work');
+    const policy = { roots: [{ path: own, ignore: [] }] } as unknown as PathPolicy;
+    for (const changing of [false, true]) {
+      const meta = sessionMeta(agentDefinitions.claude, policy, changing, null, {});
+      const permissions = permissionsOf(meta as Record<string, unknown>);
+      expect(permissions.blockReadsOutsideWorkingDirectories).toBe(true);
+      expect(permissions.deny.filter((rule) => rule.includes('/chats'))).toEqual([]);
+    }
+  });
+
+  it("still keeps a project chat out of other chats' folders when the session starts in the project", () => {
+    const policy = { roots: [{ path: '/work/app', ignore: [] }] } as unknown as PathPolicy;
+    const meta = sessionMeta(agentDefinitions.claude, policy, true, null, {});
+    const permissions = permissionsOf(meta as Record<string, unknown>);
+    expect(permissions.deny).toContain(`Read(/${toGatePath(data)}/*/chats/**)`);
   });
 });

@@ -106,12 +106,14 @@ export interface AgentDefinition {
     planning?: boolean,
     commands?: boolean,
     edits?: boolean,
+    home?: string | null,
   ) => Record<string, unknown>;
   doSessionMeta?: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     changesProject?: boolean,
     gitControlGlobs?: readonly string[],
+    home?: string | null,
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -206,10 +208,12 @@ export function claudeSessionMeta(
   changesProject = false,
   allowBypass = false,
   gitControlGlobs: readonly string[] = [],
+  home: string | null = null,
 ): Record<string, unknown> {
   const floor = repo?.floor ?? RECOMMENDED_FLOOR;
   const dataDir = browserDataDir();
-  const inSparkData = dataDir !== null && extraRoots.some((root) => inFolders(root, [dataDir]));
+  const sessionRoots = home === null ? extraRoots : [home, ...extraRoots];
+  const inSparkData = dataDir !== null && sessionRoots.some((root) => inFolders(root, [dataDir]));
   const ask = unique([
     ...(repo?.askRules ?? []),
     ...gatedAskRules(tools),
@@ -347,6 +351,7 @@ const claudeSessions = {
     planning = false,
     commands = false,
     edits = false,
+    home: string | null = null,
   ) =>
     claudeSessionMeta(
       [
@@ -358,12 +363,17 @@ const claudeSessions = {
       ],
       extraRoots,
       repo ?? null,
+      false,
+      false,
+      [],
+      home,
     ),
   doSessionMeta: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     changesProject = false,
     gitControlGlobs: readonly string[] = [],
+    home: string | null = null,
   ) =>
     claudeSessionMeta(
       CLAUDE_DO_TOOLS,
@@ -372,6 +382,7 @@ const claudeSessions = {
       changesProject,
       true,
       gitControlGlobs,
+      home,
     ),
 } satisfies Partial<AgentDefinition>;
 
