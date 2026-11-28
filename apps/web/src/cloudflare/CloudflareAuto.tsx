@@ -29,7 +29,7 @@ const PERMISSIONS: Record<CloudflareSharePermission, PermissionCopy> = {
   workers: {
     title: 'Create the share service',
     detail:
-      'Cloudflare’s smaller Workers permission can’t create one, so this covers every worker in the account. Spark creates spark-outpost-artifact-share and changes no other.',
+      'Cloudflare’s smaller Workers permission can’t create one, so this covers every worker in the account. Spark creates spark-outpost-artifact-share, or a numbered copy when the account already has one, and changes no other.',
     cloudflare: 'Workers: Admin',
   },
 };

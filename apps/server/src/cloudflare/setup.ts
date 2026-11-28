@@ -40,6 +40,7 @@ import {
   SETUP_NO_WORKER_FILE,
   SETUP_SIGN_IN_ENDED,
   SETUP_TIMED_OUT,
+  SETUP_TOO_MANY_COPIES,
   SETUP_UNAVAILABLE,
   SETUP_WORKER_EXISTS,
   SETUP_WRONG_STATE,
@@ -47,13 +48,14 @@ import {
   stepFailure,
 } from './setup-problems.ts';
 import {
-  SHARE_BUCKET_NAME,
+  SHARE_COPIES_MAX,
   SHARE_WORKER_CRON,
-  SHARE_WORKER_NAME,
   newShareKeys,
+  shareNames,
   shareWorkerOrigin,
   shareWorkerUpload,
   type ShareKeys,
+  type ShareNames,
 } from './share-install.ts';
 
 export const CLOUDFLARE_SIGN_IN_TTL_MS = 10 * 60_000;
@@ -91,6 +93,7 @@ interface Pending {
 interface Progress {
   account: CloudflareAccount | null;
   granted: string[] | null;
+  names: ShareNames | null;
   pendingKeys: ShareKeys | null;
   uploadKey: string | null;
   origin: string | null;
@@ -115,6 +118,7 @@ const freshSteps = () => CLOUDFLARE_SETUP_STEPS.map(todo);
 const freshProgress = (): Progress => ({
   account: null,
   granted: null,
+  names: null,
   pendingKeys: null,
   uploadKey: null,
   origin: null,
@@ -177,9 +181,28 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
     return progress.account.id;
   };
 
+  const freeNames = async (): Promise<ShareNames> => {
+    if (progress.names) return progress.names;
+    const id = accountId();
+    const workers = api('workers');
+    for (let copy = 1; copy <= SHARE_COPIES_MAX; copy += 1) {
+      const names = shareNames(copy);
+      if (await scriptExists(workers, id, names.worker)) continue;
+      progress.names = names;
+      return names;
+    }
+    throw new StepFailure(SETUP_TOO_MANY_COPIES, null);
+  };
+
+  const makeBucket = async () => {
+    const names = await freeNames();
+    await createBucket(api('storage'), accountId(), names.bucket);
+  };
+
   const installWorker = async () => {
     const id = accountId();
     const workers = api('workers');
+    const names = await freeNames();
     const subdomain = await workersSubdomain(workers, id);
     if (!subdomain) {
       throw new StepFailure(
@@ -189,21 +212,25 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
       );
     }
     if (!progress.uploadKey) {
-      const exists = await scriptExists(workers, id, SHARE_WORKER_NAME);
-      if (exists && !progress.pendingKeys) throw new StepFailure(SETUP_WORKER_EXISTS, null);
+      const exists = await scriptExists(workers, id, names.worker);
+      if (exists && !progress.pendingKeys) {
+        progress.names = null;
+        set('bucket', { state: 'todo' });
+        throw new StepFailure(SETUP_WORKER_EXISTS, 'retry');
+      }
       if (!exists) {
         const module = await deps.readWorker(client!.workerFile).catch(() => {
           throw new StepFailure(SETUP_NO_WORKER_FILE, null);
         });
         progress.pendingKeys ??= newShareKeys();
-        await uploadScript(workers, id, shareWorkerUpload(module, progress.pendingKeys));
+        await uploadScript(workers, id, shareWorkerUpload(module, progress.pendingKeys, names));
       }
       progress.uploadKey = progress.pendingKeys!.uploadKey;
       progress.pendingKeys = null;
     }
-    await setSchedule(workers, id, SHARE_WORKER_NAME, SHARE_WORKER_CRON);
-    await enableWorkersDev(workers, id, SHARE_WORKER_NAME);
-    progress.origin = shareWorkerOrigin(subdomain);
+    await setSchedule(workers, id, names.worker, SHARE_WORKER_CRON);
+    await enableWorkersDev(workers, id, names.worker);
+    progress.origin = shareWorkerOrigin(names.worker, subdomain);
   };
 
   const connect = async (mine: number) => {
@@ -223,7 +250,7 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
   };
 
   const WORK: Record<Exclude<CloudflareSetupStepId, 'signIn'>, (mine: number) => Promise<void>> = {
-    bucket: () => createBucket(api('storage'), accountId(), SHARE_BUCKET_NAME),
+    bucket: makeBucket,
     worker: installWorker,
     connect,
   };

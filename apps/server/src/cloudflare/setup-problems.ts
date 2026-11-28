@@ -1,6 +1,6 @@
 import type { CloudflareSetupStep, CloudflareSharePermission } from '@spark-outpost/contracts';
 import { CloudflareApiError } from './account-api.ts';
-import { SHARE_WORKER_NAME } from './share-install.ts';
+import { SHARE_COPIES_MAX, SHARE_WORKER_NAME } from './share-install.ts';
 
 export const CLOUDFLARE_DASH_URL = 'https://dash.cloudflare.com';
 
@@ -16,7 +16,9 @@ export const SETUP_R2_OFF =
   'R2 storage isn’t turned on in this Cloudflare account. Turn it on in Cloudflare, then check again. Cloudflare asks for a payment method; R2 has a free allowance.';
 export const SETUP_NO_SUBDOMAIN =
   'This account has no workers.dev address yet. Open Workers & Pages in Cloudflare once to create it, then check again.';
-export const SETUP_WORKER_EXISTS = `This account already has a worker named ${SHARE_WORKER_NAME}. Connect it by hand with its address and upload key, or delete it in Cloudflare and set up again.`;
+export const SETUP_WORKER_EXISTS =
+  'A worker with that name appeared in this account while Spark was setting up. Try again and Spark picks the next free name.';
+export const SETUP_TOO_MANY_COPIES = `This account already has ${SHARE_COPIES_MAX} share services named ${SHARE_WORKER_NAME}. Delete one you no longer use in Cloudflare and set up again.`;
 export const SETUP_NOT_ANSWERING =
   'The share service was created but isn’t answering yet. Try again in a minute.';
 export const SETUP_KEY_NOT_SAVED =

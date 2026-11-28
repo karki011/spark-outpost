@@ -7,9 +7,9 @@ order: 850
 summary: Sign in to Cloudflare once so shared artifacts live in your own account and links last 7 days.
 ---
 
-Keep shared artifacts in your own Cloudflare account. About 2 minutes. Until then, **Share…** gives 1-day links.
+Keep shared artifacts in your own Cloudflare account. About 2 minutes.
 
-You need a free Cloudflare account with R2 storage added, which may ask for a payment method.
+You need a free Cloudflare account with R2 storage, which may ask for a payment method.
 
 1. Open **Settings → Connectors → Cloudflare**.
 2. Under **Set it up for me**, read what Spark asks for, then select **Allow on Cloudflare**.
@@ -18,9 +18,9 @@ You need a free Cloudflare account with R2 storage added, which may ask for a pa
 
 The card reads **Connected**. **Share…** now offers 7 days.
 
-A step that reads **Needs you** says why and offers its fix. Finished steps are kept. Spark stays signed in for up to an hour; **Start over** ends that.
+**Needs you** on a step says why and offers a fix; finished steps are kept. Spark stays signed in up to an hour; **Start over** ends that.
 
-Spark asks to see the account, create a storage bucket, and create the share service. The last is Cloudflare's **Workers: Admin**, which covers every worker; Spark changes no other. The sign-in ends when set-up finishes.
+Spark asks to see the account, create a bucket, and create the share service: Cloudflare's **Workers: Admin**, which covers every worker; Spark changes no other. The sign-in ends when set-up finishes.
 
 No **Set it up for me**? Select **Set it up by hand instead**:
 
@@ -32,10 +32,11 @@ No **Set it up for me**? Select **Set it up by hand instead**:
 | ------------------------------------- | ------------------------------------------------------------------ |
 | Where pages live                      | A storage bucket in your account, served from your address         |
 | Upload key                            | Kept in this computer's keychain; only Spark with it can add pages |
-| Cost                                  | On your Cloudflare account; a few shared pages fit the free plan   |
+| Cost                                  | Yours; a few shared pages fit Cloudflare's free plan               |
 | What Spark keeps                      | The address and the key; no access to your Cloudflare account      |
+| More than one computer                | Each gets its own service; Spark numbers the name                  |
 | **Share artifacts from this account** | Off sends new shares to Spark's shared service again               |
 
-**Check again** tests the address and key. **Disconnect…** deletes the key from this computer; pages already shared stay up until they expire or you stop sharing them.
+**Check again** tests the address and key. **Disconnect…** deletes the key from this computer; shared pages stay up until they expire or you stop sharing.
 
 **Next:** [Share an artifact](share-an-artifact.md)

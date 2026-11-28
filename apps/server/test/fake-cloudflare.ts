@@ -24,7 +24,10 @@ export class FakeCloudflare {
   r2Enabled = true;
   workersAllowed = true;
   subdomain: string | null = 'hazel';
-  scriptExists = false;
+  readonly scripts = new Set<string>();
+  readonly buckets: string[] = [];
+  uploadedBucket: string | null = null;
+  takeNameBeforeUpload: string | null = null;
   answersAfter = 0;
   loseUploadAnswer = false;
   onServiceAsked: (() => Promise<void>) | null = null;
@@ -55,7 +58,7 @@ export class FakeCloudflare {
   readonly fetch: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? 'GET';
-    if (url.origin === FAKE_ORIGIN) {
+    if (url.hostname.endsWith('.hazel.workers.dev')) {
       await this.onServiceAsked?.();
       return this.service(init);
     }
@@ -78,40 +81,50 @@ export class FakeCloudflare {
     const path = url.pathname.replace('/client/v4', '');
     this.calls.push(`${method} ${path}`);
     const base = `/accounts/${FAKE_ACCOUNT}`;
-    const script = `${base}/workers/scripts/spark-outpost-artifact-share`;
+    const scriptPath = /^\/accounts\/[^/]+\/workers\/scripts\/([a-z0-9-]+)(\/[a-z]+)?$/.exec(path);
     if (path === '/accounts') return ok([{ id: FAKE_ACCOUNT, name: 'Hazel’s account' }]);
     const reached = await this.reachCall(method, path, init, url.searchParams);
     if (reached) return reached;
     if (path === `${base}/r2/buckets`) {
-      return this.r2Enabled
-        ? ok({ name: 'spark-outpost-artifact-shares' })
-        : refused(403, 10042, 'Please enable R2 through the Cloudflare Dashboard.');
+      if (!this.r2Enabled) {
+        return refused(403, 10042, 'Please enable R2 through the Cloudflare Dashboard.');
+      }
+      const { name } = JSON.parse(String(init?.body)) as { name: string };
+      this.buckets.push(name);
+      return ok({ name });
     }
     if (path === `${base}/workers/subdomain`) {
       return this.subdomain
         ? ok({ subdomain: this.subdomain })
         : refused(404, 10007, 'There is not a subdomain registered.');
     }
-    if (path === `${script}/settings`) {
-      return this.scriptExists ? ok({}) : refused(404, 10007, 'This Worker does not exist.');
+    const [, scriptName = '', scriptPart = ''] = scriptPath ?? [];
+    if (scriptPath && scriptPart === '/settings') {
+      const exists = this.scripts.has(scriptName);
+      if (this.takeNameBeforeUpload === scriptName) {
+        this.takeNameBeforeUpload = null;
+        this.scripts.add(scriptName);
+      }
+      return exists ? ok({}) : refused(404, 10007, 'This Worker does not exist.');
     }
-    if (path === script && method === 'PUT') {
+    if (scriptPath && scriptPart === '' && method === 'PUT') {
       if (!this.workersAllowed) return refused(403, 10000, 'No access to the specified resource.');
       const form = init?.body as FormData;
       const metadata = JSON.parse(await (form.get('metadata') as Blob).text()) as {
         main_module: string;
-        bindings: { name: string; text?: string }[];
+        bindings: { name: string; text?: string; bucket_name?: string }[];
       };
       this.uploadedKey = metadata.bindings.find((b) => b.name === 'UPLOAD_KEY')?.text ?? null;
       this.uploadedModule = await (form.get(metadata.main_module) as Blob).text();
-      this.scriptExists = true;
+      this.uploadedBucket = metadata.bindings.find((b) => b.name === 'SHARES')?.bucket_name ?? null;
+      this.scripts.add(scriptName);
       if (this.loseUploadAnswer) {
         this.loseUploadAnswer = false;
         throw new Error('The answer was lost.');
       }
-      return ok({ id: 'spark-outpost-artifact-share' });
+      return ok({ id: scriptName });
     }
-    if (path === `${script}/schedules` || path === `${script}/subdomain`) return ok({});
+    if (scriptPart === '/schedules' || scriptPart === '/subdomain') return ok({});
     return refused(404, 7003, 'No route for that URI');
   };
 
