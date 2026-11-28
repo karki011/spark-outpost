@@ -37,7 +37,10 @@ export class FakeCloudflare {
   tunnelExists = false;
   dnsRecords: { type: string; content: string }[] = [];
   accessOn = true;
-  accessApps: { domain: string }[] = [];
+  accessApps: { id: string; domain: string }[] = [];
+  policyFails = false;
+  tokenHeld: Promise<void> | null = null;
+  tokenAsked: () => void = () => undefined;
   readonly reach: { tunnelRoute: unknown; cname: unknown; policy: unknown } = {
     tunnelRoute: null,
     cname: null,
@@ -124,7 +127,11 @@ export class FakeCloudflare {
       this.reach.tunnelRoute = body().config;
       return ok({});
     }
-    if (path === `${tunnels}/tun1/token`) return ok(FAKE_TUNNEL_TOKEN);
+    if (path === `${tunnels}/tun1/token`) {
+      this.tokenAsked();
+      await this.tokenHeld;
+      return ok(FAKE_TUNNEL_TOKEN);
+    }
     if (path === '/zones/zone1/dns_records' && method === 'GET') return ok(this.dnsRecords);
     if (path === '/zones/zone1/dns_records' && method === 'POST') {
       this.reach.cname = body();
@@ -133,10 +140,14 @@ export class FakeCloudflare {
     if (path === '/zones/zone1/access/apps' && method === 'GET') return ok(this.accessApps);
     if (path === '/zones/zone1/access/apps' && method === 'POST') {
       if (!this.accessOn) return refused(400, 12130, 'access.api.error.not_enabled');
-      this.accessApps.push({ domain: String(body().domain) });
+      this.accessApps.push({ id: 'app1', domain: String(body().domain) });
       return ok({ id: 'app1' });
     }
+    if (path === '/zones/zone1/access/apps/app1/policies' && method === 'GET') {
+      return ok(this.reach.policy ? [this.reach.policy] : []);
+    }
     if (path === '/zones/zone1/access/apps/app1/policies') {
+      if (this.policyFails) return refused(500, 1000, 'Try again.');
       this.reach.policy = body();
       return ok({ id: 'pol1' });
     }

@@ -19,7 +19,7 @@ import { createCloudflareLink } from './link.ts';
 import { createCloudflareReach } from './reach.ts';
 import { createCloudflareSetup, type CloudflareSetupDeps } from './setup.ts';
 import { SETUP_KEY_NOT_SAVED, StepFailure } from './setup-problems.ts';
-import { createTunnelRunner, type TunnelRunner } from './tunnel-runner.ts';
+import type { TunnelRunner } from './tunnel-runner.ts';
 import {
   checkShareService,
   CLOUDFLARE_CHECK_TIMEOUT_MS,
@@ -42,7 +42,6 @@ export interface CloudflareRouteDeps {
   cloudflareClient?: CloudflareClientConfig | null;
   cloudflareSetup?: Partial<Pick<CloudflareSetupDeps, 'fetch' | 'readWorker' | 'sleep'>>;
   port: number;
-  cloudflaredBin?: string | null;
   tunnelRunner?: TunnelRunner | null;
   cloudflareBoot?: boolean;
 }
@@ -79,18 +78,12 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
     check,
   });
 
-  const runner =
-    deps.tunnelRunner !== undefined
-      ? deps.tunnelRunner
-      : deps.cloudflaredBin
-        ? createTunnelRunner({ bin: deps.cloudflaredBin })
-        : null;
   const reach = createCloudflareReach({
     db,
     workspaceId,
     secrets,
     client: deps.cloudflareClient ?? null,
-    runner,
+    runner: deps.tunnelRunner ?? null,
     forwardTo: `http://127.0.0.1:${deps.port}`,
     fetch: deps.cloudflareSetup?.fetch ?? fetch,
   });

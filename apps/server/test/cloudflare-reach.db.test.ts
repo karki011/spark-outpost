@@ -203,6 +203,22 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     expect((await settled(client)).status).toBe('done');
   });
 
+  it('adds the email rule on a retry when the sign-in page was made without it', async () => {
+    cloudflare.policyFails = true;
+    const client = localClient(app());
+    const { reach } = await setUp(client);
+    expect(failed(reach)?.id).toBe('signInPage');
+    expect(cloudflare.accessApps).toHaveLength(1);
+
+    cloudflare.policyFails = false;
+    await client.send('post', `${REACH}/resume`).expect(200);
+    expect((await settled(client)).status).toBe('done');
+    expect(cloudflare.accessApps).toHaveLength(1);
+    expect(cloudflare.reach.policy).toMatchObject({
+      include: [{ email: { email: WANTED.email } }],
+    });
+  });
+
   it('says so when the tunnel does not connect', async () => {
     runner.connects = false;
     const { reach } = await setUp(localClient(app()));
@@ -231,6 +247,27 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     });
     expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
     expect((await t.db.query('SELECT 1 FROM cloudflare_reach')).rowCount).toBe(0);
+  });
+
+  it('leaves no key behind when it is removed while the tunnel is being made', async () => {
+    let release = () => undefined as void;
+    cloudflare.tokenHeld = new Promise<void>((resolve) => (release = resolve));
+    const asked = new Promise<void>((resolve) => (cloudflare.tokenAsked = resolve));
+    const client = localClient(app());
+    const started = cloudflareReachSchema.parse(
+      (await client.send('post', REACH, WANTED).expect(200)).body,
+    );
+    await comeBack(started);
+    await asked;
+
+    const removing = client.send('delete', REACH).expect(200);
+    const sent = removing.then((response) => response.body as CloudflareReach);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    release();
+    expect((await sent).connected).toBeNull();
+    expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
+    expect((await t.db.query('SELECT 1 FROM cloudflare_reach')).rowCount).toBe(0);
+    expect(runner.started).toEqual([]);
   });
 
   it('is never reachable from a paired device', async () => {

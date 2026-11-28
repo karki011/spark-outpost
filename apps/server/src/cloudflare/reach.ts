@@ -15,7 +15,9 @@ import { firstAccount, type CloudflareAccount, type CloudflareAccountApi } from 
 import type { CloudflareClientConfig } from './client.ts';
 import { revokeCloudflareToken, type CloudflareToken } from './oauth.ts';
 import {
-  accessAppExists,
+  accessAppHasPolicy,
+  accessAppId,
+  allowEmail,
   createAccessApp,
   createCname,
   createTunnel,
@@ -158,14 +160,14 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     return value;
   };
 
-  const WORK: Record<Work, () => Promise<void>> = {
+  const WORK: Record<Work, (mine: number) => Promise<void>> = {
     async domain() {
       const hostname = need(progress.hostname);
       const zone = zoneOf(await listZones(api('domains'), need(progress.account).id), hostname);
       if (!zone) throw new StepFailure(reachNoDomain(hostname), null);
       progress.zone = zone;
     },
-    async tunnel() {
+    async tunnel(mine) {
       const hostname = need(progress.hostname);
       const accountId = need(progress.account).id;
       const tunnels = api('tunnel');
@@ -175,6 +177,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
         (await createTunnel(tunnels, accountId, name, randomBytes(32).toString('base64')));
       await pointTunnel(tunnels, accountId, tunnelId, { hostname, service: deps.forwardTo });
       const runToken = await tunnelToken(tunnels, accountId, tunnelId);
+      if (mine !== generation) return;
       try {
         await secrets.set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, runToken);
       } catch {
@@ -208,12 +211,12 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     async signInPage() {
       const hostname = need(progress.hostname);
       const zone = need(progress.zone);
-      if (await accessAppExists(api('access'), zone.id, hostname)) return;
-      await createAccessApp(api('access'), zone.id, {
-        name: 'Spark Outpost',
-        hostname,
-        email: need(progress.email),
-      });
+      const access = api('access');
+      const appId =
+        (await accessAppId(access, zone.id, hostname)) ??
+        (await createAccessApp(access, zone.id, { name: 'Spark Outpost', hostname }));
+      if (await accessAppHasPolicy(access, zone.id, appId)) return;
+      await allowEmail(access, zone.id, appId, need(progress.email));
     },
     async start() {
       if (!runner) throw new StepFailure(REACH_NO_TUNNEL_PROGRAM, null);
@@ -230,7 +233,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       if (steps.find((step) => step.id === id)?.state === 'done') continue;
       set(id, { state: 'working' });
       try {
-        await WORK[id]();
+        await WORK[id](mine);
       } catch (error) {
         if (mine !== generation) return;
         stop(id, reachFailure(error, STEP_PERMISSION[id]));
@@ -391,6 +394,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     },
     async remove() {
       await reset();
+      await work.catch(() => undefined);
       graceUntil = 0;
       runner?.stop();
       await secrets.delete(CLOUDFLARE_TUNNEL_TOKEN_SECRET);

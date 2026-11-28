@@ -72,6 +72,7 @@ import { meetingNotesWriter } from '../meetings/notes.ts';
 import { createMeetingService } from '../meetings/service.ts';
 import { googleClientConfig } from '../calendar/google/config.ts';
 import { cloudflareClientConfig } from '../cloudflare/client.ts';
+import { createTunnelRunner } from '../cloudflare/tunnel-runner.ts';
 import { startCloudCalendars } from '../calendar/cloud-sources.ts';
 import { microsoftClientConfig } from '../calendar/microsoft/config.ts';
 import { CALENDAR_WRITTEN_CHANNEL, agentCalendarHosts } from '../calendar/agent/access.ts';
@@ -316,6 +317,9 @@ const [artifactPages] = await Promise.all([
 sparkPorts.add(nativeMcp.port).add(nativeTerminals.port);
 desktopBrowser?.blockPorts([nativeMcp.port, nativeTerminals.port]);
 const shares = shareWiring({ db, secrets, origin: config.SPARK_SHARE_URL });
+const tunnelRunner = existsSync(config.SPARK_CLOUDFLARED_BIN)
+  ? createTunnelRunner({ bin: config.SPARK_CLOUDFLARED_BIN })
+  : null;
 const { app, reconcileRemote } = createAppParts({
   nudgeReviews: () => reviewRunner?.nudge(),
   clones,
@@ -369,7 +373,7 @@ const { app, reconcileRemote } = createAppParts({
   googleCalendar,
   zoom: clouds?.zoom ?? null,
   cloudflareClient: cloudflareClientConfig(config),
-  cloudflaredBin: existsSync(config.SPARK_CLOUDFLARED_BIN) ? config.SPARK_CLOUDFLARED_BIN : null,
+  tunnelRunner,
   cloudflareBoot: true,
   microsoftCalendar,
   meetings,
@@ -456,6 +460,7 @@ const shutdown = async (keepTerminals = false) => {
     ['approval listener', () => nativeApprovalListener.close()],
     ['calendar listener', () => calendarWrittenListener.close()],
     ['previews', () => previews.stopAll('shutdown')],
+    ['Cloudflare tunnel', () => tunnelRunner?.stop()],
     ['agent terminals', () => agentTerminals.stopAll()],
     ['chat ports', () => chatPorts?.stop()],
     ['lag monitor', () => stopLagMonitor()],

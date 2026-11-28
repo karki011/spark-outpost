@@ -107,12 +107,7 @@ export interface AppOptions
     Pick<RemoteSparkRouteDeps, 'remoteSparkPort' | 'thisMacName'>,
     Pick<
       CloudflareRouteDeps,
-      | 'cloudflareCheck'
-      | 'cloudflareClient'
-      | 'cloudflareSetup'
-      | 'cloudflaredBin'
-      | 'tunnelRunner'
-      | 'cloudflareBoot'
+      'cloudflareCheck' | 'cloudflareClient' | 'cloudflareSetup' | 'tunnelRunner' | 'cloudflareBoot'
     > {
   terminals: TerminalSessions;
   nativeTerminals?: NativeRuntime;

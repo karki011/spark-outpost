@@ -109,24 +109,25 @@ export async function createCname(
   });
 }
 
-const appsSchema = z.array(z.object({ domain: z.string().optional() }));
+const appsSchema = z.array(z.object({ id, domain: z.string().optional() }));
 
-export async function accessAppExists(
+export async function accessAppId(
   api: CloudflareAccountApi,
   zoneId: string,
   hostname: string,
-): Promise<boolean> {
+): Promise<string | null> {
   const apps = appsSchema.safeParse(
     await cloudflareCall(api, 'GET', `${zone(zoneId)}/access/apps?per_page=100`),
   );
-  return apps.success && apps.data.some((app) => app.domain === hostname);
+  if (!apps.success) return null;
+  return apps.data.find((app) => app.domain === hostname)?.id ?? null;
 }
 
 export async function createAccessApp(
   api: CloudflareAccountApi,
   zoneId: string,
-  app: { name: string; hostname: string; email: string },
-): Promise<void> {
+  app: { name: string; hostname: string },
+): Promise<string> {
   const created = z.object({ id }).parse(
     await cloudflareCall(api, 'POST', `${zone(zoneId)}/access/apps`, {
       json: {
@@ -137,16 +138,30 @@ export async function createAccessApp(
       },
     }),
   );
-  await cloudflareCall(
-    api,
-    'POST',
-    `${zone(zoneId)}/access/apps/${encodeURIComponent(created.id)}/policies`,
-    {
-      json: {
-        name: 'Owner',
-        decision: 'allow',
-        include: [{ email: { email: app.email } }],
-      },
-    },
-  );
+  return created.id;
+}
+
+const policies = (zoneId: string, appId: string) =>
+  `${zone(zoneId)}/access/apps/${encodeURIComponent(appId)}/policies`;
+
+export async function accessAppHasPolicy(
+  api: CloudflareAccountApi,
+  zoneId: string,
+  appId: string,
+): Promise<boolean> {
+  const found = z
+    .array(z.unknown())
+    .safeParse(await cloudflareCall(api, 'GET', policies(zoneId, appId)));
+  return found.success && found.data.length > 0;
+}
+
+export async function allowEmail(
+  api: CloudflareAccountApi,
+  zoneId: string,
+  appId: string,
+  email: string,
+): Promise<void> {
+  await cloudflareCall(api, 'POST', policies(zoneId, appId), {
+    json: { name: 'Owner', decision: 'allow', include: [{ email: { email } }] },
+  });
 }
