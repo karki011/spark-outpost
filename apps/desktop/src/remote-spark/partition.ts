@@ -1,5 +1,6 @@
 import { session, type Session } from 'electron';
 import {
+  isAccessSignInUrl,
   REMOTE_SPARK_PARTITION_PREFIX,
   remoteSparkOrigin,
   remoteSparkPartition,
@@ -45,7 +46,8 @@ export function remoteRequestAllowed(request: RemoteRequest, facts: RemoteReques
   if (standardPort === undefined) return false;
   const port = url.port === '' ? standardPort : Number(url.port);
   if (facts.blockedPorts.has(port)) return false;
-  return !page || url.origin === remoteSparkOrigin(facts.hostname);
+  if (!page || url.origin === remoteSparkOrigin(facts.hostname)) return true;
+  return isAccessSignInUrl(request.url, facts.hostname);
 }
 
 function ownSession(id: string): Session {

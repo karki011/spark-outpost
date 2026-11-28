@@ -3,6 +3,7 @@ import {
   fragmentValue,
   parseSparkAddress,
   remoteNeedsYou,
+  isAccessSignInUrl,
   reachOfHostname,
   remoteSparkBridgeFromHostSchema,
   remoteSparkBridgeToHostSchema,
@@ -59,6 +60,37 @@ describe('parseSparkAddress', () => {
 
   it('accepts any reachable address when this Mac has none of its own', () => {
     expect(parseSparkAddress('laptop.tail1234.ts.net', null)).toMatchObject({ ok: true });
+  });
+});
+
+describe('isAccessSignInUrl', () => {
+  const CUSTOM = 'spark.example.com';
+
+  it('is Cloudflare\u2019s sign-in host for a custom domain, over https alone', () => {
+    expect(
+      isAccessSignInUrl('https://team-1.cloudflareaccess.com/cdn-cgi/access/login/x?kid=1', CUSTOM),
+    ).toBe(true);
+    expect(isAccessSignInUrl('https://TEAM.CloudflareAccess.com/', CUSTOM)).toBe(true);
+    expect(isAccessSignInUrl('http://team.cloudflareaccess.com/', CUSTOM)).toBe(false);
+    expect(isAccessSignInUrl('https://team.cloudflareaccess.com:8443/', CUSTOM)).toBe(false);
+    expect(isAccessSignInUrl('https://user:pw@team.cloudflareaccess.com/', CUSTOM)).toBe(false);
+  });
+
+  it('is no other host, however it is spelled', () => {
+    expect(isAccessSignInUrl('https://cloudflareaccess.com/', CUSTOM)).toBe(false);
+    expect(isAccessSignInUrl('https://a.b.cloudflareaccess.com/', CUSTOM)).toBe(false);
+    expect(isAccessSignInUrl('https://team.cloudflareaccess.com.evil.example/', CUSTOM)).toBe(
+      false,
+    );
+    expect(isAccessSignInUrl('https://evilcloudflareaccess.com/', CUSTOM)).toBe(false);
+    expect(isAccessSignInUrl('https://example.com/', CUSTOM)).toBe(false);
+    expect(isAccessSignInUrl('not a url', CUSTOM)).toBe(false);
+  });
+
+  it('is never offered to a Tailscale address', () => {
+    expect(isAccessSignInUrl('https://team.cloudflareaccess.com/', 'studio.tail1234.ts.net')).toBe(
+      false,
+    );
   });
 });
 
@@ -124,6 +156,16 @@ describe('bridge messages', () => {
     expect(
       remoteSparkBridgeToHostSchema.safeParse({ ...open, hostname: '127.0.0.1' }).success,
     ).toBe(false);
+  });
+
+  it('accepts the sign-in of a page in front of the address, or its removal, within a size', () => {
+    const access = { kind: 'remote-spark:access', id: ID, hostname: 'spark.example.com' };
+    const parse = (value: unknown) =>
+      remoteSparkBridgeFromHostSchema.safeParse({ ...access, value }).success;
+    expect(parse('a'.repeat(4096))).toBe(true);
+    expect(parse(null)).toBe(true);
+    expect(parse('')).toBe(false);
+    expect(parse('a'.repeat(4097))).toBe(false);
   });
 
   it('refuses a captured cookie with no value or an oversized one', () => {

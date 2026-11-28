@@ -21,9 +21,11 @@ export const CLOUDFLARE_TUNNEL_TOKEN_SECRET = 'cloudflare:tunnel-token';
 export const shareSecret = (shareId: string): ShareSecretId => `share:${shareId}`;
 export const googleCalendarSecret = (subject: string): GoogleCalendarSecretId =>
   `calendar:google:${subject}`;
-export type RemoteSparkSecretId = `remote-spark:${string}`;
+export type RemoteSparkSecretId = `remote-spark:${string}` | `remote-spark-access:${string}`;
 export const remoteSparkSecret = (sparkId: string): RemoteSparkSecretId =>
   `remote-spark:${sparkId}`;
+export const remoteSparkAccessSecret = (sparkId: string): RemoteSparkSecretId =>
+  `remote-spark-access:${sparkId}`;
 export type SecretId =
   | ConnectableId
   | 'github'
@@ -55,7 +57,9 @@ export const DEFAULT_KEYCHAIN_SERVICE = 'Spark Outpost';
 
 function account(provider: SecretId): string {
   if (provider.startsWith('mcp:') || provider.startsWith('signin:')) return provider;
-  if (provider.startsWith('remote-spark:')) return provider;
+  if (provider.startsWith('remote-spark:') || provider.startsWith('remote-spark-access:')) {
+    return provider;
+  }
   if (provider.startsWith('mcp-oauth:')) return `${provider}:sign-in`;
   if (provider.startsWith('calendar:google:') || provider.startsWith('calendar:microsoft:')) {
     return `${provider}:refresh`;

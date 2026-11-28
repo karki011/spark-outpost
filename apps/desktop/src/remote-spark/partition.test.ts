@@ -89,6 +89,15 @@ describe('a request from the remote Spark window', () => {
     expect(page('file:///etc/passwd')).toBe(false);
   });
 
+  it('loads Cloudflare\u2019s sign-in page for a custom domain alone', () => {
+    const signIn = 'https://team-1.cloudflareaccess.com/cdn-cgi/access/login/spark.example.com';
+    const custom = { ...facts, hostname: 'spark.example.com' };
+    const request = { url: signIn, resourceType: 'mainFrame' };
+    expect(remoteRequestAllowed(request, custom)).toBe(true);
+    expect(remoteRequestAllowed(request, facts)).toBe(false);
+    expect(remoteRequestAllowed({ ...request, url: 'https://example.com/' }, custom)).toBe(false);
+  });
+
   it('never loads a file or an unknown scheme as part of a page', () => {
     expect(part('file:///etc/passwd')).toBe(false);
     expect(part('chrome://settings')).toBe(false);

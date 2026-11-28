@@ -16,7 +16,12 @@ import { remoteAccess } from '../remote/store.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { RemoteSparkLink, RemoteSparkPort } from './bridge.ts';
 import { iconPathOf, sparkIconRoutes, toLocalSpark } from './icon-routes.ts';
-import { forgetSparkCookie, savedSparkCookie } from './secrets.ts';
+import {
+  forgetSparkCookie,
+  saveSparkAccess,
+  savedSparkAccess,
+  savedSparkCookie,
+} from './secrets.ts';
 import {
   RemoteSparkTakenError,
   addRemoteSpark,
@@ -84,6 +89,7 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkL
       deviceName: (await localSpark(db, workspaceId)).name ?? defaultName,
       code,
       cookie: await savedSparkCookie(secrets, row.id),
+      access: await savedSparkAccess(secrets, row.id),
     });
     return (await markRemoteSparkOpened(db, workspaceId, row.id)) ?? row;
   };
@@ -143,6 +149,7 @@ export function remoteSparkRoutes(deps: RemoteSparkRouteDeps, link: RemoteSparkL
       return;
     }
     await forgetSparkCookie(secrets, id);
+    await saveSparkAccess(secrets, id, null);
     await deleteRemoteSpark(db, workspaceId, id);
     port?.post({ kind: 'remote-spark:close', id });
     await link.forget(id);

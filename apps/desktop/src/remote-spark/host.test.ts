@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { REMOTE_DEVICE_COOKIE, REMOTE_SPARK_PARTITION_PREFIX } from '@spark-outpost/contracts';
+import {
+  REMOTE_ACCESS_COOKIE,
+  REMOTE_DEVICE_COOKIE,
+  REMOTE_SPARK_PARTITION_PREFIX,
+} from '@spark-outpost/contracts';
 import { createAppLockGate, type AppLockGate } from '../app-lock-gate.ts';
 import type { WorkerBridge } from '../browser/bridge.ts';
 import {
@@ -98,6 +102,22 @@ describe('opening a remote Spark window', () => {
     await settle();
     expect(page(window).loaded).toEqual([`https://${HOST}/`]);
     expect(posted).toEqual([]);
+  });
+
+  it('places a saved sign-in for the page in front of the address, and reports a new one', async () => {
+    bridge.receive({ ...open, cookie: 'saved-value', access: 'saved-sign-in' });
+    await settle();
+    const window = only();
+    const { cookies } = sessionOf(window);
+    expect(cookies.placed.map((cookie) => [cookie.name, cookie.value])).toEqual([
+      [REMOTE_ACCESS_COOKIE, 'saved-sign-in'],
+      [REMOTE_DEVICE_COOKIE, 'saved-value'],
+    ]);
+    expect(posted).toEqual([]);
+    cookies.hostReplaces(REMOTE_ACCESS_COOKIE, HOST, 'saved-sign-in', 'renewed');
+    expect(posted).toEqual([
+      { kind: 'remote-spark:access', id: ID, hostname: HOST, value: 'renewed' },
+    ]);
   });
 
   it('opens the pairing entry when the saved cookie cannot be placed, logging no value', async () => {

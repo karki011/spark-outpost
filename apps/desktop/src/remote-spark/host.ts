@@ -64,6 +64,7 @@ export function startRemoteSparkHost(options: RemoteSparkHostOptions): RemoteSpa
       gate: options.gate,
       openExternal: options.openExternal,
       changed: (value) => tell({ kind: 'remote-spark:cookie', id, hostname, value }),
+      accessChanged: (value) => tell({ kind: 'remote-spark:access', id, hostname, value }),
       signedOut: () => tell({ kind: 'remote-spark:signed-out', id }),
       closed: () => {
         if (windows.get(id) === window) windows.delete(id);
