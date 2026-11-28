@@ -23,6 +23,9 @@ export const REACH_TOKEN_NOT_SAVED =
 export const REACH_RECORD_TAKEN =
   'That address already has a DNS record that isn’t Spark’s. Remove it in Cloudflare, or start over with another address.';
 
+export const REACH_PAGE_TAKEN =
+  'That address already has a sign-in page in Cloudflare that doesn’t let only this email in. Change it in Cloudflare, or start over with another address.';
+
 export const reachNoDomain = (hostname: string) =>
   `This Cloudflare account has no domain for ${hostname}. Start over with an address on one of its domains.`;
 

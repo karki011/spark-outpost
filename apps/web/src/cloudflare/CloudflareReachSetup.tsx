@@ -7,7 +7,7 @@ import type {
   RemoteAccess,
   SetupFields,
 } from '@spark-outpost/contracts';
-import { parseCustomDomain } from '../phone/custom-domain.ts';
+import { parseCustomDomain, REPLACES_TAILSCALE } from '../phone/custom-domain.ts';
 import { phoneApi } from '../phone/phone-api.ts';
 import { ExternalLinkIcon } from '../ui/icons.tsx';
 import {
@@ -79,10 +79,11 @@ function progressLine(reach: CloudflareReach): string {
 }
 
 interface CloudflareReachSetupProps {
+  replacesTailscale: boolean;
   onSaved: (access: RemoteAccess) => void;
 }
 
-export function CloudflareReachSetup({ onSaved }: CloudflareReachSetupProps) {
+export function CloudflareReachSetup({ replacesTailscale, onSaved }: CloudflareReachSetupProps) {
   const ids = useId();
   const auto = useCloudflareReach();
   const [address, setAddress] = useState('');
@@ -210,6 +211,7 @@ export function CloudflareReachSetup({ onSaved }: CloudflareReachSetupProps) {
             <PermissionList permissions={reach.permissions} copy={PERMISSIONS} />
           </details>
           <p>{REACH_KEEPS}</p>
+          {replacesTailscale && <p className="ph-note">{REPLACES_TAILSCALE}</p>}
           <div className="cx-actions">
             <button type="submit" className="btn primary sm" disabled={auto.busy}>
               Allow on Cloudflare

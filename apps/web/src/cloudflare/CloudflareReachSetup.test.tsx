@@ -37,14 +37,14 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function show(reach: CloudflareReach, drafts: SetupDraft[] = []) {
+function show(reach: CloudflareReach, drafts: SetupDraft[] = [], tailscaleOn = false) {
   vi.spyOn(setupDraftsApi, 'list').mockResolvedValue({ drafts });
   vi.spyOn(cloudflareApi, 'reach').mockResolvedValue(reach);
   const onSaved = vi.fn();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <CloudflareReachSetup onSaved={onSaved} />
+      <CloudflareReachSetup replacesTailscale={tailscaleOn} onSaved={onSaved} />
     </QueryClientProvider>,
   );
   return onSaved;
@@ -73,6 +73,12 @@ describe('setting up a Cloudflare address for this computer', () => {
     expect(screen.getByLabelText<HTMLInputElement>('Your email').value).toBe('me@example.com');
     expect(screen.getByText(/was prepared by an agent/)).toBeTruthy();
     expect(start).not.toHaveBeenCalled();
+  });
+
+  it('warns that Tailscale access turns off before the user allows Spark', async () => {
+    show(IDLE, [], true);
+    await screen.findByLabelText('Address');
+    expect(screen.getByText(/Tailscale access turns off when you turn this on/)).toBeTruthy();
   });
 
   it('lists the five permissions and starts with a valid address and email', async () => {

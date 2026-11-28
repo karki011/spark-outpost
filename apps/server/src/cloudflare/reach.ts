@@ -15,10 +15,11 @@ import { firstAccount, type CloudflareAccount, type CloudflareAccountApi } from 
 import type { CloudflareClientConfig } from './client.ts';
 import { revokeCloudflareToken, type CloudflareToken } from './oauth.ts';
 import {
-  accessAppHasPolicy,
+  accessPolicies,
   accessAppId,
   allowEmail,
   createAccessApp,
+  letsInOnly,
   createCname,
   createTunnel,
   dnsRecordsNamed,
@@ -31,11 +32,13 @@ import {
 import {
   REACH_BUSY,
   REACH_NOT_CONNECTED,
+  REACH_PAGE_TAKEN,
   REACH_NO_TUNNEL_PROGRAM,
   REACH_RECORD_TAKEN,
   REACH_SCOPES,
   REACH_TOKEN_NOT_SAVED,
   REACH_UNAVAILABLE,
+  ZERO_TRUST_URL,
   reachFailure,
   reachNoDomain,
   reachNotAllowed,
@@ -78,6 +81,7 @@ interface Progress {
   granted: string[] | null;
   zone: CloudflareZone | null;
   tunnelId: string | null;
+  runToken: string | null;
 }
 
 type Work = Exclude<CloudflareReachStepId, 'signIn'>;
@@ -105,6 +109,7 @@ const freshProgress = (): Progress => ({
   granted: null,
   zone: null,
   tunnelId: null,
+  runToken: null,
 });
 
 function zoneOf(zones: CloudflareZone[], hostname: string): CloudflareZone | null {
@@ -123,6 +128,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
   let token: CloudflareToken | null = null;
   let signIn: CloudflareSignIn | null = null;
   let generation = 0;
+  let attempts = 0;
   let graceUntil = 0;
   let connected: string | null = null;
   let work: Promise<void> = Promise.resolve();
@@ -160,10 +166,31 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     return value;
   };
 
+  const bind = async (runToken: string, mine: number) => {
+    const hostname = need(progress.hostname);
+    await saveReach(db, workspaceId, {
+      hostname,
+      accountId: need(progress.account).id,
+      zoneId: need(progress.zone).id,
+      tunnelId: need(progress.tunnelId),
+    });
+    try {
+      await secrets.set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, runToken);
+    } catch {
+      await deleteReach(db, workspaceId);
+      connected = null;
+      throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
+    }
+    if (mine !== generation) return;
+    connected = hostname;
+    progress.runToken = null;
+  };
+
   const WORK: Record<Work, (mine: number) => Promise<void>> = {
-    async domain() {
+    async domain(mine) {
       const hostname = need(progress.hostname);
       const zone = zoneOf(await listZones(api('domains'), need(progress.account).id), hostname);
+      if (mine !== generation) return;
       if (!zone) throw new StepFailure(reachNoDomain(hostname), null);
       progress.zone = zone;
     },
@@ -178,19 +205,8 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       await pointTunnel(tunnels, accountId, tunnelId, { hostname, service: deps.forwardTo });
       const runToken = await tunnelToken(tunnels, accountId, tunnelId);
       if (mine !== generation) return;
-      try {
-        await secrets.set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, runToken);
-      } catch {
-        throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
-      }
       progress.tunnelId = tunnelId;
-      await saveReach(db, workspaceId, {
-        hostname,
-        accountId,
-        zoneId: need(progress.zone).id,
-        tunnelId,
-      });
-      connected = hostname;
+      progress.runToken = runToken;
     },
     async address() {
       const hostname = need(progress.hostname);
@@ -215,11 +231,20 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       const appId =
         (await accessAppId(access, zone.id, hostname)) ??
         (await createAccessApp(access, zone.id, { name: 'Spark Outpost', hostname }));
-      if (await accessAppHasPolicy(access, zone.id, appId)) return;
-      await allowEmail(access, zone.id, appId, need(progress.email));
+      const email = need(progress.email);
+      const policies = await accessPolicies(access, zone.id, appId);
+      if (policies.length === 0) {
+        await allowEmail(access, zone.id, appId, email);
+        return;
+      }
+      if (!letsInOnly(policies, email)) {
+        throw new StepFailure(REACH_PAGE_TAKEN, 'cloudflare', ZERO_TRUST_URL);
+      }
     },
-    async start() {
+    async start(mine) {
       if (!runner) throw new StepFailure(REACH_NO_TUNNEL_PROGRAM, null);
+      if (progress.runToken) await bind(progress.runToken, mine);
+      if (mine !== generation) return;
       const runToken = await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
       if (!runToken) throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
       graceUntil = now() + SETUP_GRACE_MS;
@@ -274,19 +299,22 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       return;
     }
     set('signIn', { state: 'done' });
-    await run(mine);
+    work = run(mine);
+    await work;
   };
 
   const beginSignIn = async (config: CloudflareClientConfig) => {
     signIn?.cancel();
     signIn = null;
     const mine = generation;
+    attempts += 1;
+    const attempt = attempts;
     const begun = await beginCloudflareSignIn(
       { client: config, fetch: deps.fetch, now },
       Object.values(REACH_SCOPES),
       async (result) => {
         if (signIn === begun) signIn = null;
-        if (mine !== generation) {
+        if (mine !== generation || attempt !== attempts) {
           if (result.ok) await revoke(result.token);
           return;
         }
@@ -344,6 +372,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
 
   const reconcile = async () => {
     if (!runner) return;
+    const mine = generation;
     const row = await reachRow(db, workspaceId);
     connected = row?.hostname ?? null;
     const access = await remoteAccess(db, workspaceId);
@@ -351,7 +380,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     if (serving) {
       if (runner.state() !== 'off') return;
       const runToken = await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
-      if (runToken) void runner.start(runToken);
+      if (runToken && mine === generation) void runner.start(runToken);
       return;
     }
     if (now() >= graceUntil && runner.state() !== 'off') runner.stop();

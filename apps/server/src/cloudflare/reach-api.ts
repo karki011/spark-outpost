@@ -5,6 +5,8 @@ const id = z.string().min(1).max(64);
 const account = (accountId: string) => `/accounts/${encodeURIComponent(accountId)}`;
 const zone = (zoneId: string) => `/zones/${encodeURIComponent(zoneId)}`;
 
+const ZONES_PER_PAGE = 50;
+const ZONE_PAGES_MAX = 40;
 const zonesSchema = z.array(z.object({ id, name: z.string().min(1).max(253) }));
 export interface CloudflareZone {
   id: string;
@@ -15,9 +17,19 @@ export async function listZones(
   api: CloudflareAccountApi,
   accountId: string,
 ): Promise<CloudflareZone[]> {
-  const query = new URLSearchParams({ 'account.id': accountId, per_page: '50' });
-  const zones = zonesSchema.safeParse(await cloudflareCall(api, 'GET', `/zones?${query}`));
-  return zones.success ? zones.data : [];
+  const zones: CloudflareZone[] = [];
+  for (let page = 1; page <= ZONE_PAGES_MAX; page += 1) {
+    const query = new URLSearchParams({
+      'account.id': accountId,
+      per_page: String(ZONES_PER_PAGE),
+      page: String(page),
+    });
+    const found = zonesSchema.safeParse(await cloudflareCall(api, 'GET', `/zones?${query}`));
+    if (!found.success) break;
+    zones.push(...found.data);
+    if (found.data.length < ZONES_PER_PAGE) break;
+  }
+  return zones;
 }
 
 const tunnelsSchema = z.array(z.object({ id }));
@@ -144,15 +156,28 @@ export async function createAccessApp(
 const policies = (zoneId: string, appId: string) =>
   `${zone(zoneId)}/access/apps/${encodeURIComponent(appId)}/policies`;
 
-export async function accessAppHasPolicy(
+const policiesSchema = z.array(
+  z.object({
+    decision: z.string(),
+    include: z.array(z.object({ email: z.object({ email: z.string() }).optional() })).optional(),
+  }),
+);
+export type AccessPolicy = z.infer<typeof policiesSchema>[number];
+
+export async function accessPolicies(
   api: CloudflareAccountApi,
   zoneId: string,
   appId: string,
-): Promise<boolean> {
-  const found = z
-    .array(z.unknown())
-    .safeParse(await cloudflareCall(api, 'GET', policies(zoneId, appId)));
-  return found.success && found.data.length > 0;
+): Promise<AccessPolicy[]> {
+  return policiesSchema.parse(await cloudflareCall(api, 'GET', policies(zoneId, appId)));
+}
+
+export function letsInOnly(found: AccessPolicy[], email: string): boolean {
+  const wanted = email.toLowerCase();
+  const allows = (policy: AccessPolicy) =>
+    policy.decision === 'allow' &&
+    (policy.include ?? []).some((rule) => rule.email?.email.toLowerCase() === wanted);
+  return found.some(allows) && found.every((policy) => policy.decision !== 'bypass');
 }
 
 export async function allowEmail(

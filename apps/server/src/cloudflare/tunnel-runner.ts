@@ -36,6 +36,10 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
       stdio: ['ignore', 'ignore', 'pipe'],
     });
     child = started;
+    const deadline = setTimeout(() => {
+      if (child === started && state === 'starting') started.kill('SIGTERM');
+    }, readyMs);
+    deadline.unref();
     started.stderr?.setEncoding('utf8');
     started.stderr?.on('data', (text: string) => {
       if (child !== started || state === 'running' || !CONNECTED.test(text)) return;
@@ -44,6 +48,7 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
       onConnected();
     });
     const ended = () => {
+      clearTimeout(deadline);
       if (child !== started) return;
       child = null;
       state = wanted === null ? 'off' : 'stopped';

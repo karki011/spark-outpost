@@ -47,7 +47,7 @@ export async function beginCloudflareSignIn(
     work = onResult({ ok: false, problem: SETUP_TIMED_OUT });
   }, CLOUDFLARE_SIGN_IN_TTL_MS);
   timer.unref();
-  loopback = await startLoopback(
+  const opened = startLoopback(
     'Cloudflare',
     (callback) => {
       if (!open) return;
@@ -80,6 +80,12 @@ export async function beginCloudflareSignIn(
     },
     CLOUDFLARE_CALLBACK_PATH,
   );
+  try {
+    loopback = await opened;
+  } catch (error) {
+    close();
+    throw error;
+  }
   return {
     authorizeUrl: cloudflareAuthorizeUrl(deps.client, pkce, loopback.redirectUri, scopes),
     cancel: close,

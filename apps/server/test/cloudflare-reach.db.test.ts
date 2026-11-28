@@ -219,6 +219,20 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     });
   });
 
+  it('stops when the address already has a sign-in page for someone else', async () => {
+    cloudflare.accessApps.push({ id: 'app1', domain: WANTED.hostname });
+    cloudflare.reach.policy = {
+      decision: 'allow',
+      include: [{ email: { email: 'x@other.test' } }],
+    };
+    const client = localClient(app());
+    const { reach } = await setUp(client);
+    expect(failed(reach)).toMatchObject({ id: 'signInPage', fix: 'cloudflare' });
+    expect(runner.started).toEqual([]);
+    expect((await t.db.query('SELECT 1 FROM cloudflare_reach')).rowCount).toBe(0);
+    expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
+  });
+
   it('says so when the tunnel does not connect', async () => {
     runner.connects = false;
     const { reach } = await setUp(localClient(app()));

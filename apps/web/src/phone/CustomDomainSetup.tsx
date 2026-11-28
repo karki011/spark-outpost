@@ -33,7 +33,7 @@ export function CustomDomainSetup({
         </div>
       </div>
       {choice}
-      <CloudflareReachSetup onSaved={onSaved} />
+      <CloudflareReachSetup replacesTailscale={replacesTailscale} onSaved={onSaved} />
       {reach.data?.available && <h3 className="cf-or">{MANUAL_HEADING}</h3>}
       <CustomDomainForm
         forwardTo={forwardTo}
