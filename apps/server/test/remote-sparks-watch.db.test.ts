@@ -151,7 +151,9 @@ describe('the status of saved Sparks in the list', () => {
 
     await watches(3);
     expect(await stateOf(id)).toEqual({ status: 'checking', needsYou: 0 });
-    expect(desktop.watched.at(-1)).toEqual([{ id, hostname: STUDIO, cookie: 'a-newer-cookie' }]);
+    expect(desktop.watched.at(-1)).toEqual([
+      { id, hostname: STUDIO, cookie: 'a-newer-cookie', access: null },
+    ]);
   });
 
   it('keeps a report when the desktop app echoes the sign-in it was given', async () => {
@@ -195,7 +197,7 @@ describe('the list the desktop app watches', () => {
     await watches(1, restarted);
     expect(desktop.watched).toEqual([[]]);
     expect(restarted.watched).toEqual([
-      [{ id: signedIn, hostname: STUDIO, cookie: STUDIO_COOKIE }],
+      [{ id: signedIn, hostname: STUDIO, cookie: STUDIO_COOKIE, access: null }],
     ]);
     expect(restarted.posted).toEqual([]);
   });
@@ -205,7 +207,7 @@ describe('the list the desktop app watches', () => {
     const garage = await added(GARAGE);
     expect(desktop.watched).toEqual([
       [],
-      [{ id: studio, hostname: STUDIO, cookie: STUDIO_COOKIE }],
+      [{ id: studio, hostname: STUDIO, cookie: STUDIO_COOKIE, access: null }],
     ]);
 
     desktop.send({
@@ -216,14 +218,14 @@ describe('the list the desktop app watches', () => {
     });
     await watches(3);
     expect(desktop.watched.at(-1)).toEqual([
-      { id: studio, hostname: STUDIO, cookie: STUDIO_COOKIE },
-      { id: garage, hostname: GARAGE, cookie: GARAGE_COOKIE },
+      { id: studio, hostname: STUDIO, cookie: STUDIO_COOKIE, access: null },
+      { id: garage, hostname: GARAGE, cookie: GARAGE_COOKIE, access: null },
     ]);
 
     desktop.send({ kind: 'remote-spark:signed-out', id: studio });
     await watches(4);
     expect(desktop.watched.at(-1)).toEqual([
-      { id: garage, hostname: GARAGE, cookie: GARAGE_COOKIE },
+      { id: garage, hostname: GARAGE, cookie: GARAGE_COOKIE, access: null },
     ]);
 
     await localClient(app).send('delete', `/api/remote-sparks/${garage}`).expect(204);
@@ -263,7 +265,9 @@ describe('the list the desktop app watches', () => {
     const second = fakeDesktop();
     sparkApp(t, secrets, second);
     await watches(1, second);
-    expect(second.watched).toEqual([[{ id: garage, hostname: GARAGE, cookie: GARAGE_COOKIE }]]);
+    expect(second.watched).toEqual([
+      [{ id: garage, hostname: GARAGE, cookie: GARAGE_COOKIE, access: null }],
+    ]);
 
     const locked = fakeDesktop();
     sparkApp(

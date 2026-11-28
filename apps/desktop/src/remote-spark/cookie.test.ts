@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { REMOTE_DEVICE_COOKIE } from '@spark-outpost/contracts';
-import { watchDeviceCookie, type DeviceCookieWatch } from './cookie.ts';
+import { REMOTE_ACCESS_COOKIE, REMOTE_DEVICE_COOKIE } from '@spark-outpost/contracts';
+import { watchAccessCookie, watchDeviceCookie, type DeviceCookieWatch } from './cookie.ts';
 import { FakeCookies } from './electron.fixture.ts';
 
 const HOST = 'studio.tail1234.ts.net';
@@ -67,5 +67,50 @@ describe('the device cookie of a remote Spark window', () => {
     jar.hostSets(REMOTE_DEVICE_COOKIE, HOST, 'late');
     jar.hostRemoves(REMOTE_DEVICE_COOKIE, HOST, 'late');
     expect(seen).toEqual([]);
+  });
+});
+
+describe('the sign-in cookie of a page in front of a remote Spark', () => {
+  const CUSTOM = 'spark.example.com';
+  let reported: (string | null)[];
+
+  beforeEach(() => {
+    reported = [];
+  });
+
+  it('is placed for the saved host alone and not reported back', async () => {
+    const access = watchAccessCookie(jar, CUSTOM, (value) => reported.push(value));
+    await access.place('saved-sign-in');
+    expect(jar.placed).toEqual([
+      {
+        url: `https://${CUSTOM}`,
+        name: REMOTE_ACCESS_COOKIE,
+        value: 'saved-sign-in',
+        path: '/',
+        secure: true,
+        httpOnly: true,
+        sameSite: 'lax',
+      },
+    ]);
+    expect(reported).toEqual([]);
+  });
+
+  it('is reported when the page sets, renews or removes it, and never for another host or name', () => {
+    const access = watchAccessCookie(jar, CUSTOM, (value) => reported.push(value));
+    jar.hostSets(REMOTE_ACCESS_COOKIE, CUSTOM, 'first');
+    jar.hostReplaces(REMOTE_ACCESS_COOKIE, CUSTOM, 'first', 'second');
+    jar.hostSets(REMOTE_ACCESS_COOKIE, 'team.cloudflareaccess.com', 'theirs');
+    jar.hostSets(REMOTE_ACCESS_COOKIE, 'example.com', 'parent');
+    jar.hostSets(REMOTE_ACCESS_COOKIE, '.example.com', 'parent-wide');
+    jar.hostSets('CF_AppSession', CUSTOM, 'other');
+    jar.hostSets(REMOTE_ACCESS_COOKIE, CUSTOM, 'x'.repeat(4097));
+    jar.hostRemoves(REMOTE_ACCESS_COOKIE, CUSTOM, 'second');
+    expect(reported).toEqual(['first', 'second', null]);
+    jar.hostSets(REMOTE_ACCESS_COOKIE, `.${CUSTOM}`, 'domain-wide');
+    jar.hostRemoves(REMOTE_ACCESS_COOKIE, `.${CUSTOM}`, 'domain-wide');
+    expect(reported).toEqual(['first', 'second', null, 'domain-wide', null]);
+    access.stop();
+    jar.hostSets(REMOTE_ACCESS_COOKIE, CUSTOM, 'third');
+    expect(reported).toHaveLength(5);
   });
 });

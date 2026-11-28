@@ -1,6 +1,7 @@
 import type { Session } from 'electron';
 import {
   attentionListSchema,
+  REMOTE_ACCESS_COOKIE,
   REMOTE_DEVICE_COOKIE,
   REMOTE_SPARK_WATCH_MS,
   remoteNeedsYou,
@@ -8,7 +9,7 @@ import {
   type RemoteSparkBridgeFromHost,
   type RemoteSparkBridgeToHost,
 } from '@spark-outpost/contracts';
-import { deviceCookie } from './cookie.ts';
+import { accessCookie, deviceCookie } from './cookie.ts';
 import { remoteSparkSession, type RemoteSparkGuards } from './partition.ts';
 
 export const REMOTE_SPARK_CHECK_TIMEOUT_MS = 10_000;
@@ -40,6 +41,7 @@ export interface RemoteSparkWatcher {
 interface Watched {
   hostname: string;
   cookie: string;
+  access: string | null;
   target: Session;
   timer: ReturnType<typeof setInterval> | undefined;
   checking: boolean;
@@ -50,11 +52,8 @@ interface Watched {
 
 const OFFLINE: Reach = { status: 'offline', needsYou: 0 };
 
-async function holdsCookie(target: Session, hostname: string): Promise<boolean> {
-  const held = await target.cookies.get({
-    url: remoteSparkOrigin(hostname),
-    name: REMOTE_DEVICE_COOKIE,
-  });
+async function holdsCookie(target: Session, hostname: string, name: string): Promise<boolean> {
+  const held = await target.cookies.get({ url: remoteSparkOrigin(hostname), name });
   return held.length > 0;
 }
 
@@ -79,8 +78,12 @@ async function ask(target: Session, hostname: string): Promise<Reach | 'signed-o
 
 async function reachOf(watched: Watched): Promise<Reach | 'signed-out'> {
   try {
-    if (!(await holdsCookie(watched.target, watched.hostname))) {
-      await watched.target.cookies.set(deviceCookie(watched.hostname, watched.cookie));
+    const { target, hostname, access } = watched;
+    if (!(await holdsCookie(target, hostname, REMOTE_DEVICE_COOKIE))) {
+      await target.cookies.set(deviceCookie(hostname, watched.cookie));
+    }
+    if (access !== null && !(await holdsCookie(target, hostname, REMOTE_ACCESS_COOKIE))) {
+      await target.cookies.set(accessCookie(hostname, access));
     }
   } catch {
     return OFFLINE;
@@ -128,10 +131,11 @@ export function startRemoteSparkWatcher(hooks: RemoteSparkWatcherHooks): RemoteS
   const schedule = (id: string, watched: Watched) =>
     setInterval(() => void check(id, watched), REMOTE_SPARK_WATCH_MS);
 
-  const start = ({ id, hostname, cookie }: WatchedSpark) => {
+  const start = ({ id, hostname, cookie, access }: WatchedSpark) => {
     const watched: Watched = {
       hostname,
       cookie,
+      access,
       target: remoteSparkSession(id, hostname, hooks.guards),
       timer: undefined,
       checking: false,
@@ -154,6 +158,7 @@ export function startRemoteSparkWatcher(hooks: RemoteSparkWatcherHooks): RemoteS
         const watched = watching.get(spark.id);
         if (watched) {
           watched.cookie = spark.cookie;
+          watched.access = spark.access;
           continue;
         }
         try {

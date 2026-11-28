@@ -7,7 +7,13 @@ import {
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
-import { forgetSparkCookie, saveSparkCookie, savedSparkCookie } from './secrets.ts';
+import {
+  forgetSparkCookie,
+  saveSparkAccess,
+  saveSparkCookie,
+  savedSparkAccess,
+  savedSparkCookie,
+} from './secrets.ts';
 import { remoteSparkStatuses, type RemoteSparkState } from './status.ts';
 import { listRemoteSparks, remoteSpark } from './store.ts';
 
@@ -53,7 +59,9 @@ async function watchedSparks(deps: RemoteSparkLinkDeps): Promise<WatchedSparks> 
   for (const row of await listRemoteSparks(deps.db, deps.workspaceId)) {
     if (watched.length === REMOTE_SPARKS_MAX) break;
     const cookie = await savedSparkCookie(deps.secrets, row.id);
-    if (cookie !== null) watched.push({ id: row.id, hostname: row.hostname, cookie });
+    if (cookie === null) continue;
+    const access = await savedSparkAccess(deps.secrets, row.id);
+    watched.push({ id: row.id, hostname: row.hostname, cookie, access });
   }
   return watched;
 }
@@ -92,6 +100,12 @@ export function linkRemoteSparks(
       return;
     }
     if (saved.hostname !== message.hostname.toLowerCase()) return;
+    if (message.kind === 'remote-spark:access') {
+      if ((await savedSparkAccess(deps.secrets, message.id)) === message.value) return;
+      await saveSparkAccess(deps.secrets, message.id, message.value);
+      await sendWatch();
+      return;
+    }
     if ((await savedSparkCookie(deps.secrets, message.id)) === message.value) return;
     await saveSparkCookie(deps.secrets, message.id, message.value);
     statuses.drop(message.id);

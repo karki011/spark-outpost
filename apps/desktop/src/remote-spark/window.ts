@@ -7,7 +7,12 @@ import {
 } from '@spark-outpost/contracts';
 import type { AppLockGate } from '../app-lock-gate.ts';
 import { hideWhileLocked } from '../app-lock-windows.ts';
-import { watchDeviceCookie, type CookieJar, type DeviceCookieEvents } from './cookie.ts';
+import {
+  watchAccessCookie,
+  watchDeviceCookie,
+  type CookieJar,
+  type DeviceCookieEvents,
+} from './cookie.ts';
 import { answerFailed, isNotLoadedPage, loadFailed, notLoadedPage } from './load-state.ts';
 import { guardRemoteNavigation } from './navigation.ts';
 import { remoteSparkSession, type RemoteSparkGuards } from './partition.ts';
@@ -18,6 +23,7 @@ export type RemoteSparkOpen = Extract<RemoteSparkBridgeToHost, { kind: 'remote-s
 export interface RemoteSparkWindowHooks extends DeviceCookieEvents {
   guards: RemoteSparkGuards;
   gate: AppLockGate | undefined;
+  accessChanged(value: string | null): void;
   openExternal(url: string): void;
   closed(): void;
 }
@@ -66,8 +72,10 @@ export function openRemoteSparkWindow(
   guardRemoteNavigation(remote.webContents, hostname, hooks.openExternal);
   hideWhileLocked(window, hooks.gate);
   const watch = watchDeviceCookie(target.cookies as CookieJar, hostname, hooks);
+  const access = watchAccessCookie(target.cookies as CookieJar, hostname, hooks.accessChanged);
   window.on('closed', () => {
     watch.stop();
+    access.stop();
     for (const view of views) {
       if (!view.webContents.isDestroyed()) view.webContents.close();
     }
@@ -113,6 +121,7 @@ export function openRemoteSparkWindow(
     }
   };
   const start = async () => {
+    if (spark.access !== null) await access.place(spark.access).catch(() => undefined);
     if (!(await signedIn())) entry = pairingEntry(spark.code);
     await load(entry);
   };
@@ -127,6 +136,7 @@ export function openRemoteSparkWindow(
     },
     close() {
       watch.stop();
+      access.stop();
       if (!window.isDestroyed()) window.destroy();
     },
   };

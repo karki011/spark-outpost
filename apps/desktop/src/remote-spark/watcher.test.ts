@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  REMOTE_ACCESS_COOKIE,
   REMOTE_DEVICE_COOKIE,
   REMOTE_SPARK_WATCH_MS,
   remoteSparkPartition,
@@ -145,6 +146,18 @@ describe('watching a saved Spark', () => {
     expect(target.cookies.placed).toEqual([]);
     expect(target.cookies.held.get(`${HOST} ${REMOTE_DEVICE_COOKIE}`)).toBe('newer-value');
     expect(posted).toEqual([status(ID, 'online', 0)]);
+  });
+
+  it('places a saved sign-in for the page in front of the address before asking', async () => {
+    watch({ ...studio, access: 'saved-sign-in' });
+    await settle();
+    const { cookies } = sessionOf(ID);
+    expect(cookies.placed.map((cookie) => [cookie.name, cookie.value])).toEqual([
+      [REMOTE_DEVICE_COOKIE, 'saved-value'],
+      [REMOTE_ACCESS_COOKIE, 'saved-sign-in'],
+    ]);
+    await nextCheck();
+    expect(cookies.placed).toHaveLength(2);
   });
 
   it('never logs or reports a cookie value', async () => {
