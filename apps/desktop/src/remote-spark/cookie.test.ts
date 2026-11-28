@@ -100,12 +100,17 @@ describe('the sign-in cookie of a page in front of a remote Spark', () => {
     jar.hostSets(REMOTE_ACCESS_COOKIE, CUSTOM, 'first');
     jar.hostReplaces(REMOTE_ACCESS_COOKIE, CUSTOM, 'first', 'second');
     jar.hostSets(REMOTE_ACCESS_COOKIE, 'team.cloudflareaccess.com', 'theirs');
+    jar.hostSets(REMOTE_ACCESS_COOKIE, 'example.com', 'parent');
+    jar.hostSets(REMOTE_ACCESS_COOKIE, '.example.com', 'parent-wide');
     jar.hostSets('CF_AppSession', CUSTOM, 'other');
     jar.hostSets(REMOTE_ACCESS_COOKIE, CUSTOM, 'x'.repeat(4097));
     jar.hostRemoves(REMOTE_ACCESS_COOKIE, CUSTOM, 'second');
     expect(reported).toEqual(['first', 'second', null]);
+    jar.hostSets(REMOTE_ACCESS_COOKIE, `.${CUSTOM}`, 'domain-wide');
+    jar.hostRemoves(REMOTE_ACCESS_COOKIE, `.${CUSTOM}`, 'domain-wide');
+    expect(reported).toEqual(['first', 'second', null, 'domain-wide', null]);
     access.stop();
     jar.hostSets(REMOTE_ACCESS_COOKIE, CUSTOM, 'third');
-    expect(reported).toEqual(['first', 'second', null]);
+    expect(reported).toHaveLength(5);
   });
 });

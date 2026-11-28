@@ -105,6 +105,10 @@ export function watchDeviceCookie(
   };
 }
 
+function hostOf(cookie: JarCookie): string | undefined {
+  return cookie.domain?.startsWith('.') ? cookie.domain.slice(1) : cookie.domain;
+}
+
 export interface AccessCookieWatch {
   place(value: string): Promise<void>;
   stop(): void;
@@ -117,7 +121,7 @@ export function watchAccessCookie(
 ): AccessCookieWatch {
   let known: string | null = null;
   const listener: CookieChange = (_event, cookie, cause, removed) => {
-    if (cookie.name !== REMOTE_ACCESS_COOKIE || cookie.domain !== hostname) return;
+    if (cookie.name !== REMOTE_ACCESS_COOKIE || hostOf(cookie) !== hostname) return;
     if (removed) {
       if (replacedByNewValue(cause) || known === null) return;
       known = null;
