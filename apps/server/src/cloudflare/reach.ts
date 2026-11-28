@@ -382,14 +382,16 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     steps,
   });
 
-  const reset = async () => {
+  const reset = async (): Promise<number> => {
     generation += 1;
+    const mine = generation;
     signIn?.cancel();
     signIn = null;
     status = 'idle';
     steps = freshSteps();
     progress = freshProgress();
     await dropToken();
+    return mine;
   };
 
   const reconcile = async () => {
@@ -422,7 +424,8 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       if (!client) throw new StepFailure(REACH_UNAVAILABLE, null);
       if (!runner) throw new StepFailure(REACH_NO_TUNNEL_PROGRAM, null);
       if (status === 'working' || removal) throw new StepFailure(REACH_BUSY, null);
-      await reset();
+      const mine = await reset();
+      if (mine !== generation || removal) throw new StepFailure(REACH_BUSY, null);
       progress = { ...freshProgress(), hostname: request.hostname, email: request.email };
       await beginSignIn(client);
       return view();

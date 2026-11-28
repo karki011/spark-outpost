@@ -371,6 +371,50 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
   });
 
+  it('keeps both keys when the saved address can’t be switched', async () => {
+    const client = localClient(app());
+    await setUp(client);
+    await t.db.query(`UPDATE cloudflare_reach SET tunnel_id = 'older'`);
+    const older = { tunnel: 'older', token: 'older-token-0123456789' };
+    await secrets.set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, JSON.stringify([older]));
+    const query = t.db.query.bind(t.db);
+    t.db.query = ((text: string, values?: unknown[]) =>
+      text.includes('INSERT INTO cloudflare_reach')
+        ? Promise.reject(new Error('write failed'))
+        : query(text, values)) as typeof t.db.query;
+    try {
+      const { reach } = await setUp(client);
+      expect(failed(reach)?.id).toBe('start');
+    } finally {
+      t.db.query = query;
+    }
+    expect(JSON.parse((await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)) ?? '[]')).toEqual([
+      { tunnel: 'tun1', token: FAKE_TUNNEL_TOKEN },
+      older,
+    ]);
+    const { rows } = await t.db.query('SELECT tunnel_id FROM cloudflare_reach');
+    expect(rows).toEqual([{ tunnel_id: 'older' }]);
+  });
+
+  it('starts nothing when a removal finishes while a new set-up is still clearing the old sign-in', async () => {
+    cloudflare.accessOn = false;
+    const client = localClient(app());
+    await setUp(client);
+    let release = () => undefined as void;
+    cloudflare.revokeHeld = new Promise<void>((resolve) => (release = resolve));
+    const asked = new Promise<void>((resolve) => (cloudflare.revokeAsked = resolve));
+    const starting = client.send('post', REACH, WANTED);
+    const refused = starting.then((response) => response.status);
+    await asked;
+    await client.send('delete', REACH).expect(200);
+    release();
+    expect(await refused).toBe(400);
+    expect((await client.get(REACH).expect(200)).body).toMatchObject({
+      status: 'idle',
+      authorizeUrl: null,
+    });
+  });
+
   it('says so when the tunnel does not connect', async () => {
     runner.connects = false;
     const { reach } = await setUp(localClient(app()));

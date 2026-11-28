@@ -41,6 +41,8 @@ export class FakeCloudflare {
   policyFails = false;
   policies: unknown[] | null = null;
   tokenHeld: Promise<void> | null = null;
+  revokeHeld: Promise<void> | null = null;
+  revokeAsked: () => void = () => undefined;
   tokenAsked: () => void = () => undefined;
   readonly reach: { tunnelRoute: unknown; cname: unknown; policy: unknown } = {
     tunnelRoute: null,
@@ -68,6 +70,8 @@ export class FakeCloudflare {
       });
     }
     if (url.pathname === '/oauth2/revoke') {
+      this.revokeAsked();
+      await this.revokeHeld;
       this.revoked.push(String(new URLSearchParams(String(init?.body)).get('token')));
       return jsonResponse(200, {});
     }
