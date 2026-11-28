@@ -23,6 +23,7 @@ export function foreignLibraries(otoolOutput: string): string[] {
 export function binaryProblems(
   arch: MacArch,
   facts: { archs: string; otool: string; minOs: string | null },
+  target: string = DEPLOYMENT_TARGET,
 ): string[] {
   const problems: string[] = [];
   if (facts.archs.trim() !== clangArch(arch))
@@ -32,8 +33,8 @@ export function binaryProblems(
   const foreign = foreignLibraries(facts.otool);
   if (foreign.length > 0)
     problems.push(`it links ${foreign.join(', ')}, which a Mac does not ship`);
-  if (facts.minOs !== null && Number(facts.minOs) > Number(DEPLOYMENT_TARGET))
-    problems.push(`it needs macOS ${facts.minOs}, newer than the app's ${DEPLOYMENT_TARGET}`);
+  if (facts.minOs !== null && Number(facts.minOs) > Number(target))
+    problems.push(`it needs macOS ${facts.minOs}, newer than the allowed ${target}`);
   return problems;
 }
 
@@ -46,6 +47,7 @@ export interface BundledBinary {
   path: string;
   arch: MacArch;
   missing: string;
+  target?: string;
 }
 
 export async function checkBundledBinary(binary: BundledBinary): Promise<void> {
@@ -60,11 +62,11 @@ export async function checkBundledBinary(binary: BundledBinary): Promise<void> {
     run('otool', ['-L', path]),
     run('otool', ['-l', path]),
   ]);
-  const problems = binaryProblems(arch, {
-    archs: archs.stdout,
-    otool: otool.stdout,
-    minOs: minimumOs(commands.stdout),
-  });
+  const problems = binaryProblems(
+    arch,
+    { archs: archs.stdout, otool: otool.stdout, minOs: minimumOs(commands.stdout) },
+    binary.target,
+  );
   if (problems.length > 0)
     throw new Error(`The ${name} built for ${arch} can't be bundled: ${problems.join('; ')}.`);
   if (arch === 'arm64') await run('codesign', ['--verify', path]);

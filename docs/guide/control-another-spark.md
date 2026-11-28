@@ -37,7 +37,7 @@ On the other computer:
 | Other computer asleep or off    | The window says it did not load; select **Try again**                                  |
 | Not available                   | Downloads, notifications, adding a Spark from a paired device                          |
 
-**Custom domain.** Without Tailscale, choose **Custom domain** under **How devices reach this computer**, type your **Domain**, point your reverse proxy or tunnel at **Forward requests to**, tick the box and **Turn on**.
+**Custom domain.** Without Tailscale, choose **Custom domain**, type your **Domain**, point your proxy or tunnel at **Forward requests to**, tick the box and **Turn on**. Or [use Cloudflare](reach-with-cloudflare.md).
 
 Spark can't check that a custom domain is private. Adding one needs **I trust this address** and shows a **Custom domain** tag.
 

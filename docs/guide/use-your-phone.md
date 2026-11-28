@@ -7,7 +7,7 @@ order: 1010
 summary: Pair a device over Tailscale and choose what it may do.
 ---
 
-Use Spark elsewhere; work stays on the Mac or PC. About 5 minutes. Needs Tailscale.
+Use Spark elsewhere; work stays on the Mac or PC. About 5 minutes. Needs Tailscale or [Cloudflare](reach-with-cloudflare.md).
 
 1. Open **Remote control** above **Settings**: Tailscale, HTTPS, turn on.
 2. Under **Devices**, select **Pair a device**; scan or type the code at the address.

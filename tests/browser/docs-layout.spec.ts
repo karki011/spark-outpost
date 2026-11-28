@@ -17,10 +17,12 @@ async function open(page: Page, slug: string) {
 function frame(page: Page) {
   return page.evaluate(() => {
     const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+    const origin = box('.page.docs');
+    const half = (value: number) => Math.round(value * 2) / 2;
     return {
-      side: Math.round(box('.docs-side').width),
-      find: `${Math.round(box('.docs-find').top)}+${Math.round(box('.docs-find').height)}`,
-      title: Math.round(box('.docs-article h1').left),
+      side: half(box('.docs-side').width),
+      find: `${half(box('.docs-find').top - origin.top)}+${half(box('.docs-find').height)}`,
+      title: half(box('.docs-article h1').left - origin.left),
     };
   });
 }
@@ -115,11 +117,18 @@ test('the open page stays in view in the sidebar and the list does not jump', as
   expect(await nav.evaluate((list) => list.scrollTop)).toBe(scrolled);
 
   await nav.evaluate((list) => list.scrollTo(0, 0));
-  const before = Math.round((await projects.boundingBox())!.y);
+  const offset = () =>
+    projects.evaluate((button) =>
+      Math.round(
+        (button.getBoundingClientRect().top - button.closest('nav')!.getBoundingClientRect().top) *
+          2,
+      ),
+    );
+  const before = await offset();
   await open(page, 'glossary');
   await expect(nav.getByRole('link', { name: 'Glossary' })).toBeInViewport({ ratio: 1 });
   await nav.evaluate((list) => list.scrollTo(0, 0));
-  expect(Math.round((await projects.boundingBox())!.y)).toBe(before);
+  expect(await offset()).toBe(before);
 
   const search = docs(page).getByRole('searchbox', { name: 'Search the guide' });
   await nav.evaluate((list) => list.scrollTo(0, 300));

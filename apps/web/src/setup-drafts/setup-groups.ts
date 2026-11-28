@@ -2,6 +2,8 @@ import type { SetupTarget } from '@spark-outpost/contracts';
 
 export const PROVIDER_SETUPS: readonly SetupTarget[] = ['claude', 'codex', 'zai', 'custom'];
 
+export const REMOTE_SETUPS: readonly SetupTarget[] = ['remote_cloudflare'];
+
 export const CONNECTOR_SETUPS: readonly SetupTarget[] = [
   'atlassian',
   'servicenow',

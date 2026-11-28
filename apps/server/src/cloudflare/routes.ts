@@ -4,6 +4,7 @@ import {
   CLOUDFLARE_DEPLOY_URL,
   CLOUDFLARE_PROBLEMS,
   connectCloudflareRequestSchema,
+  startCloudflareReachRequestSchema,
   shareServiceOrigin,
   updateCloudflareRequestSchema,
   type CloudflareConnection,
@@ -15,8 +16,10 @@ import type { Db } from '../persistence/db.ts';
 import { CLOUDFLARE_UPLOAD_KEY_SECRET, type SecretStore } from '../setup/secrets.ts';
 import type { CloudflareClientConfig } from './client.ts';
 import { createCloudflareLink } from './link.ts';
+import { createCloudflareReach } from './reach.ts';
 import { createCloudflareSetup, type CloudflareSetupDeps } from './setup.ts';
 import { SETUP_KEY_NOT_SAVED, StepFailure } from './setup-problems.ts';
+import type { TunnelRunner } from './tunnel-runner.ts';
 import {
   checkShareService,
   CLOUDFLARE_CHECK_TIMEOUT_MS,
@@ -38,6 +41,9 @@ export interface CloudflareRouteDeps {
   cloudflareCheck?: ServiceCheck;
   cloudflareClient?: CloudflareClientConfig | null;
   cloudflareSetup?: Partial<Pick<CloudflareSetupDeps, 'fetch' | 'readWorker' | 'sleep'>>;
+  port: number;
+  tunnelRunner?: TunnelRunner | null;
+  cloudflareBoot?: boolean;
 }
 
 const NOT_CONNECTED = 'Cloudflare is not connected.';
@@ -71,6 +77,26 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
     link,
     check,
   });
+
+  const reach = createCloudflareReach({
+    db,
+    workspaceId,
+    secrets,
+    client: deps.cloudflareClient ?? null,
+    runner: deps.tunnelRunner ?? null,
+    forwardTo: `http://127.0.0.1:${deps.port}`,
+    fetch: deps.cloudflareSetup?.fetch ?? fetch,
+  });
+  if (deps.cloudflareBoot) reach.boot();
+
+  const answerReach = async (res: Response, work: () => Promise<unknown>) => {
+    try {
+      res.set('Cache-Control', 'no-store').json(await work());
+    } catch (error) {
+      if (error instanceof StepFailure) throw new BadRequestError(error.message);
+      throw error;
+    }
+  };
 
   const connection = async (): Promise<CloudflareConnection> => {
     const row = await cloudflareRow(db, workspaceId);
@@ -162,6 +188,28 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
     const cancelled = await setup.cancel();
     await inTurn(() => Promise.resolve());
     res.set('Cache-Control', 'no-store').json(cancelled);
+  });
+
+  router.get('/cloudflare/reach', async (_req, res) => {
+    await reach.reconcile();
+    res.set('Cache-Control', 'no-store').json(reach.view());
+  });
+
+  router.post('/cloudflare/reach', async (req, res) => {
+    const request = parseBody(startCloudflareReachRequestSchema, req);
+    await answerReach(res, () => reach.start(request));
+  });
+
+  router.post('/cloudflare/reach/resume', async (_req, res) => {
+    await answerReach(res, () => reach.resume());
+  });
+
+  router.delete('/cloudflare/reach/setup', async (_req, res) => {
+    await answerReach(res, () => reach.cancel());
+  });
+
+  router.delete('/cloudflare/reach', async (_req, res) => {
+    await answerReach(res, () => reach.remove());
   });
 
   router.delete('/cloudflare', async (_req, res) => {

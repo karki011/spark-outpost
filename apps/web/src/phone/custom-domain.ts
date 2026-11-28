@@ -14,9 +14,9 @@ export const REPLACES_TAILSCALE =
   'Tailscale access turns off when you turn this on, and paired devices pair again.';
 export const REPLACES_CUSTOM =
   'Turning Tailscale on turns your custom domain off, and paired devices pair again.';
-export const CUSTOM_SETUP_NOTE =
-  'Use an https address you already run, behind your own reverse proxy or tunnel.';
+export const CUSTOM_SETUP_NOTE = 'Use an address on your own domain, in place of Tailscale.';
 
+export const MANUAL_HEADING = 'Or use your own reverse proxy or tunnel';
 export const REACH_CHOICE_LABEL = 'How devices reach this computer';
 export const FORWARD_NOTE =
   'Your reverse proxy or tunnel sends requests here. Spark still listens on this computer only.';

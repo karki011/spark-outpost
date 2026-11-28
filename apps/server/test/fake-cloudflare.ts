@@ -10,6 +10,9 @@ export const FAKE_CLOUDFLARE_CLIENT = {
 
 export const FAKE_ACCOUNT = 'acc0123456789';
 export const FAKE_ORIGIN = 'https://spark-outpost-artifact-share.hazel.workers.dev';
+export const FAKE_TUNNEL_TOKEN = 'tunnel-run-token-0123456789abcdef';
+export const REACH_SCOPES_GRANTED =
+  'account-settings.read zone.read dns.write argotunnel.write zone-access.write';
 const ALL_SCOPES = 'account-settings.read workers-r2.write workers-scripts.admin';
 
 const ok = (result: unknown) => jsonResponse(200, { success: true, errors: [], result });
@@ -30,6 +33,22 @@ export class FakeCloudflare {
   readonly revoked: string[] = [];
   uploadedKey: string | null = null;
   uploadedModule: string | null = null;
+  zones = [{ id: 'zone1', name: 'example.com' }];
+  tunnelExists = false;
+  dnsRecords: { type: string; content: string }[] = [];
+  accessOn = true;
+  accessApps: { id: string; domain: string }[] = [];
+  policyFails = false;
+  policies: unknown[] | null = null;
+  tokenHeld: Promise<void> | null = null;
+  revokeHeld: Promise<void> | null = null;
+  revokeAsked: () => void = () => undefined;
+  tokenAsked: () => void = () => undefined;
+  readonly reach: { tunnelRoute: unknown; cname: unknown; policy: unknown } = {
+    tunnelRoute: null,
+    cname: null,
+    policy: null,
+  };
   private tokens = 0;
   private asked = 0;
 
@@ -51,6 +70,8 @@ export class FakeCloudflare {
       });
     }
     if (url.pathname === '/oauth2/revoke') {
+      this.revokeAsked();
+      await this.revokeHeld;
       this.revoked.push(String(new URLSearchParams(String(init?.body)).get('token')));
       return jsonResponse(200, {});
     }
@@ -59,6 +80,8 @@ export class FakeCloudflare {
     const base = `/accounts/${FAKE_ACCOUNT}`;
     const script = `${base}/workers/scripts/spark-outpost-artifact-share`;
     if (path === '/accounts') return ok([{ id: FAKE_ACCOUNT, name: 'Hazel’s account' }]);
+    const reached = await this.reachCall(method, path, init, url.searchParams);
+    if (reached) return reached;
     if (path === `${base}/r2/buckets`) {
       return this.r2Enabled
         ? ok({ name: 'spark-outpost-artifact-shares' })
@@ -91,6 +114,55 @@ export class FakeCloudflare {
     if (path === `${script}/schedules` || path === `${script}/subdomain`) return ok({});
     return refused(404, 7003, 'No route for that URI');
   };
+
+  private async reachCall(
+    method: string,
+    path: string,
+    init: RequestInit | undefined,
+    query: URLSearchParams,
+  ): Promise<Response | null> {
+    const tunnels = `/accounts/${FAKE_ACCOUNT}/cfd_tunnel`;
+    const body = () => JSON.parse(String(init?.body)) as Record<string, unknown>;
+    if (path === '/zones') {
+      const page = Number(query.get('page') ?? '1');
+      const size = Number(query.get('per_page') ?? '50');
+      return ok(this.zones.slice((page - 1) * size, page * size));
+    }
+    if (path === tunnels && method === 'GET') return ok(this.tunnelExists ? [{ id: 'tun1' }] : []);
+    if (path === tunnels && method === 'POST') {
+      this.tunnelExists = true;
+      return ok({ id: 'tun1' });
+    }
+    if (path === `${tunnels}/tun1/configurations`) {
+      this.reach.tunnelRoute = body().config;
+      return ok({});
+    }
+    if (path === `${tunnels}/tun1/token`) {
+      this.tokenAsked();
+      await this.tokenHeld;
+      return ok(FAKE_TUNNEL_TOKEN);
+    }
+    if (path === '/zones/zone1/dns_records' && method === 'GET') return ok(this.dnsRecords);
+    if (path === '/zones/zone1/dns_records' && method === 'POST') {
+      this.reach.cname = body();
+      return ok({ id: 'rec1' });
+    }
+    if (path === '/zones/zone1/access/apps' && method === 'GET') return ok(this.accessApps);
+    if (path === '/zones/zone1/access/apps' && method === 'POST') {
+      if (!this.accessOn) return refused(400, 12130, 'access.api.error.not_enabled');
+      this.accessApps.push({ id: 'app1', domain: String(body().domain) });
+      return ok({ id: 'app1' });
+    }
+    if (path === '/zones/zone1/access/apps/app1/policies' && method === 'GET') {
+      return ok(this.policies ?? (this.reach.policy ? [this.reach.policy] : []));
+    }
+    if (path === '/zones/zone1/access/apps/app1/policies') {
+      if (this.policyFails) return refused(500, 1000, 'Try again.');
+      this.reach.policy = body();
+      return ok({ id: 'pol1' });
+    }
+    return null;
+  }
 
   private service(init: RequestInit | undefined): Response {
     this.asked += 1;

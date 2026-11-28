@@ -39,7 +39,7 @@ function failureOf(status: number, codes: number[]): CloudflareApiFailure {
   return 'refused';
 }
 
-async function call(
+export async function cloudflareCall(
   api: CloudflareAccountApi,
   method: string,
   path: string,
@@ -80,7 +80,7 @@ export interface CloudflareAccount {
 }
 
 export async function firstAccount(api: CloudflareAccountApi): Promise<CloudflareAccount> {
-  const accounts = accountsSchema.safeParse(await call(api, 'GET', '/accounts'));
+  const accounts = accountsSchema.safeParse(await cloudflareCall(api, 'GET', '/accounts'));
   if (!accounts.success) {
     throw new CloudflareApiError('refused', 'Cloudflare listed no account for this sign-in.');
   }
@@ -98,7 +98,7 @@ export async function workersSubdomain(
   accountId: string,
 ): Promise<string | null> {
   try {
-    const result = await call(api, 'GET', `${account(accountId)}/workers/subdomain`);
+    const result = await cloudflareCall(api, 'GET', `${account(accountId)}/workers/subdomain`);
     const parsed = subdomainSchema.safeParse(result);
     return parsed.success ? parsed.data.subdomain : null;
   } catch (error) {
@@ -112,7 +112,9 @@ export async function createBucket(
   accountId: string,
   name: string,
 ): Promise<void> {
-  await call(api, 'POST', `${account(accountId)}/r2/buckets`, { json: { name } }, [BUCKET_EXISTS]);
+  await cloudflareCall(api, 'POST', `${account(accountId)}/r2/buckets`, { json: { name } }, [
+    BUCKET_EXISTS,
+  ]);
 }
 
 export async function scriptExists(
@@ -121,7 +123,7 @@ export async function scriptExists(
   name: string,
 ): Promise<boolean> {
   try {
-    await call(api, 'GET', `${script(accountId, name)}/settings`);
+    await cloudflareCall(api, 'GET', `${script(accountId, name)}/settings`);
     return true;
   } catch (error) {
     if (error instanceof CloudflareApiError && error.kind === 'notFound') return false;
@@ -153,7 +155,7 @@ export async function uploadScript(
     new Blob([upload.module], { type: 'application/javascript+module' }),
     upload.moduleName,
   );
-  await call(api, 'PUT', script(accountId, upload.name), { form });
+  await cloudflareCall(api, 'PUT', script(accountId, upload.name), { form });
 }
 
 export async function setSchedule(
@@ -162,7 +164,7 @@ export async function setSchedule(
   name: string,
   cron: string,
 ): Promise<void> {
-  await call(api, 'PUT', `${script(accountId, name)}/schedules`, { json: [{ cron }] });
+  await cloudflareCall(api, 'PUT', `${script(accountId, name)}/schedules`, { json: [{ cron }] });
 }
 
 export async function enableWorkersDev(
@@ -170,7 +172,7 @@ export async function enableWorkersDev(
   accountId: string,
   name: string,
 ): Promise<void> {
-  await call(api, 'POST', `${script(accountId, name)}/subdomain`, {
+  await cloudflareCall(api, 'POST', `${script(accountId, name)}/subdomain`, {
     json: { enabled: true, previews_enabled: false },
   });
 }
