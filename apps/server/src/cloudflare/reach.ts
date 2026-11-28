@@ -131,7 +131,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
   let signIn: CloudflareSignIn | null = null;
   let generation = 0;
   let attempts = 0;
-  let removing = false;
+  let removal: Promise<void> | null = null;
   let graceUntil = 0;
   let connected: string | null = null;
   let work: Promise<void> = Promise.resolve();
@@ -185,7 +185,10 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       const hostname = need(progress.hostname);
       const tunnelId = need(progress.tunnelId);
       const fresh = { tunnel: tunnelId, token: runToken };
-      const earlier = (await savedKeys()).filter((key) => key.tunnel !== tunnelId).slice(0, 1);
+      const bound = (await reachRow(db, workspaceId))?.tunnelId ?? null;
+      const earlier = (await savedKeys()).filter(
+        (key) => key.tunnel === bound && key.tunnel !== tunnelId,
+      );
       try {
         await secrets.set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, packTunnelKeys([fresh, ...earlier]));
       } catch {
@@ -418,7 +421,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     async start(request) {
       if (!client) throw new StepFailure(REACH_UNAVAILABLE, null);
       if (!runner) throw new StepFailure(REACH_NO_TUNNEL_PROGRAM, null);
-      if (status === 'working' || removing) throw new StepFailure(REACH_BUSY, null);
+      if (status === 'working' || removal) throw new StepFailure(REACH_BUSY, null);
       await reset();
       progress = { ...freshProgress(), hostname: request.hostname, email: request.email };
       await beginSignIn(client);
@@ -426,7 +429,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     },
     async resume() {
       if (!client) throw new StepFailure(REACH_UNAVAILABLE, null);
-      if (removing) throw new StepFailure(REACH_BUSY, null);
+      if (removal) throw new StepFailure(REACH_BUSY, null);
       if (status === 'working') return view();
       if (!progress.hostname) throw new StepFailure(REACH_UNAVAILABLE, null);
       if (canResume()) {
@@ -443,8 +446,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       return view();
     },
     async remove() {
-      removing = true;
-      try {
+      removal ??= (async () => {
         await reset();
         await work.catch(() => undefined);
         await exclusive(async () => {
@@ -454,9 +456,10 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
           await deleteReach(db, workspaceId);
           connected = null;
         });
-      } finally {
-        removing = false;
-      }
+      })().finally(() => {
+        removal = null;
+      });
+      await removal;
       return view();
     },
   };

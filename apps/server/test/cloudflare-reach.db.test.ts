@@ -361,7 +361,8 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     await comeBack(started);
     await asked;
     const removing = client.send('delete', REACH).expect(200);
-    const removed = removing.then(() => undefined);
+    const again = client.send('delete', REACH).expect(200);
+    const removed = Promise.all([removing, again]).then(() => undefined);
     await new Promise((resolve) => setTimeout(resolve, 50));
     await client.send('post', REACH, WANTED).expect(400);
     release();
