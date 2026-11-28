@@ -1,5 +1,6 @@
 ---
 title: Start and check chats from anywhere
+nav: Chats from anywhere
 section: Mac app and providers
 type: how-to
 order: 412

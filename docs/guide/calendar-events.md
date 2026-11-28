@@ -1,8 +1,9 @@
 ---
 title: Reply to invites and create events
+nav: Invites and new events
 section: Mac app and providers
 type: how-to
-order: 423
+order: 428
 summary: Answer a Google Calendar invitation and create an event with guests and a Meet link from Today.
 ---
 

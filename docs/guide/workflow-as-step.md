@@ -2,7 +2,7 @@
 title: Use a workflow as a step
 section: Chats
 type: how-to
-order: 231
+order: 237
 summary: Build one workflow on top of another by adding it as a step, and see how its steps run, fail and show in a run.
 ---
 

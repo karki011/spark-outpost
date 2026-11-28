@@ -1,5 +1,6 @@
 ---
 title: Choose how much Spark does alone
+nav: How much Spark does alone
 section: Chats
 type: how-to
 order: 214

@@ -1,5 +1,6 @@
 ---
 title: Control Spark from another device
+nav: Use another device
 section: Mac app and providers
 type: how-to
 order: 417

@@ -1,5 +1,6 @@
 ---
 title: Review, keep or revert changes
+nav: Review changes
 section: Chats
 type: how-to
 order: 222

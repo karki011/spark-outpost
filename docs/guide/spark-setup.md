@@ -2,7 +2,7 @@
 title: Set up a Spark
 section: Chats
 type: how-to
-order: 229
+order: 232
 summary: Choose what a Spark runs on, read what that means, use it for every new chat and see where it is used.
 ---
 

@@ -48,11 +48,12 @@ Sections are the seven groups in the Docs sidebar. `order` sorts pages; the hund
 ## How a page is written
 
 - One Markdown file per page. The file name is the page id and the link: `plan-card.md` opens at `#/docs/plan-card`.
-- Frontmatter, all five fields required:
+- Frontmatter. `nav` is optional; the other five fields are required:
 
   ```yaml
   ---
-  title: Answer a plan
+  title: Choose how much Spark does alone
+  nav: How much Spark does alone
   section: Chats
   type: how-to
   order: 224
@@ -60,6 +61,10 @@ Sections are the seven groups in the Docs sidebar. `order` sorts pages; the hund
   ---
   ```
 
+- `title` is the page's heading, its name in search and to agents, and what a `**Next:**` link quotes. Keep it to 40 characters.
+- `nav` is the page's one-line label in the Docs sidebar, up to 26 characters. Add it only when the title is longer than 26; shorter titles are their own label. No two pages share a label.
+- `section` is one of the seven names below, spelled exactly. `order` is not repeated within a section.
+- Keep `##` headings to 40 characters and tables to four columns, so they fit the outline and a phone.
 - Plain Markdown with GitHub tables. No `#` heading in the body; use `##` for parts of the page and `###` below them. Docs lists the `##` headings under **On this page** when there are three or more.
 - Heading links follow GitHub's rules: `## Hold to confirm` is `#hold-to-confirm`. Link to another page with a relative link: `[protected paths](protected-paths.md#secret-files)`.
 - Callouts are blockquotes that start with a bold word: `> **Tip:**`, `> **Note:**`, `> **Important:**`. At most one Tip per page.
@@ -120,11 +125,12 @@ do: [Share one](share-an-artifact.md).
 
 `pnpm check:docs` fails when:
 
-- a page has bad frontmatter, an unknown `type` or a repeated title;
+- a page has bad frontmatter, an unknown `type` or `section`, a repeated title or sidebar label, or an `order` another page in its section has;
+- a title is over 40 characters, a title over 26 has no `nav` label, a `nav` label is over 26 or repeats its title, or a `##` heading is over 40;
 - a page is over its word cap, has a paragraph over 40 words, a `#` heading or a second Tip;
 - a how-to lacks its time estimate or numbered steps, a how-to or start page lacks its `**Next:**` link, or a Next link's text isn't the target's title;
 - a link to a page or heading is broken;
-- a table has no header row, or a row has a different number of cells than its header;
+- a table has no header row, more than four columns, or a row with a different number of cells than its header;
 - a shown image is missing its light or dark file, or an image is shown nowhere;
 - a Spark tool has no entry in `spark-tools.md`, or a Settings section has none in `settings.md`;
 - `spark_docs` would clip the page list or a page (60 list items, 4,000 characters per section, 20,000 per answer).

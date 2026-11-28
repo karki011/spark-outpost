@@ -1,5 +1,6 @@
 ---
 title: Let Spark handle PR feedback
+nav: Handle PR feedback
 section: Projects and shipping
 type: how-to
 order: 322

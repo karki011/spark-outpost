@@ -94,6 +94,16 @@ test('a link to a missing heading opens its page, and a missing page opens the l
   await expect(pageTitle(page)).toHaveText('What do you want to do?');
 });
 
+test('a long-titled page has a short sidebar label and keeps its full title', async ({ page }) => {
+  await page.goto('/#/docs/connect-cloudflare');
+  await expect(pageTitle(page)).toHaveText('Share from your own Cloudflare account');
+  const current = guideNav(page).getByRole('link', { name: 'Use your own Cloudflare' });
+  await expect(current).toHaveAttribute('aria-current', 'page');
+  await expect(
+    guideNav(page).getByRole('link', { name: 'Share from your own Cloudflare account' }),
+  ).toHaveCount(0);
+});
+
 test('the contents open one product area at a time and keep the current one open', async ({
   page,
 }) => {

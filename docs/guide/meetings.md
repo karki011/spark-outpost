@@ -2,7 +2,7 @@
 title: Take meeting notes (alpha)
 section: Mac app and providers
 type: how-to
-order: 422
+order: 426
 summary: Alpha. Record a meeting on your Mac, get a transcript labelled You and Others, and notes written when it ends.
 ---
 

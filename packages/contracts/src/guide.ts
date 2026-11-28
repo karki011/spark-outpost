@@ -33,9 +33,20 @@ export const GUIDE_TYPE_LABELS: Readonly<Record<GuidePageType, string>> = {
   'whats-new': "What's new",
 };
 
+export const GUIDE_SECTIONS = [
+  'Get started',
+  'Chats',
+  'Projects and shipping',
+  'Mac app and providers',
+  'Understand Spark',
+  'Reference',
+  'Help',
+] as const;
+
 export interface GuidePage {
   slug: string;
   title: string;
+  nav: string | null;
   section: string;
   type: GuidePageType;
   order: number;
@@ -57,6 +68,7 @@ export interface GuideLink {
 
 const frontmatterSchema = z.object({
   title: z.string().min(1),
+  nav: z.string().min(1).optional(),
   section: z.string().min(1),
   type: z.enum(GUIDE_PAGE_TYPES),
   order: z.coerce.number().int(),
@@ -157,6 +169,7 @@ export function parseGuidePage(slug: string, source: string): GuidePage {
   return {
     slug,
     ...meta,
+    nav: meta.nav ?? null,
     body,
     headings: extractHeadings(body),
     comingSoon: COMING_SOON.test(body),
@@ -187,6 +200,10 @@ export function loadGuidePages(files: Record<string, string>): GuidePage[] {
     );
   }
   return pages.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
+}
+
+export function guideNavLabel(page: GuidePage): string {
+  return page.nav ?? page.title;
 }
 
 export function groupGuideSections(pages: readonly GuidePage[]): GuideNavSection[] {

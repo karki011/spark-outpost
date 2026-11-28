@@ -1,5 +1,6 @@
 ---
 title: Pick the model, effort and mode
+nav: Model, effort and mode
 section: Chats
 type: how-to
 order: 212

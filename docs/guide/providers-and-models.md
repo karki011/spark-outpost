@@ -1,8 +1,9 @@
 ---
 title: Manage providers, models and Jev
+nav: Providers, models and Jev
 section: Mac app and providers
 type: how-to
-order: 418
+order: 421
 summary: Change a provider's defaults, sign in again or disconnect it, read the model cards, and connect Jev, the optional advisor.
 ---
 

@@ -1,8 +1,9 @@
 ---
 title: Spark, skill and workflow files
+nav: Spark and workflow files
 section: Reference
 type: reference
-order: 619
+order: 620
 summary: The formats of a Spark's folder, a skill's SKILL.md and a workflow file, and how an agent reads and proposes changes to them.
 ---
 

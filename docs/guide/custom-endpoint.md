@@ -1,8 +1,9 @@
 ---
 title: Use a local model or your own endpoint
+nav: Local model or endpoint
 section: Mac app and providers
 type: how-to
-order: 419
+order: 423
 summary: Run chats on Ollama, LM Studio, a llama.cpp server, LiteLLM or any server that speaks the Anthropic Messages API.
 ---
 

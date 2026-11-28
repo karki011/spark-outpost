@@ -1,6 +1,8 @@
 import {
+  GUIDE_SECTIONS,
   guideHrefTarget,
   guideLineWords,
+  guideNavLabel,
   guideNextSlug,
   markdownLines,
   type GuidePage,
@@ -19,6 +21,10 @@ export const WORD_CAPS: Readonly<Record<GuidePageType, number>> = {
 
 export const PARAGRAPH_WORDS_MAX = 40;
 export const SUMMARY_CHARS_MAX = 170;
+export const TITLE_CHARS_MAX = 40;
+export const NAV_CHARS_MAX = 26;
+export const HEADING_CHARS_MAX = 40;
+export const TABLE_COLUMNS_MAX = 4;
 const SEQUENCE_TYPES: readonly GuidePageType[] = ['start', 'how-to'];
 
 export interface GuideViolation {
@@ -82,6 +88,11 @@ export function tableProblems(body: string): string[] {
       continue;
     }
     const columns = tableCells(rows[0]!);
+    if (columns > TABLE_COLUMNS_MAX) {
+      problems.push(
+        `a table has ${columns} columns; keep tables to ${TABLE_COLUMNS_MAX}: ${rows[0]!.trim().slice(0, 40)}`,
+      );
+    }
     for (const row of rows.slice(2)) {
       const cells = tableCells(row);
       if (cells !== columns) {
@@ -89,6 +100,33 @@ export function tableProblems(body: string): string[] {
           `a table row has ${cells} cells; its header has ${columns}: ${row.trim().slice(0, 40)}`,
         );
       }
+    }
+  }
+  return problems;
+}
+
+function pageNaming(page: GuidePage): string[] {
+  const problems: string[] = [];
+  if (!(GUIDE_SECTIONS as readonly string[]).includes(page.section)) {
+    problems.push(`unknown section "${page.section}"; sections are ${GUIDE_SECTIONS.join(', ')}`);
+  }
+  if (page.title.length > TITLE_CHARS_MAX) {
+    problems.push(`title is ${page.title.length} characters; keep it to ${TITLE_CHARS_MAX}`);
+  }
+  if (page.nav === null && page.title.length > NAV_CHARS_MAX) {
+    problems.push(
+      `title is ${page.title.length} characters; add a nav label of up to ${NAV_CHARS_MAX} for the sidebar`,
+    );
+  }
+  if (page.nav !== null && page.nav.length > NAV_CHARS_MAX) {
+    problems.push(`nav label is ${page.nav.length} characters; keep it to ${NAV_CHARS_MAX}`);
+  }
+  if (page.nav === page.title) problems.push('nav label repeats the title; leave it out');
+  for (const heading of page.headings) {
+    if (heading.depth === 2 && heading.text.length > HEADING_CHARS_MAX) {
+      problems.push(
+        `heading "${heading.text}" is ${heading.text.length} characters; keep ## headings to ${HEADING_CHARS_MAX}`,
+      );
     }
   }
   return problems;
@@ -197,11 +235,28 @@ export function guideWords(pages: readonly GuidePage[]): number {
 export function checkPages(pages: readonly GuidePage[]): GuideViolation[] {
   const violations: GuideViolation[] = [];
   const titles = new Map<string, string>();
+  const labels = new Map<string, string>();
+  const orders = new Map<string, string>();
   for (const page of pages) {
     const twin = titles.get(page.title);
     if (twin) violations.push({ page: page.slug, message: `same title as ${twin}` });
     titles.set(page.title, page.slug);
-    for (const message of [...pageShape(page), ...pageLinks(page, pages)]) {
+    const label = guideNavLabel(page);
+    const sameLabel = labels.get(label);
+    if (sameLabel && !twin) {
+      violations.push({ page: page.slug, message: `same sidebar label as ${sameLabel}` });
+    }
+    labels.set(label, page.slug);
+    const slot = `${page.section}\n${page.order}`;
+    const sameOrder = orders.get(slot);
+    if (sameOrder) {
+      violations.push({
+        page: page.slug,
+        message: `same order ${page.order} as ${sameOrder} in ${page.section}`,
+      });
+    }
+    orders.set(slot, page.slug);
+    for (const message of [...pageNaming(page), ...pageShape(page), ...pageLinks(page, pages)]) {
       violations.push({ page: page.slug, message });
     }
   }

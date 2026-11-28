@@ -3,6 +3,7 @@ import {
   GUIDE_TYPE_LABELS,
   groupGuideSections,
   guideLink,
+  guideNavLabel,
   searchGuidePages,
   type GuidePage,
 } from '@spark-outpost/contracts';
@@ -164,7 +165,7 @@ function PageList({
                     aria-current={page.slug === current ? 'page' : undefined}
                     onClick={onPicked}
                   >
-                    {page.title}
+                    {guideNavLabel(page)}
                     {page.comingSoon && <span className="docs-soon">Soon</span>}
                   </a>
                 </li>

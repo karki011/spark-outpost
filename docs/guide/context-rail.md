@@ -1,5 +1,6 @@
 ---
 title: See a chat's context and tools
+nav: Context and tools
 section: Chats
 type: how-to
 order: 217

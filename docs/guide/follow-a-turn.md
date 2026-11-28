@@ -1,5 +1,6 @@
 ---
 title: Follow, stop and queue messages
+nav: Follow, stop and queue
 section: Chats
 type: how-to
 order: 216

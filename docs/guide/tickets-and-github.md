@@ -1,5 +1,6 @@
 ---
 title: Connect GitHub and ticket trackers
+nav: GitHub and ticket trackers
 section: Projects and shipping
 type: how-to
 order: 330

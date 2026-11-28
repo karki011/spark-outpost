@@ -2,7 +2,7 @@
 title: Split a job
 section: Chats
 type: how-to
-order: 238
+order: 242
 summary: Ask the agent to split a job into sub-chats, answer its plan card, and see what each piece starts with.
 ---
 

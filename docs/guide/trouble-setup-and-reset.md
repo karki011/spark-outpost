@@ -1,5 +1,6 @@
 ---
 title: Fix the app, setup or a reset
+nav: Fix the app or setup
 section: Help
 type: troubleshooting
 order: 710

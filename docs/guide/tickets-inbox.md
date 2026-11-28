@@ -1,5 +1,6 @@
 ---
 title: Work from the Tickets inbox
+nav: The Tickets inbox
 section: Projects and shipping
 type: how-to
 order: 332

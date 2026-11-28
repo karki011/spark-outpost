@@ -2,7 +2,7 @@
 title: Messages between chats
 section: Chats
 type: concept
-order: 237
+order: 241
 summary: How one chat's agent messages another, who may message whom, and why the text is never your message.
 ---
 

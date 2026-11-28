@@ -2,7 +2,7 @@
 title: Organize browser tabs
 section: Chats
 type: how-to
-order: 229
+order: 231
 summary: Sort Browser view tabs into Spaces and pinned folders, and get archived tabs back.
 ---
 

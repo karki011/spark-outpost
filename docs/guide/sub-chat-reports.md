@@ -2,7 +2,7 @@
 title: Reports and the wrap-up
 section: Chats
 type: concept
-order: 239
+order: 243
 summary: What a sub-chat reports to its parent, when a waiting sub-chat starts, and the wrap-up the parent writes at the end.
 ---
 

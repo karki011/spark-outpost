@@ -2,7 +2,7 @@
 title: Build with an agent
 section: Chats
 type: how-to
-order: 229
+order: 230
 summary: Make, change or delete Sparks and workflows by talking to an agent in a builder chat docked beside the Sparks page. Changes follow the agent's mode.
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: Agent modes and autonomy levels
+nav: Modes and autonomy levels
 section: Reference
 type: reference
 order: 612
