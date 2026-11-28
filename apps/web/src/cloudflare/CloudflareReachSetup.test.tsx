@@ -2,9 +2,10 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CloudflareReach, RemoteAccess } from '@spark-outpost/contracts';
+import type { CloudflareReach, RemoteAccess, SetupDraft } from '@spark-outpost/contracts';
 import { phoneApi } from '../phone/phone-api.ts';
 import { CloudflareReachSetup } from './CloudflareReachSetup.tsx';
+import { setupDraftsApi } from '../setup-drafts/setup-drafts-api.ts';
 import { cloudflareApi } from './cloudflare-api.ts';
 
 const step = (
@@ -36,7 +37,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function show(reach: CloudflareReach) {
+function show(reach: CloudflareReach, drafts: SetupDraft[] = []) {
+  vi.spyOn(setupDraftsApi, 'list').mockResolvedValue({ drafts });
   vi.spyOn(cloudflareApi, 'reach').mockResolvedValue(reach);
   const onSaved = vi.fn();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -54,6 +56,23 @@ describe('setting up a Cloudflare address for this computer', () => {
     show({ ...IDLE, available: false });
     await waitFor(() => expect(load).toHaveBeenCalled());
     expect(screen.queryByRole('heading', { name: 'Set it up with Cloudflare' })).toBeNull();
+  });
+
+  it('fills in what an agent prepared and leaves Allow on Cloudflare to the user', async () => {
+    const start = vi.spyOn(cloudflareApi, 'startReach');
+    show(IDLE, [
+      {
+        target: 'remote_cloudflare',
+        fields: { address: 'spark.example.com', email: 'me@example.com' },
+        conversationId: null,
+        createdAt: '2026-11-27T00:00:00.000Z',
+      },
+    ]);
+    const address = await screen.findByLabelText<HTMLInputElement>('Address');
+    await waitFor(() => expect(address.value).toBe('spark.example.com'));
+    expect(screen.getByLabelText<HTMLInputElement>('Your email').value).toBe('me@example.com');
+    expect(screen.getByText(/was prepared by an agent/)).toBeTruthy();
+    expect(start).not.toHaveBeenCalled();
   });
 
   it('lists the five permissions and starts with a valid address and email', async () => {

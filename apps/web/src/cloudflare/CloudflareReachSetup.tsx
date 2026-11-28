@@ -5,6 +5,7 @@ import type {
   CloudflareReachPermission,
   CloudflareReachStepId,
   RemoteAccess,
+  SetupFields,
 } from '@spark-outpost/contracts';
 import { parseCustomDomain } from '../phone/custom-domain.ts';
 import { phoneApi } from '../phone/phone-api.ts';
@@ -15,6 +16,9 @@ import {
   StepList,
   type PermissionCopy,
 } from './CloudflareChecklist.tsx';
+import { PreparedSetups } from '../setup-drafts/PreparedSetups.tsx';
+import { REMOTE_SETUPS } from '../setup-drafts/setup-groups.ts';
+import { usePreparedSetup } from '../setup-drafts/use-setup-drafts.ts';
 import { useCloudflareReach } from './use-cloudflare-reach.ts';
 
 export const REACH_HEADING = 'Set it up with Cloudflare';
@@ -84,6 +88,13 @@ export function CloudflareReachSetup({ onSaved }: CloudflareReachSetupProps) {
   const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
   const [tried, setTried] = useState(false);
+  const prepared = usePreparedSetup('remote_cloudflare');
+  const [applied, setApplied] = useState<SetupFields | null>(null);
+  if (prepared.fields && prepared.fields !== applied) {
+    setApplied(prepared.fields);
+    setAddress((current) => current || (prepared.fields?.address ?? ''));
+    setEmail((current) => current || (prepared.fields?.email ?? ''));
+  }
   const turnedOn = useRef(false);
   const turnOn = useMutation({
     mutationFn: (hostname: string) => phoneApi.setAccess({ hostname, confirmed: true }),
@@ -110,6 +121,7 @@ export function CloudflareReachSetup({ onSaved }: CloudflareReachSetupProps) {
     setTried(true);
     if (!parsed.ok || !emailOk || auto.busy) return;
     turnedOn.current = false;
+    prepared.clear();
     auto.start({ hostname: parsed.hostname, email: email.trim() });
   };
   return (
@@ -151,6 +163,7 @@ export function CloudflareReachSetup({ onSaved }: CloudflareReachSetupProps) {
       ) : (
         <form className="cf-reach-form" noValidate onSubmit={submit}>
           <p>{REACH_LEDE}</p>
+          <PreparedSetups targets={REMOTE_SETUPS} />
           <div className="field">
             <label htmlFor={`${ids}-address`} className="ph-field-label">
               Address

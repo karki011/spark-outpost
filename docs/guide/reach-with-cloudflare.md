@@ -36,4 +36,6 @@ A step that reads **Needs you** says why and offers its fix. Finished steps are 
 
 Spark never replaces a DNS record it did not make. If the address is taken, pick another.
 
+An agent can fill in the address and email; you still select **Allow on Cloudflare**.
+
 **Next:** [Answer cards from a paired device](answer-remotely.md)

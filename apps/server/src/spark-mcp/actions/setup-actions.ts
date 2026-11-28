@@ -61,14 +61,14 @@ export const prepareSetupTool = sparkTool({
   title: 'Prepare an AI provider or connector',
   acts: true,
   description:
-    `Prefill an AI provider or connector form with non-secret fields; the user types the key or signs in and connects it. Never pass a secret. Fields: ${FIELD_GUIDE}. ` +
+    `Prefill a provider, connector or Remote control form; the user finishes it. Never pass a secret. Fields: ${FIELD_GUIDE}. ` +
     ACTION_NOTE,
   input: {
     target: setupTargetSchema,
     fields: z
       .record(z.string().max(40), z.string().trim().min(1).max(SETUP_FIELD_MAX))
       .optional()
-      .describe('Non-secret values by field name.'),
+      .describe('Values by field name.'),
   },
   run: (args, context) => prepare(context, args),
 });
