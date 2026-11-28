@@ -260,6 +260,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           ticketsWaiting={ticketsWaiting}
           ticketNotices={ticketNotices}
           githubUpdates={githubUpdates}
+          mood={mood}
           onIntent={preloadView}
           onSettingsIntent={preloadSettings}
           onView={onRailView}
