@@ -10,6 +10,8 @@ const ZONES_PER_PAGE = 50;
 const ZONE_PAGES_MAX = 40;
 export const REACH_DOMAINS_UNREADABLE =
   'Cloudflare sent a list of domains Spark couldn’t read. Try again.';
+export const REACH_PAGES_UNREADABLE =
+  'Cloudflare sent a list of sign-in pages Spark couldn’t read. Try again.';
 export const REACH_TOO_MANY_DOMAINS =
   'This Cloudflare account has more domains than Spark can look through. Use Custom domain and run your own tunnel.';
 const zonesSchema = z.array(z.object({ id, name: z.string().min(1).max(253) }));
@@ -126,18 +128,38 @@ export async function createCname(
   });
 }
 
-const appsSchema = z.array(z.object({ id, domain: z.string().optional() }));
+const appsSchema = z.array(
+  z.object({ id, domain: z.string().optional(), destinations: z.unknown().optional() }),
+);
 
-export async function accessAppId(
+export interface AccessApp {
+  id: string;
+  exemptsPaths: boolean;
+}
+
+function hasOverrides(destination: unknown): boolean {
+  if (typeof destination !== 'object' || destination === null) return true;
+  const overrides = (destination as { overrides?: unknown }).overrides;
+  if (overrides === undefined || overrides === null) return false;
+  return !Array.isArray(overrides) || overrides.length > 0;
+}
+
+function exemptsPaths(destinations: unknown): boolean {
+  if (destinations === undefined || destinations === null) return false;
+  return !Array.isArray(destinations) || destinations.some(hasOverrides);
+}
+
+export async function accessAppFor(
   api: CloudflareAccountApi,
   zoneId: string,
   hostname: string,
-): Promise<string | null> {
+): Promise<AccessApp | null> {
   const apps = appsSchema.safeParse(
     await cloudflareCall(api, 'GET', `${zone(zoneId)}/access/apps?per_page=100`),
   );
-  if (!apps.success) return null;
-  return apps.data.find((app) => app.domain === hostname)?.id ?? null;
+  if (!apps.success) throw new StepFailure(REACH_PAGES_UNREADABLE, 'retry');
+  const app = apps.data.find((candidate) => candidate.domain === hostname);
+  return app ? { id: app.id, exemptsPaths: exemptsPaths(app.destinations) } : null;
 }
 
 export async function createAccessApp(
