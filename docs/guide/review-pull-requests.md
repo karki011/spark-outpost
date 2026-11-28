@@ -2,7 +2,7 @@
 title: Read a pull request review
 section: Projects and shipping
 type: how-to
-order: 334
+order: 790
 summary: Run your Spark or workflow reviewer on a pull request from the GitHub page, follow its state and read its review in the details.
 ---
 

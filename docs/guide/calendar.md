@@ -1,8 +1,8 @@
 ---
 title: See your day
-section: Mac app and providers
+section: Mac app
 type: how-to
-order: 421
+order: 940
 summary: Connect Mac Calendar, Google Calendar or Microsoft 365 to see Today beside your chats, join meetings in one click and keep focus time quiet.
 ---
 

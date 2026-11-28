@@ -2,7 +2,7 @@
 title: Guardrails
 section: Understand Spark
 type: concept
-order: 520
+order: 1140
 summary: What Spark enforces itself in every chat and agent mode, what it leaves to the agent, and why nothing is capped.
 ---
 

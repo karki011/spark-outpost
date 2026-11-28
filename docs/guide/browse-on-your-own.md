@@ -1,8 +1,8 @@
 ---
 title: Browse on your own
-section: Chats
+section: Browser
 type: how-to
-order: 228
+order: 420
 summary: Keep your own tabs in the left bar, in a Personal profile no agent can reach or a Work profile that shares agents' sign-ins.
 ---
 

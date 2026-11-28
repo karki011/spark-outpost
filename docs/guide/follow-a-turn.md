@@ -1,8 +1,9 @@
 ---
 title: Follow, stop and queue messages
+nav: Follow, stop and queue
 section: Chats
 type: how-to
-order: 216
+order: 260
 summary: Follow work, stop it, queue files and messages, or delete a chat that is running.
 ---
 

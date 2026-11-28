@@ -2,7 +2,7 @@
 title: Link, clone or read a repo
 section: Projects and shipping
 type: how-to
-order: 312
+order: 720
 summary: Let a chat find a repo by name and link it, clone it from GitHub, or copy it just to read and answer a question.
 ---
 

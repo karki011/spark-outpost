@@ -2,7 +2,7 @@
 title: Protected paths
 section: Reference
 type: reference
-order: 616
+order: 1240
 summary: The hard rails - what Spark's rules make ask or refuse in a chat, and what is refused even with no rules.
 ---
 

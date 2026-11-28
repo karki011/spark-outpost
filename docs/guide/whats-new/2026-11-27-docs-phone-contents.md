@@ -1,0 +1,1 @@
+change: In a narrow window and on a phone, Docs opens its contents and search from a bar that stays at the top, rows are finger-sized, wide tables stack into labelled rows, and **On this page** is one row you open

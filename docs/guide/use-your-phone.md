@@ -1,8 +1,9 @@
 ---
 title: Control Spark from another device
-section: Mac app and providers
+nav: Use another device
+section: Other devices
 type: how-to
-order: 417
+order: 1010
 summary: Pair a device over Tailscale and choose what it may do.
 ---
 

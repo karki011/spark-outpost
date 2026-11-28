@@ -1,8 +1,8 @@
 ---
 title: Use Claude plugins
-section: Mac app and providers
+section: Connections
 type: how-to
-order: 422
+order: 880
 summary: Turn on Claude Code plugins you installed for Claude chats, check what they run first, and use their commands from the / menu.
 ---
 

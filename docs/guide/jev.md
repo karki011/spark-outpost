@@ -2,7 +2,7 @@
 title: Jev, the optional advisor
 section: Understand Spark
 type: concept
-order: 518
+order: 1130
 summary: What Jev decides and never does, what it reads, what it costs, and what happens without it.
 ---
 

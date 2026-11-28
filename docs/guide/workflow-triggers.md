@@ -1,8 +1,9 @@
 ---
 title: Start a workflow on an event
-section: Chats
+nav: Start on an event
+section: Sparks and workflows
 type: how-to
-order: 231
+order: 580
 summary: Have a workflow run in a chat when it starts, when a turn changes files, before publish, on a new commit or when Spark's pull request updates.
 ---
 

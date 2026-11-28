@@ -8,13 +8,13 @@ This folder is the single source for the user guide. The app bundles these pages
 
 `welcome.md`, the Docs landing page, lists at most 12 tasks in four groups. Every other page is reached from the sidebar, search or a link.
 
-| Reader                                     | Top tasks                                                                       | Starts in                    |
-| ------------------------------------------ | ------------------------------------------------------------------------------- | ---------------------------- |
-| New user setting up                        | Connect a provider, send a first message, connect GitHub or a tracker           | Get started                  |
-| Daily user working in chats                | Start a chat, set the mode, answer cards, review changes, open a PR             | Chats, Projects and shipping |
-| Power user running sub-chats and Full auto | Set autonomy, plan first, sub-chats and stacks, PR feedback, Sparks, the island | Chats, Mac app and providers |
-| Someone worried about safety or privacy    | See what always asks, what leaves the computer, what Jev reads                  | Understand Spark, Reference  |
-| Someone fixing a problem                   | Match a symptom to a fix, send diagnostics, start over                          | Help                         |
+| Reader                                     | Top tasks                                                                       | Starts in                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------- |
+| New user setting up                        | Connect a provider, send a first message, connect GitHub or a tracker           | Get started, Connections        |
+| Daily user working in chats                | Start a chat, set the mode, answer cards, review changes, open a PR             | Chats, Approve and review       |
+| Power user running sub-chats and Full auto | Set autonomy, plan first, sub-chats and stacks, PR feedback, Sparks, the island | Sub-chats, Sparks and workflows |
+| Someone worried about safety or privacy    | See what always asks, what leaves the computer, what Jev reads                  | Understand Spark, Reference     |
+| Someone fixing a problem                   | Match a symptom to a fix, send diagnostics, start over                          | Help                            |
 
 ## Page types
 
@@ -33,26 +33,33 @@ Words are counted without frontmatter, table rules, image syntax and link target
 
 ## Sections
 
-Sections are the seven groups in the Docs sidebar. `order` sorts pages; the hundreds digit groups a section, and sections appear in the order of their first page.
+Sections are the groups in the Docs sidebar, declared once in `GUIDE_SECTIONS` (`packages/contracts/src/guide.ts`). `order` sorts pages; the hundreds group a section, and sections appear in the order of their first page. A section holds at most 15 pages; aim for 10 or fewer and split a section that outgrows that.
 
-| Section               | Orders | Holds                                                                |
-| --------------------- | ------ | -------------------------------------------------------------------- |
-| Get started           | 100s   | The landing page, setup, connecting a provider                       |
-| Chats                 | 200s   | Working in a chat: model and mode, cards, changes, terminals, Sparks |
-| Projects and shipping | 300s   | Worktrees, `.sparkignore`, the Map, Ship, PR follow-up, tickets      |
-| Mac app and providers | 400s   | Spark Island, updates, Mac privacy, providers, models and Jev's key  |
-| Understand Spark      | 500s   | Concepts                                                             |
-| Reference             | 600s   | Tables                                                               |
-| Help                  | 700s   | Troubleshooting and What's new                                       |
+| Section               | Orders | Holds                                                           |
+| --------------------- | ------ | --------------------------------------------------------------- |
+| Get started           | 100s   | The landing page, setup, connecting a provider                  |
+| Chats                 | 200s   | Working in a chat: model and mode, autonomy, context, terminals |
+| Approve and review    | 300s   | Approval cards, plans, reviewing changes, sharing an artifact   |
+| Browser               | 400s   | The Browser pane and the Browser view                           |
+| Sparks and workflows  | 500s   | Making Sparks, test runs, workflows, schedules and triggers     |
+| Sub-chats             | 600s   | Splitting a job, messages between chats, reports                |
+| Projects and shipping | 700s   | Worktrees, `.sparkignore`, the Map, Ship, PR follow-up, tickets |
+| Connections           | 800s   | GitHub and trackers, Slack, Zoom, MCP, Cloudflare, providers    |
+| Mac app               | 900s   | Spark Island, voice, calendar, meetings, Mac control, privacy   |
+| Other devices         | 1000s  | Paired devices and another computer's Spark                     |
+| Understand Spark      | 1100s  | Concepts                                                        |
+| Reference             | 1200s  | Tables                                                          |
+| Help                  | 1300s  | Troubleshooting and What's new                                  |
 
 ## How a page is written
 
 - One Markdown file per page. The file name is the page id and the link: `plan-card.md` opens at `#/docs/plan-card`.
-- Frontmatter, all five fields required:
+- Frontmatter. `nav` is optional; the other five fields are required:
 
   ```yaml
   ---
-  title: Answer a plan
+  title: Choose how much Spark does alone
+  nav: How much Spark does alone
   section: Chats
   type: how-to
   order: 224
@@ -60,6 +67,10 @@ Sections are the seven groups in the Docs sidebar. `order` sorts pages; the hund
   ---
   ```
 
+- `title` is the page's heading, its name in search and to agents, and what a `**Next:**` link quotes. Keep it to 40 characters.
+- `nav` is the page's one-line label in the Docs sidebar, up to 26 characters. Add it only when the title is longer than 26; shorter titles are their own label. No two pages share a label.
+- `section` is one of the names in the table above, spelled exactly. `order` is not repeated within a section.
+- Keep `##` headings to 40 characters and tables to four columns, so they fit the outline and a phone.
 - Plain Markdown with GitHub tables. No `#` heading in the body; use `##` for parts of the page and `###` below them. Docs lists the `##` headings under **On this page** when there are three or more.
 - Heading links follow GitHub's rules: `## Hold to confirm` is `#hold-to-confirm`. Link to another page with a relative link: `[protected paths](protected-paths.md#secret-files)`.
 - Callouts are blockquotes that start with a bold word: `> **Tip:**`, `> **Note:**`, `> **Important:**`. At most one Tip per page.
@@ -120,11 +131,13 @@ do: [Share one](share-an-artifact.md).
 
 `pnpm check:docs` fails when:
 
-- a page has bad frontmatter, an unknown `type` or a repeated title;
+- a section has more than 15 pages;
+- a page has bad frontmatter, an unknown `type` or `section`, a repeated title or sidebar label, or an `order` another page in its section has;
+- a title is over 40 characters, a title over 26 has no `nav` label, a `nav` label is over 26 or repeats its title, or a `##` heading is over 40;
 - a page is over its word cap, has a paragraph over 40 words, a `#` heading or a second Tip;
 - a how-to lacks its time estimate or numbered steps, a how-to or start page lacks its `**Next:**` link, or a Next link's text isn't the target's title;
 - a link to a page or heading is broken;
-- a table has no header row, or a row has a different number of cells than its header;
+- a table has no header row, more than four columns, or a row with a different number of cells than its header;
 - a shown image is missing its light or dark file, or an image is shown nowhere;
 - a Spark tool has no entry in `spark-tools.md`, or a Settings section has none in `settings.md`;
 - `spark_docs` would clip the page list or a page (60 list items, 4,000 characters per section, 20,000 per answer).

@@ -1,8 +1,8 @@
 ---
 title: Plan before building
-section: Chats
+section: Approve and review
 type: how-to
-order: 220
+order: 320
 summary: Have the agent plan first with /plan or Plan mode, approve its plan, and open the approved plan later.
 ---
 

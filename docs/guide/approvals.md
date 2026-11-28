@@ -2,7 +2,7 @@
 title: Permissions and approvals
 section: Understand Spark
 type: concept
-order: 512
+order: 1120
 summary: The agent's mode and Spark autonomy, why an approval card appears, what never goes on without you, and what happens when nobody answers.
 ---
 

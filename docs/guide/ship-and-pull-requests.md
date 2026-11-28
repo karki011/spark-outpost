@@ -2,7 +2,7 @@
 title: Ship a change
 section: Projects and shipping
 type: how-to
-order: 320
+order: 750
 summary: Commit, push or open a pull request from a chat, and choose whether pull requests open ready for review or as drafts.
 ---
 

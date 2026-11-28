@@ -2,7 +2,7 @@
 title: Privacy and secrets
 section: Understand Spark
 type: concept
-order: 522
+order: 1150
 summary: Where your keys are stored, what leaves your computer and where it goes, and how Spark redacts secrets.
 ---
 

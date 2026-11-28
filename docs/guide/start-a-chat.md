@@ -1,5 +1,6 @@
 ---
 title: Start a chat and link a project
+nav: Start a chat
 section: Chats
 type: how-to
 order: 210

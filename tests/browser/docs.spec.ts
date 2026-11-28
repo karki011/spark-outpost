@@ -94,7 +94,17 @@ test('a link to a missing heading opens its page, and a missing page opens the l
   await expect(pageTitle(page)).toHaveText('What do you want to do?');
 });
 
-test('the contents open one product area at a time and keep the current one open', async ({
+test('a long-titled page has a short sidebar label and keeps its full title', async ({ page }) => {
+  await page.goto('/#/docs/connect-cloudflare');
+  await expect(pageTitle(page)).toHaveText('Share from your own Cloudflare account');
+  const current = guideNav(page).getByRole('link', { name: 'Use your own Cloudflare' });
+  await expect(current).toHaveAttribute('aria-current', 'page');
+  await expect(
+    guideNav(page).getByRole('link', { name: 'Share from your own Cloudflare account' }),
+  ).toHaveCount(0);
+});
+
+test('the contents keep the areas you opened and open the area of the page you go to', async ({
   page,
 }) => {
   await openDocs(page);
@@ -112,14 +122,24 @@ test('the contents open one product area at a time and keep the current one open
   await expect(typeBadge(page)).toHaveText('Reference');
   await expect(article(page).getByRole('table').first()).toBeVisible();
   await expect(reference).toHaveAttribute('aria-expanded', 'true');
-
-  await expect(started).toHaveAttribute('aria-expanded', 'false');
-  await expect(guideNav(page).getByRole('link', { name: 'Set up Spark Outpost' })).toBeHidden();
-  await started.click();
   await expect(started).toHaveAttribute('aria-expanded', 'true');
   await expect(guideNav(page).getByRole('link', { name: 'Set up Spark Outpost' })).toBeVisible();
-  await reference.click();
-  await expect(guideNav(page).getByRole('link', { name: 'Cards' })).toBeHidden();
+
+  await started.click();
+  await expect(started).toHaveAttribute('aria-expanded', 'false');
+  await article(page).getByRole('link', { name: 'protected path' }).first().click();
+  await expect(pageTitle(page)).toHaveText('Protected paths');
+  await expect(started).toHaveAttribute('aria-expanded', 'false');
+
+  await page.goto('/#/docs/jev');
+  await page.reload();
+  await expect(pageTitle(page)).toHaveText('Jev, the optional advisor');
+  await expect(reference).toHaveAttribute('aria-expanded', 'true');
+  await expect(started).toHaveAttribute('aria-expanded', 'false');
+  await expect(guideNav(page).getByRole('button', { name: /^Understand Spark/ })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 });
 
 test('Search finds a task, shows the page type and opens the matching section', async ({
@@ -181,7 +201,7 @@ test('a Settings info link opens the guide at the page for that setting', async 
 test('Docs works at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openDocs(page);
-  const contents = docs(page).getByRole('button', { name: 'Contents' });
+  const contents = docs(page).getByRole('button', { name: 'Contents', exact: true });
   await expect(contents).toHaveAttribute('aria-expanded', 'false');
   await expect(guideNav(page)).toBeHidden();
   await contents.click();

@@ -1,8 +1,9 @@
 ---
 title: Let Spark handle PR feedback
+nav: Handle PR feedback
 section: Projects and shipping
 type: how-to
-order: 322
+order: 760
 summary: Have the chat fix failing checks and answer review comments on its pull requests, pushing the fix by itself or after a confirm card.
 ---
 

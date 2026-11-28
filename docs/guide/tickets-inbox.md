@@ -1,8 +1,9 @@
 ---
 title: Work from the Tickets inbox
+nav: The Tickets inbox
 section: Projects and shipping
 type: how-to
-order: 332
+order: 800
 summary: Find what needs you in the Tickets inbox, start a chat from a ticket, and follow it through to a pull request.
 ---
 

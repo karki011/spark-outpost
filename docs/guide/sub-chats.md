@@ -1,8 +1,8 @@
 ---
 title: Sub-chats
-section: Chats
+section: Sub-chats
 type: concept
-order: 236
+order: 610
 summary: Chats an agent starts to split one job, nested under their parent.
 ---
 

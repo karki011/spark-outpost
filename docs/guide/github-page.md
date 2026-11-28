@@ -2,7 +2,7 @@
 title: Work from the GitHub page
 section: Projects and shipping
 type: how-to
-order: 333
+order: 780
 summary: See the pull requests that need you on the GitHub page, search them, read one's description and files, and start or open its chat.
 ---
 

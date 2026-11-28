@@ -2,7 +2,7 @@
 title: Glossary
 section: Reference
 type: reference
-order: 624
+order: 1300
 summary: One-line definitions of the words you see in Spark Outpost - agent, mode, autonomy, sub-agent, sub-chat, worktree, Jev and more.
 ---
 
