@@ -22,6 +22,7 @@ export function cloudflareAuthorizeUrl(
   client: CloudflareClientConfig,
   pkce: Pkce,
   redirectUri: string,
+  scopes: string[] = Object.values(CLOUDFLARE_SCOPES),
 ): string {
   const url = new URL(`${client.oauthUrl}/auth`);
   url.searchParams.set('client_id', client.clientId);
@@ -30,7 +31,7 @@ export function cloudflareAuthorizeUrl(
   url.searchParams.set('state', pkce.state);
   url.searchParams.set('code_challenge', pkce.challenge);
   url.searchParams.set('code_challenge_method', 'S256');
-  url.searchParams.set('scope', Object.values(CLOUDFLARE_SCOPES).join(' '));
+  url.searchParams.set('scope', scopes.join(' '));
   return url.toString();
 }
 

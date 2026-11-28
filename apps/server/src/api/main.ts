@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   DEV_API_TOKEN_FILE,
@@ -368,6 +369,8 @@ const { app, reconcileRemote } = createAppParts({
   googleCalendar,
   zoom: clouds?.zoom ?? null,
   cloudflareClient: cloudflareClientConfig(config),
+  cloudflaredBin: existsSync(config.SPARK_CLOUDFLARED_BIN) ? config.SPARK_CLOUDFLARED_BIN : null,
+  cloudflareBoot: true,
   microsoftCalendar,
   meetings,
   ...(config.AGENT_RUNTIME === 'fake' && config.PAIRING_TEST_ATTEMPTS_PER_MINUTE

@@ -4,6 +4,7 @@ import { signInRefs } from '../persistence/browser-sign-ins.ts';
 import { cloudSubjects } from '../calendar/cloud/account-store.ts';
 import { remoteSparkIds } from '../remote-sparks/store.ts';
 import {
+  CLOUDFLARE_TUNNEL_TOKEN_SECRET,
   CLOUDFLARE_UPLOAD_KEY_SECRET,
   SLACK_SECRET_IDS,
   SLACK_SIGN_IN_SECRET,
@@ -25,6 +26,7 @@ export async function storedSecretIds(db: Queryable, keepApiKeys: boolean): Prom
     ...ticketSourceIdSchema.options.map((source) => `ticket:${source}` as const),
     ...SLACK_SECRET_IDS,
     SLACK_SIGN_IN_SECRET,
+    CLOUDFLARE_TUNNEL_TOKEN_SECRET,
     CLOUDFLARE_UPLOAD_KEY_SECRET,
     ...rows.map((row) => `mcp:${row.id}` as const),
     ...signIns,

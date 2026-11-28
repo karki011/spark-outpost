@@ -105,7 +105,15 @@ export interface AppOptions
     ChatPortRouteDeps,
     Pick<GithubReviewRouteDeps, 'nudgeReviews'>,
     Pick<RemoteSparkRouteDeps, 'remoteSparkPort' | 'thisMacName'>,
-    Pick<CloudflareRouteDeps, 'cloudflareCheck' | 'cloudflareClient' | 'cloudflareSetup'> {
+    Pick<
+      CloudflareRouteDeps,
+      | 'cloudflareCheck'
+      | 'cloudflareClient'
+      | 'cloudflareSetup'
+      | 'cloudflaredBin'
+      | 'tunnelRunner'
+      | 'cloudflareBoot'
+    > {
   terminals: TerminalSessions;
   nativeTerminals?: NativeRuntime;
   previews: PreviewServers;

@@ -260,6 +260,11 @@ DELETE /api/cloudflare
 GET /api/cloudflare/setup
 POST /api/cloudflare/setup
 DELETE /api/cloudflare/setup
+GET /api/cloudflare/reach
+POST /api/cloudflare/reach
+POST /api/cloudflare/reach/resume
+DELETE /api/cloudflare/reach/setup
+DELETE /api/cloudflare/reach
 GET /api/island/requests
 POST /api/island/requests/:id/claim
 GET /api/remote/access

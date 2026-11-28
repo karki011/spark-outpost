@@ -123,6 +123,7 @@ const configSchema = z.object({
     .regex(/^[A-Za-z0-9_-]{0,64}$/)
     .default(''),
   SPARK_SHARE_WORKER_FILE: z.string().trim().max(1024).default(''),
+  SPARK_CLOUDFLARED_BIN: z.string().trim().max(1024).default(''),
   SPARK_SHARE_URL: z
     .string()
     .default('')
