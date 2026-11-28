@@ -1,8 +1,9 @@
 ---
 title: Answer cards from a paired device
-section: Mac app and providers
+nav: Answer cards remotely
+section: Other devices
 type: how-to
-order: 418
+order: 1020
 summary: Let a paired device answer Sparks and workflows, plugins, calendar, Spark rules and Mac control cards, with a passkey for the sensitive ones.
 ---
 

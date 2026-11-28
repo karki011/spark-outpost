@@ -13,6 +13,7 @@ const FIELD_LABELS: Record<string, string> = {
   username: 'Username',
   authKind: 'Sign-in',
   server: 'Server',
+  address: 'Address',
 };
 
 export function SetupFacts({

@@ -1,8 +1,8 @@
 ---
 title: Answer an approval card
-section: Chats
+section: Approve and review
 type: how-to
-order: 218
+order: 310
 summary: Allow or deny a command or file change an agent asks about, hold to confirm the risky ones, and let trusted commands run without asking.
 ---
 

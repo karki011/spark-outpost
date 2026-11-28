@@ -1,5 +1,7 @@
+import { z } from 'zod';
 import {
   MCP_NAME_PATTERN,
+  remoteHostnameSchema,
   setupTargets,
   type SetupFields,
   type SetupTarget,
@@ -12,6 +14,7 @@ const CHOICES: Record<string, readonly string[]> = {
   authKind: ['basic', 'api_key'],
 };
 const ADDRESSES = new Set(['baseUrl', 'siteUrl', 'instanceUrl']);
+const EMAIL = z.email().max(254);
 const SECRET_NAME = /key|token|secret|password|credential/i;
 
 function addressProblem(field: string, value: string): string | null {
@@ -37,6 +40,10 @@ function valueProblem(field: string, value: string): string | null {
     return `${field} looks like a secret. Secrets are typed by the user.`;
   }
   if (field === 'server' && !MCP_NAME_PATTERN.test(value)) return 'server is an MCP server name.';
+  if (field === 'address' && !remoteHostnameSchema.safeParse(value).success) {
+    return 'address is a name on the user’s own domain, like spark.example.com, with no scheme, port or path.';
+  }
+  if (field === 'email' && !EMAIL.safeParse(value).success) return 'email is an email address.';
   return null;
 }
 

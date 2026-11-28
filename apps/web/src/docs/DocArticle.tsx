@@ -5,18 +5,20 @@ import {
   guideBodyWithoutNext,
   guideHrefTarget,
   guideLink,
-  type GuideHeading,
   type GuidePage,
 } from '@spark-outpost/contracts';
 import { codeComponents, remarkPlugins } from '../chat/markdown/Markdown.tsx';
 import { remarkCallouts } from './callouts.ts';
+import { DocOutline } from './DocOutline.tsx';
+import { restoreDocScroll, savedDocScroll, useRememberDocScroll } from './doc-scroll.ts';
 import { guideImage } from './guide-content.ts';
 import { DOC_HEADING_PREFIX, remarkHeadingIds } from './heading-ids.ts';
+import { remarkTableLabels } from './table-labels.ts';
 import { useColorScheme } from './use-color-scheme.ts';
 
 const WEB_LINK = /^(https?:|mailto:)/i;
 const OUTLINE_MIN_HEADINGS = 3;
-const plugins = [...remarkPlugins, remarkHeadingIds, remarkCallouts];
+const plugins = [...remarkPlugins, remarkHeadingIds, remarkCallouts, remarkTableLabels];
 
 interface DocArticleProps {
   page: GuidePage;
@@ -60,6 +62,12 @@ function useScrollToTarget(page: GuidePage, anchor: string | null) {
   useEffect(() => {
     const initial = first.current;
     first.current = false;
+    const saved = savedDocScroll(page.slug);
+    if (saved !== null) {
+      restoreDocScroll(titleRef.current, saved);
+      if (!initial) titleRef.current?.focus({ preventScroll: true });
+      return;
+    }
     const target = anchor ? document.getElementById(`${DOC_HEADING_PREFIX}${anchor}`) : null;
     if (target) {
       target.scrollIntoView({ block: 'start' });
@@ -69,6 +77,7 @@ function useScrollToTarget(page: GuidePage, anchor: string | null) {
     titleRef.current?.closest('article')?.scrollIntoView({ block: 'start' });
     if (!initial) titleRef.current?.focus({ preventScroll: true });
   }, [page.slug, anchor]);
+  useRememberDocScroll(titleRef, page.slug);
   return titleRef;
 }
 
@@ -78,21 +87,6 @@ function PageLink({ page, rel }: { page: GuidePage; rel: 'prev' | 'next' }) {
       <span>{rel === 'prev' ? 'Previous' : 'Next'}</span>
       {page.title}
     </a>
-  );
-}
-
-function Outline({ slug, headings }: { slug: string; headings: readonly GuideHeading[] }) {
-  return (
-    <nav className="docs-outline" aria-labelledby="docs-outline-title">
-      <p id="docs-outline-title">On this page</p>
-      <ul>
-        {headings.map((heading) => (
-          <li key={heading.anchor}>
-            <a href={guideLink(slug, heading.anchor)}>{heading.text}</a>
-          </li>
-        ))}
-      </ul>
-    </nav>
   );
 }
 
@@ -117,7 +111,10 @@ export const DocArticle = memo(function DocArticle({
     [page.slug],
   );
   const body = useMemo(() => guideBodyWithoutNext(page), [page]);
-  const outline = page.headings.filter((heading) => heading.depth === 2);
+  const outline = useMemo(
+    () => page.headings.filter((heading) => heading.depth === 2),
+    [page.headings],
+  );
   const outlined = page.type !== 'start' && outline.length >= OUTLINE_MIN_HEADINGS;
   const typeLabel = GUIDE_TYPE_LABELS[page.type];
 
@@ -142,7 +139,7 @@ export const DocArticle = memo(function DocArticle({
           </h1>
           <p className="docs-lede">{page.summary}</p>
         </header>
-        {outlined && <Outline slug={page.slug} headings={outline} />}
+        {outlined && <DocOutline slug={page.slug} headings={outline} />}
         <div className="md docs-body">
           <ReactMarkdown remarkPlugins={plugins} components={components}>
             {body}

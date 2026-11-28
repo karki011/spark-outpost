@@ -1,8 +1,9 @@
 ---
 title: See a chat's context and tools
+nav: Context and tools
 section: Chats
 type: how-to
-order: 217
+order: 270
 summary: The Context rail shows a chat's project, agent, cost, ports, tools and connectors, and switches them.
 ---
 

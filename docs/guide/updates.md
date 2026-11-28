@@ -1,8 +1,8 @@
 ---
 title: Update the app
-section: Mac app and providers
+section: Mac app
 type: how-to
-order: 414
+order: 1000
 summary: Install an update from the blob above Settings, pick Stable or Beta, and see what happens to your data and running work.
 ---
 

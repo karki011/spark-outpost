@@ -17,6 +17,7 @@ export type ZoomSecretId = `zoom:${string}`;
 export const zoomSecret = (subject: string): ZoomSecretId => `zoom:${subject}`;
 export type ShareSecretId = `share:${string}`;
 export const CLOUDFLARE_UPLOAD_KEY_SECRET = 'cloudflare:upload-key';
+export const CLOUDFLARE_TUNNEL_TOKEN_SECRET = 'cloudflare:tunnel-token';
 export const shareSecret = (shareId: string): ShareSecretId => `share:${shareId}`;
 export const googleCalendarSecret = (subject: string): GoogleCalendarSecretId =>
   `calendar:google:${subject}`;
@@ -39,6 +40,7 @@ export type SecretId =
   | ZoomSecretId
   | ShareSecretId
   | typeof CLOUDFLARE_UPLOAD_KEY_SECRET
+  | typeof CLOUDFLARE_TUNNEL_TOKEN_SECRET
   | RemoteSparkSecretId;
 
 export interface SecretStore {

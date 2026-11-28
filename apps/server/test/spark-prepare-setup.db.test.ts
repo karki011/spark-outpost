@@ -64,6 +64,21 @@ describe('an agent preparing a connection', { timeout: 60_000 }, () => {
     expect(await listSetupDrafts(t.db, t.workspaceId)).toEqual([]);
   });
 
+  it('prepares Remote control through Cloudflare from a bare address and an email only', async () => {
+    const target = 'remote_cloudflare';
+    for (const fields of [
+      { address: 'https://spark.example.com/path', email: 'me@acme.test' },
+      { address: 'spark.example.com', email: 'not an email' },
+    ]) {
+      expect((await tools.call('spark_prepare_setup', { target, fields })).isError).toBe(true);
+    }
+    expect((await t.db.query('SELECT 1 FROM approvals')).rowCount).toBe(0);
+
+    const fields = { address: 'spark.example.com', email: 'me@acme.test' };
+    const proposed = await tools.call('spark_prepare_setup', { target, fields });
+    expect(proposed.isError).toBeFalsy();
+  });
+
   it('refuses a secret before any card is shown', async () => {
     const refused = await tools.call('spark_prepare_setup', {
       target: 'atlassian',

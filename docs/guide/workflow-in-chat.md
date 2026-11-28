@@ -1,8 +1,8 @@
 ---
 title: Workflows in a chat
-section: Chats
+section: Sparks and workflows
 type: how-to
-order: 231
+order: 550
 summary: Read a workflow run from the card above the message box, fix its findings and run one workflow in several chats at once.
 ---
 

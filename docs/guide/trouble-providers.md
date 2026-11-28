@@ -2,7 +2,7 @@
 title: Providers and keys
 section: Help
 type: troubleshooting
-order: 712
+order: 1320
 summary: Fixes for a provider that won't connect, a rejected key, an empty model picker, a failing test message and rate limits.
 ---
 

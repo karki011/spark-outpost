@@ -1,8 +1,8 @@
 ---
 title: Share an artifact
-section: Chats
+section: Approve and review
 type: how-to
-order: 215
+order: 340
 summary: Send a page an agent made as a link anyone can open in a browser, with an optional passcode, and stop sharing it.
 ---
 

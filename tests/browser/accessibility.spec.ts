@@ -279,9 +279,9 @@ test('the Docs page has no serious colour-contrast or ARIA issues in any theme',
     await useTheme(page, theme);
     found.push(...(await blockingViolations(page, `docs search ${theme}`)));
   }
-  await page.setViewportSize({ width: 390, height: 844 });
   await docs.getByRole('searchbox', { name: 'Search the guide' }).fill('');
-  await docs.getByRole('button', { name: 'Contents' }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await docs.getByRole('button', { name: 'Contents', exact: true }).click();
   found.push(...(await blockingViolations(page, 'docs phone contents')));
   expect(found).toEqual([]);
 });

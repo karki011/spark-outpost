@@ -1,8 +1,8 @@
 ---
 title: Talk to Spark
-section: Mac app and providers
+section: Mac app
 type: how-to
-order: 420
+order: 930
 summary: Dictate locally on Mac, open chats or ask about work, with the Parakeet speech model.
 ---
 

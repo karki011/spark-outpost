@@ -2,7 +2,7 @@
 title: Open a terminal
 section: Chats
 type: how-to
-order: 226
+order: 290
 summary: Run commands beside a chat, or work with an agent's own CLI in a Terminal session.
 ---
 

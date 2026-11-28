@@ -1,8 +1,9 @@
 ---
 title: Fix the app, setup or a reset
+nav: Fix the app or setup
 section: Help
 type: troubleshooting
-order: 710
+order: 1310
 summary: Fix startup problems, export diagnostics and reset Spark.
 ---
 
@@ -10,14 +11,14 @@ Providers: [Providers and keys](trouble-providers.md). Runs: [Runs and pull requ
 
 ## The app
 
-| You see                                     | Why                                                   | Fix                                                                                                                |
-| ------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **Taking a quick nap** or **Reconnecting…** | The server stopped answering.                         | Wait for **Back online!**, or **Try now**.                                                                         |
-| **Can't reach your Mac** on a phone         | The Mac is asleep, shut down or off Tailscale.        | Wake the Mac, check Tailscale on both. It reconnects.                                                              |
-| "Spark Outpost could not continue"          | Database or server didn't start, or an update failed. | Quit and reopen. After an update: [**Open previous version instructions**](updates.md#your-data-during-an-update). |
-| "Git is not installed"                      | The Mac app needs Git.                                | Run `xcode-select --install` in Terminal.                                                                          |
-| "Another app is using this shortcut"        | Another app has those keys.                           | **Settings → Notifications**: **Change** or **Reset**.                                                             |
-| "You have 12 terminals open"                | The limit across chats.                               | Close a tab, or reload to end them all.                                                                            |
+| You see                                     | Why                                                                      | Fix                                                                                                                |
+| ------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| **Taking a quick nap** or **Reconnecting…** | The server stopped answering.                                            | Wait for **Back online!**, or **Try now**.                                                                         |
+| **Can't reach your Mac** on a phone         | The Mac is asleep, shut down, or off Tailscale or its Cloudflare tunnel. | Wake the Mac, check Tailscale on both. It reconnects.                                                              |
+| "Spark Outpost could not continue"          | Database or server didn't start, or an update failed.                    | Quit and reopen. After an update: [**Open previous version instructions**](updates.md#your-data-during-an-update). |
+| "Git is not installed"                      | The Mac app needs Git.                                                   | Run `xcode-select --install` in Terminal.                                                                          |
+| "Another app is using this shortcut"        | Another app has those keys.                                              | **Settings → Notifications**: **Change** or **Reset**.                                                             |
+| "You have 12 terminals open"                | The limit across chats.                                                  | Close a tab, or reload to end them all.                                                                            |
 
 > **Important:** Don't delete `~/Library/Application Support/Spark Outpost` to fix start-up: it holds chats and backups.
 

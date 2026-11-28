@@ -1,8 +1,8 @@
 ---
 title: Use Spark Island
-section: Mac app and providers
+section: Mac app
 type: how-to
-order: 410
+order: 910
 summary: Turn on Spark Island in the Mac or Windows app, size and move it, and allow or deny an agent's request from the top of your screen.
 ---
 

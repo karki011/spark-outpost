@@ -1,8 +1,9 @@
 ---
 title: Share from your own Cloudflare account
-section: Projects and shipping
+nav: Use your own Cloudflare
+section: Connections
 type: how-to
-order: 335
+order: 850
 summary: Sign in to Cloudflare once so shared artifacts live in your own account and links last 7 days.
 ---
 

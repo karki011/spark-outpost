@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { GUIDE_SECTIONS } from '@spark-outpost/contracts';
 import { startSparkTools, type SparkToolsHarness } from './spark-mcp-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
@@ -32,12 +33,9 @@ describe('spark_docs', () => {
     const { sections } = (await tools.call('spark_docs')).json<{ sections: ListedSection[] }>();
     expect(sections[0]).toMatchObject({ section: 'Get started' });
     expect(sections[0]!.pages[0]).toMatchObject({ page: 'welcome', type: 'start' });
-    expect(sections.map((entry) => entry.section)).toEqual(
-      expect.arrayContaining(['Chats', 'Understand Spark', 'Reference', 'Help']),
-    );
+    expect(sections.map((entry) => entry.section)).toEqual([...GUIDE_SECTIONS]);
     const pages = sections.flatMap((entry) => entry.pages);
     expect(pages.length).toBeGreaterThan(40);
-    expect(sections.length).toBeLessThanOrEqual(7);
     expect(pages.filter((page) => page.comingSoon)).toEqual([]);
     expect(pages.map((page) => page.page)).not.toContain('README');
     expect(JSON.stringify(sections)).not.toMatch(/… \d+ more/);

@@ -1,8 +1,8 @@
 ---
 title: Connect Zoom
-section: Projects and shipping
+section: Connections
 type: how-to
-order: 333
+order: 830
 summary: Sign in to Zoom once so New event can add a Zoom link to a Google Calendar event.
 ---
 

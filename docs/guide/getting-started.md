@@ -2,7 +2,7 @@
 title: Set up Spark Outpost
 section: Get started
 type: start
-order: 110
+order: 120
 summary: Go from first launch to your first chat in about five minutes.
 ---
 

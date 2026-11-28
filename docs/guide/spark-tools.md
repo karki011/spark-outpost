@@ -2,7 +2,7 @@
 title: Spark tools for agents
 section: Reference
 type: reference
-order: 618
+order: 1250
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
@@ -99,6 +99,6 @@ Edit, then confirm or select **Don't**; the card shows the result or **Try again
 | Password and card fields     | `[masked]`; painted over in screenshots.              |
 | Secrets, API keys and tokens | Redacted before agents see them.                      |
 
-`spark_prepare_setup` prefills a provider or connector form; you type the key or sign in.
+`spark_prepare_setup` prefills a provider, connector or [Cloudflare](reach-with-cloudflare.md) form; you type the key or sign in.
 
 After private reads, Spark notes [sends elsewhere](approvals.md#sending-data-out-after-reading-secrets).

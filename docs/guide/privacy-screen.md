@@ -1,8 +1,9 @@
 ---
 title: Lock Spark with the privacy screen
-section: Mac app and providers
+nav: Privacy screen
+section: Mac app
 type: how-to
-order: 417
+order: 990
 summary: Cover Spark's windows when you step away, unlock with Touch ID, Windows Hello or a code, and reset a code you forgot.
 ---
 

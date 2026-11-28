@@ -2,7 +2,7 @@
 title: Use the Map
 section: Projects and shipping
 type: how-to
-order: 314
+order: 740
 summary: Open a project's Map, find a file, see what breaks if it changes, and correct how areas are labelled.
 ---
 

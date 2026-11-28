@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import {
   cloudflareConnectionSchema,
+  cloudflareReachSchema,
   cloudflareSetupSchema,
   type CloudflareConnection,
+  type CloudflareReach,
   type CloudflareSetup,
   type ConnectCloudflareRequest,
+  type StartCloudflareReachRequest,
   type UpdateCloudflareRequest,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
@@ -13,6 +16,7 @@ export const cloudflareKeys = {
   connection: ['cloudflare'] as const,
   setup: ['cloudflare-setup'] as const,
   madeKeys: ['cloudflare-made-keys'] as const,
+  reach: ['cloudflare-reach'] as const,
 };
 
 export const ARTIFACT_SHARE_KEY = ['artifact-share'] as const;
@@ -37,5 +41,17 @@ export const cloudflareApi = {
     request(cloudflareSetupSchema, '/cloudflare/setup', { method: 'POST', body: '{}' }),
   cancelSetup: (): Promise<CloudflareSetup> =>
     request(cloudflareSetupSchema, '/cloudflare/setup', { method: 'DELETE' }),
+  reach: (): Promise<CloudflareReach> => request(cloudflareReachSchema, '/cloudflare/reach'),
+  startReach: (body: StartCloudflareReachRequest): Promise<CloudflareReach> =>
+    request(cloudflareReachSchema, '/cloudflare/reach', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  resumeReach: (): Promise<CloudflareReach> =>
+    request(cloudflareReachSchema, '/cloudflare/reach/resume', { method: 'POST', body: '{}' }),
+  cancelReach: (): Promise<CloudflareReach> =>
+    request(cloudflareReachSchema, '/cloudflare/reach/setup', { method: 'DELETE' }),
+  removeReach: (): Promise<CloudflareReach> =>
+    request(cloudflareReachSchema, '/cloudflare/reach', { method: 'DELETE' }),
   disconnect: (): Promise<null> => request(z.null(), '/cloudflare', { method: 'DELETE' }),
 };

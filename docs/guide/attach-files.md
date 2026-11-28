@@ -2,7 +2,7 @@
 title: Attach files to a message
 section: Chats
 type: how-to
-order: 213
+order: 240
 summary: Send images, PDFs, spreadsheets, large CSVs and other files with a message, and see how the agent gets them.
 ---
 

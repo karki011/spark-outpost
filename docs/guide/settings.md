@@ -2,7 +2,7 @@
 title: Settings
 section: Reference
 type: reference
-order: 610
+order: 1210
 summary: Every Settings section by group, its rows and defaults, and the page that explains each one.
 ---
 

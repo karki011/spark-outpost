@@ -1,8 +1,8 @@
 ---
 title: Use the browser
-section: Chats
+section: Browser
 type: how-to
-order: 227
+order: 410
 summary: Open a page in the chat's Browser pane, let the agent look, browse and click, and point at what you mean.
 ---
 

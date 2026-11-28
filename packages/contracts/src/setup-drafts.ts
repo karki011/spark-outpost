@@ -14,6 +14,7 @@ export const setupTargetSchema = z.enum([
   'microsoft_calendar',
   'zoom',
   'mcp_sign_in',
+  'remote_cloudflare',
 ]);
 export type SetupTarget = z.infer<typeof setupTargetSchema>;
 
@@ -87,6 +88,13 @@ export const setupTargets: Record<SetupTarget, SetupTargetFacts> = {
     place: 'Settings → Connectors → MCP servers',
     route: '#/settings/tools',
     finish: 'Choose Sign in on the server.',
+  },
+  remote_cloudflare: {
+    name: 'Remote control through Cloudflare',
+    fields: ['address', 'email'],
+    place: 'Remote control → Custom domain',
+    route: '#/phone',
+    finish: 'Select Allow on Cloudflare and allow Spark Outpost in your browser.',
   },
 };
 

@@ -1,20 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { parseGuidePage } from '../packages/contracts/src/guide.ts';
+import { GUIDE_SECTIONS, parseGuidePage } from '../packages/contracts/src/guide.ts';
 import {
   checkCoverage,
   checkImages,
   checkPages,
+  HEADING_CHARS_MAX,
   longestParagraph,
+  NAV_CHARS_MAX,
   PARAGRAPH_WORDS_MAX,
   proseWords,
+  SECTION_PAGES_MAX,
+  TABLE_COLUMNS_MAX,
   tableProblems,
+  TITLE_CHARS_MAX,
   WORD_CAPS,
 } from './guide-rules.ts';
 
-function page(slug: string, type: string, body: string, title = slug) {
+let nextOrder = 1;
+
+function page(slug: string, type: string, body: string, title = slug, extra = '') {
+  const order = nextOrder++;
   return parseGuidePage(
     slug,
-    `---\ntitle: ${title}\nsection: Chats\ntype: ${type}\norder: 1\nsummary: One line.\n---\n${body}`,
+    `---\ntitle: ${title}\n${extra}section: Chats\ntype: ${type}\norder: ${order}\nsummary: One line.\n---\n${body}`,
   );
 }
 
@@ -74,6 +82,70 @@ describe('page rules', () => {
       'bad: broken link other.md#nope',
       'bad: Next link says "Old name" but the page is titled "other"',
       'other: same title as bad',
+    ]);
+  });
+});
+
+describe('sidebar rules', () => {
+  const longTitle = 'A title that is far too long for one sidebar row';
+
+  it('caps the title and asks a long title for a nav label', () => {
+    expect(messages([page('long', 'concept', 'Text.', longTitle)])).toEqual([
+      `long: title is ${longTitle.length} characters; keep it to ${TITLE_CHARS_MAX}`,
+      `long: title is ${longTitle.length} characters; add a nav label of up to ${NAV_CHARS_MAX} for the sidebar`,
+    ]);
+    const labelled = page('ok', 'concept', 'Text.', 'Twenty-seven characters ok.', 'nav: Short\n');
+    expect(labelled.nav).toBe('Short');
+    expect(messages([labelled])).toEqual([]);
+  });
+
+  it('caps the nav label and refuses one that repeats a title or another label', () => {
+    const long = page('a', 'concept', 'Text.', 'A', `nav: ${'x'.repeat(NAV_CHARS_MAX + 1)}\n`);
+    const same = page('b', 'concept', 'Text.', 'B', 'nav: B\n');
+    const taken = page('c', 'concept', 'Text.', 'C', 'nav: A\n');
+    expect(messages([long, same, taken, page('d', 'concept', 'Text.', 'A2', 'nav: A\n')])).toEqual([
+      `a: nav label is ${NAV_CHARS_MAX + 1} characters; keep it to ${NAV_CHARS_MAX}`,
+      'b: nav label repeats the title; leave it out',
+      'd: same sidebar label as c',
+    ]);
+  });
+
+  it('refuses an unknown section and a repeated order in a section', () => {
+    const stray = parseGuidePage(
+      'stray',
+      '---\ntitle: Stray\nsection: Chatz\ntype: concept\norder: 5\nsummary: s\n---\nText.',
+    );
+    const first = parseGuidePage(
+      'first',
+      '---\ntitle: First\nsection: Chats\ntype: concept\norder: 900\nsummary: s\n---\nText.',
+    );
+    const second = parseGuidePage(
+      'second',
+      '---\ntitle: Second\nsection: Chats\ntype: concept\norder: 900\nsummary: s\n---\nText.',
+    );
+    expect(messages([stray, first, second])).toEqual([
+      `stray: unknown section "Chatz"; sections are ${GUIDE_SECTIONS.join(', ')}`,
+      'second: same order 900 as first in Chats',
+    ]);
+  });
+
+  it('caps the pages in a section', () => {
+    const crowd = Array.from({ length: SECTION_PAGES_MAX + 1 }, (_, index) =>
+      page(`p${index}`, 'concept', 'Text.'),
+    );
+    expect(messages(crowd)).toEqual([
+      `Chats: ${SECTION_PAGES_MAX + 1} pages; a section holds up to ${SECTION_PAGES_MAX}, so split it`,
+    ]);
+  });
+
+  it('caps ## headings and table columns', () => {
+    const heading = 'A second-level heading that runs on too long';
+    const wide = '| A | B | C | D | E |\n| - | - | - | - | - |\n| 1 | 2 | 3 | 4 | 5 |';
+    expect(
+      messages([page('wide', 'concept', `## ${heading}\n\n### ${heading}\n\n${wide}`)]),
+    ).toEqual([
+      `wide: heading "${heading}" is ${heading.length} characters; keep ## headings to ${HEADING_CHARS_MAX}`,
+      `wide: a table has 5 columns; keep tables to ${TABLE_COLUMNS_MAX}: | A | B | C | D | E |`,
     ]);
   });
 });

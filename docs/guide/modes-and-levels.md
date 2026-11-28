@@ -1,8 +1,9 @@
 ---
 title: Agent modes and autonomy levels
+nav: Modes and autonomy levels
 section: Reference
 type: reference
-order: 612
+order: 1220
 summary: Every agent mode for Claude, Codex and Z.ai, what each allows, and the two Spark autonomy levels.
 ---
 

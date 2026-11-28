@@ -15,6 +15,7 @@ import {
   prunePostgresWindows,
 } from './prune-postgres.ts';
 import { stageTmux } from './tmux-bundle.ts';
+import { buildCloudflared, stageCloudflared } from './cloudflared-bundle.ts';
 import { buildMacControl, stageMacControl } from './mac-control-bundle.ts';
 import { buildCalendar, stageCalendar } from './calendar-bundle.ts';
 import { buildVoice, stageVoice } from './voice-bundle.ts';
@@ -108,6 +109,7 @@ async function stageArch(stageDir: string, arch: MacArch, platform: BuildPlatfor
     return;
   }
   await stageTmux(await buildTmux(repoRoot, arch), arch, archDir);
+  await stageCloudflared(await buildCloudflared(repoRoot, arch), arch, archDir);
   await stageMacControl(await buildMacControl(repoRoot, arch), arch, archDir);
   await stageCalendar(await buildCalendar(repoRoot, arch), arch, archDir);
   await stageVoice(await buildVoice(repoRoot, arch), arch, archDir);

@@ -1,8 +1,8 @@
 ---
 title: Mac privacy settings
-section: Mac app and providers
+section: Mac app
 type: how-to
-order: 416
+order: 980
 summary: Turn the anonymous heartbeat off, decide on Full Disk Access, and answer the macOS keychain prompt.
 ---
 

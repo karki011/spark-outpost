@@ -2,7 +2,7 @@
 title: Pause automatic work
 section: Chats
 type: how-to
-order: 234
+order: 300
 summary: Hold the work Spark starts on its own, keep what is running, and resume it later.
 ---
 

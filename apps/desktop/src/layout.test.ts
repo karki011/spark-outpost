@@ -26,6 +26,7 @@ describe('appLayout', () => {
           serverDir: '/repo/apps/server',
           webRoot: '/repo/apps/web/dist',
           tmuxBin: '/repo/.local/tmux/arm64/bin/tmux',
+          cloudflaredBin: '/repo/.local/cloudflared/arm64/bin/cloudflared',
           macControlBin: '/repo/.local/mac-control/arm64/spark-mac-control',
           calendarBin: '/repo/.local/calendar/arm64/spark-calendar',
           calendarSeedBin: '/repo/.local/calendar/arm64/spark-calendar-seed',
@@ -57,6 +58,8 @@ describe('appLayout', () => {
         serverDir: '/Applications/Spark Outpost.app/Contents/Resources/server',
         webRoot: '/Applications/Spark Outpost.app/Contents/Resources/web',
         tmuxBin: '/Applications/Spark Outpost.app/Contents/Resources/tmux/bin/tmux',
+        cloudflaredBin:
+          '/Applications/Spark Outpost.app/Contents/Resources/cloudflared/bin/cloudflared',
         macControlBin:
           '/Applications/Spark Outpost.app/Contents/Resources/mac-control/bin/spark-mac-control',
         calendarBin:
