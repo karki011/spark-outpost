@@ -13,8 +13,7 @@ import { BookIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { CloudflareAuto } from './CloudflareAuto.tsx';
 import { CloudflareKeys } from './CloudflareKeys.tsx';
 import { cloudflareApi } from './cloudflare-api.ts';
-import { newShareKeys } from './share-keys.ts';
-import { useCloudflareSaved, useCloudflareSetup } from './use-cloudflare.ts';
+import { useCloudflareSaved, useCloudflareSetup, useMadeShareKeys } from './use-cloudflare.ts';
 
 const CLOUDFLARE_SIGN_UP_URL = 'https://dash.cloudflare.com/sign-up';
 const CLOUDFLARE_GUIDE_PAGE = 'connect-cloudflare';
@@ -153,7 +152,7 @@ function ConnectForm({ madeKey }: { madeKey: string }) {
 
 function ByHand({ deployUrl }: { deployUrl: string }) {
   const needsId = useId();
-  const [keys] = useState(newShareKeys);
+  const keys = useMadeShareKeys();
   const docs = use(DocsReachable);
   return (
     <>

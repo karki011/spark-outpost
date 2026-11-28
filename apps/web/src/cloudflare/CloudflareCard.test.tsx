@@ -348,4 +348,25 @@ describe('the keys for a by-hand set-up', () => {
     expect(document.body.textContent).not.toContain(upload);
     expect(await screen.findByRole('button', { name: 'Copied SIGNING_KEY' })).toBeTruthy();
   });
+
+  it('keeps the same keys when the card is taken away and shown again', async () => {
+    vi.spyOn(phoneApi, 'session').mockResolvedValue({ remote: false } as RemoteSession);
+    vi.spyOn(cloudflareApi, 'setup').mockResolvedValue(NO_SETUP);
+    vi.spyOn(cloudflareApi, 'connection').mockResolvedValue(NOT_CONNECTED);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const card = () => (
+      <QueryClientProvider client={client}>
+        <ul>
+          <CloudflareCard icon={null} open onToggle={() => undefined} />
+        </ul>
+      </QueryClientProvider>
+    );
+    const view = render(card());
+    const first = ((await screen.findByLabelText('Upload key')) as HTMLInputElement).value;
+
+    view.unmount();
+    expect(screen.queryByLabelText('Upload key')).toBeNull();
+    render(card());
+    expect(((await screen.findByLabelText('Upload key')) as HTMLInputElement).value).toBe(first);
+  });
 });

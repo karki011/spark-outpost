@@ -170,6 +170,14 @@ openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY
 npx wrangler@4 deploy
 ```
 
+For Spark's own copy, the same three steps use the hosted names:
+
+```sh
+npx wrangler@4 r2 bucket create spark-outpost-shares
+openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY --env hosted
+npx wrangler@4 deploy --env hosted
+```
+
 `package.json` pins the same Wrangler major for the Deploy button and for `npm install && npm run deploy`; it is not part of the repo's pnpm workspace.
 
 `SIGNING_KEY` must be at least 32 characters. Without it the viewer routes answer `503` (shares can still be created, deleted and reported). Changing it signs everyone out of passcode shares and breaks open frames for a minute; nothing else.

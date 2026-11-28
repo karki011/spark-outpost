@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CloudflareConnection, CloudflareSetup } from '@spark-outpost/contracts';
 import { openOutside } from '../browser/outside-link.ts';
 import { ARTIFACT_SHARE_KEY, cloudflareApi, cloudflareKeys } from './cloudflare-api.ts';
+import { newShareKeys, type ShareKeys } from './share-keys.ts';
 
 export function useCloudflareConnection(enabled: boolean) {
   return useQuery({
@@ -17,8 +18,19 @@ export function useCloudflareSaved() {
   return async (connection: CloudflareConnection) => {
     await queryClient.cancelQueries({ queryKey: cloudflareKeys.connection });
     queryClient.setQueryData(cloudflareKeys.connection, connection);
+    if (connection.connected) queryClient.removeQueries({ queryKey: cloudflareKeys.madeKeys });
     void queryClient.invalidateQueries({ queryKey: ARTIFACT_SHARE_KEY });
   };
+}
+
+export function useMadeShareKeys(): ShareKeys {
+  return useQuery({
+    queryKey: cloudflareKeys.madeKeys,
+    queryFn: newShareKeys,
+    initialData: newShareKeys,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  }).data;
 }
 
 export function useCloudflareActions() {
