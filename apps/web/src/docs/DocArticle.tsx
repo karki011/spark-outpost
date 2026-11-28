@@ -5,11 +5,11 @@ import {
   guideBodyWithoutNext,
   guideHrefTarget,
   guideLink,
-  type GuideHeading,
   type GuidePage,
 } from '@spark-outpost/contracts';
 import { codeComponents, remarkPlugins } from '../chat/markdown/Markdown.tsx';
 import { remarkCallouts } from './callouts.ts';
+import { DocOutline } from './DocOutline.tsx';
 import { restoreDocScroll, savedDocScroll, useRememberDocScroll } from './doc-scroll.ts';
 import { guideImage } from './guide-content.ts';
 import { DOC_HEADING_PREFIX, remarkHeadingIds } from './heading-ids.ts';
@@ -89,21 +89,6 @@ function PageLink({ page, rel }: { page: GuidePage; rel: 'prev' | 'next' }) {
   );
 }
 
-function Outline({ slug, headings }: { slug: string; headings: readonly GuideHeading[] }) {
-  return (
-    <nav className="docs-outline" aria-labelledby="docs-outline-title">
-      <p id="docs-outline-title">On this page</p>
-      <ul>
-        {headings.map((heading) => (
-          <li key={heading.anchor}>
-            <a href={guideLink(slug, heading.anchor)}>{heading.text}</a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}
-
 export const DocArticle = memo(function DocArticle({
   page,
   anchor,
@@ -125,7 +110,10 @@ export const DocArticle = memo(function DocArticle({
     [page.slug],
   );
   const body = useMemo(() => guideBodyWithoutNext(page), [page]);
-  const outline = page.headings.filter((heading) => heading.depth === 2);
+  const outline = useMemo(
+    () => page.headings.filter((heading) => heading.depth === 2),
+    [page.headings],
+  );
   const outlined = page.type !== 'start' && outline.length >= OUTLINE_MIN_HEADINGS;
   const typeLabel = GUIDE_TYPE_LABELS[page.type];
 
@@ -150,7 +138,7 @@ export const DocArticle = memo(function DocArticle({
           </h1>
           <p className="docs-lede">{page.summary}</p>
         </header>
-        {outlined && <Outline slug={page.slug} headings={outline} />}
+        {outlined && <DocOutline slug={page.slug} headings={outline} />}
         <div className="md docs-body">
           <ReactMarkdown remarkPlugins={plugins} components={components}>
             {body}

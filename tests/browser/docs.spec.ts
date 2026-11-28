@@ -104,7 +104,7 @@ test('a long-titled page has a short sidebar label and keeps its full title', as
   ).toHaveCount(0);
 });
 
-test('the contents open one product area at a time and keep the current one open', async ({
+test('the contents keep the areas you opened and open the area of the page you go to', async ({
   page,
 }) => {
   await openDocs(page);
@@ -122,14 +122,24 @@ test('the contents open one product area at a time and keep the current one open
   await expect(typeBadge(page)).toHaveText('Reference');
   await expect(article(page).getByRole('table').first()).toBeVisible();
   await expect(reference).toHaveAttribute('aria-expanded', 'true');
-
-  await expect(started).toHaveAttribute('aria-expanded', 'false');
-  await expect(guideNav(page).getByRole('link', { name: 'Set up Spark Outpost' })).toBeHidden();
-  await started.click();
   await expect(started).toHaveAttribute('aria-expanded', 'true');
   await expect(guideNav(page).getByRole('link', { name: 'Set up Spark Outpost' })).toBeVisible();
-  await reference.click();
-  await expect(guideNav(page).getByRole('link', { name: 'Cards' })).toBeHidden();
+
+  await started.click();
+  await expect(started).toHaveAttribute('aria-expanded', 'false');
+  await article(page).getByRole('link', { name: 'protected path' }).first().click();
+  await expect(pageTitle(page)).toHaveText('Protected paths');
+  await expect(started).toHaveAttribute('aria-expanded', 'false');
+
+  await page.goto('/#/docs/jev');
+  await page.reload();
+  await expect(pageTitle(page)).toHaveText('Jev, the optional advisor');
+  await expect(reference).toHaveAttribute('aria-expanded', 'true');
+  await expect(started).toHaveAttribute('aria-expanded', 'false');
+  await expect(guideNav(page).getByRole('button', { name: /^Understand Spark/ })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
 });
 
 test('Search finds a task, shows the page type and opens the matching section', async ({

@@ -98,3 +98,66 @@ test('Back returns to where you were reading', async ({ page }) => {
   await expect(article(page)).toHaveAttribute('data-page', 'glossary');
   await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(0);
 });
+
+test('the open page stays in view in the sidebar and the list does not jump', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 700 });
+  await page.goto('/#/docs/start-a-chat');
+  const nav = docs(page).getByRole('navigation', { name: 'Guide pages' });
+  const projects = nav.getByRole('button', { name: /^Projects and shipping/ });
+  await open(page, 'sub-chat-reports');
+  await expect(nav.getByRole('link', { name: 'Reports and the wrap-up' })).toBeInViewport({
+    ratio: 1,
+  });
+  const scrolled = await nav.evaluate((list) => list.scrollTop);
+  expect(scrolled).toBeGreaterThan(0);
+  await open(page, 'sub-chats');
+  expect(await nav.evaluate((list) => list.scrollTop)).toBe(scrolled);
+
+  await nav.evaluate((list) => list.scrollTo(0, 0));
+  const before = Math.round((await projects.boundingBox())!.y);
+  await open(page, 'glossary');
+  await expect(nav.getByRole('link', { name: 'Glossary' })).toBeInViewport({ ratio: 1 });
+  await nav.evaluate((list) => list.scrollTo(0, 0));
+  expect(Math.round((await projects.boundingBox())!.y)).toBe(before);
+
+  const search = docs(page).getByRole('searchbox', { name: 'Search the guide' });
+  await nav.evaluate((list) => list.scrollTo(0, 300));
+  await search.fill('autonomy');
+  await expect(docs(page).getByRole('list', { name: 'Search results' })).toBeVisible();
+  await search.fill('');
+  await expect.poll(() => nav.evaluate((list) => list.scrollTop)).toBe(300);
+});
+
+test('the keyboard skips the contents, walks search results and the outline marks the section', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/#/docs/answer-approvals');
+  await expect(article(page)).toHaveAttribute('data-page', 'answer-approvals');
+  await expect(page.getByRole('complementary', { name: 'Guide contents' })).toBeVisible();
+  const skip = docs(page).getByRole('link', { name: 'Skip to the page' });
+  await skip.focus();
+  await expect(skip).toBeInViewport();
+  await page.keyboard.press('Enter');
+  await expect(docs(page).getByRole('heading', { level: 1 })).toBeFocused();
+
+  const search = docs(page).getByRole('searchbox', { name: 'Search the guide' });
+  await search.fill('autonomy');
+  const results = docs(page).getByRole('list', { name: 'Search results' }).getByRole('link');
+  await search.press('ArrowDown');
+  await expect(results.nth(0)).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(results.nth(1)).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await expect(search).toBeFocused();
+  await search.fill('');
+
+  const outline = docs(page).getByRole('navigation', { name: 'On this page' });
+  await outline.getByRole('link', { name: 'Hold to confirm' }).click();
+  await expect(outline.getByRole('link', { name: 'Hold to confirm' })).toHaveAttribute(
+    'aria-current',
+    'location',
+  );
+  await expect(outline.locator('[aria-current]')).toHaveCount(1);
+});

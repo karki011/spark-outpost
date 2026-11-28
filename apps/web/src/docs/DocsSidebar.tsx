@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, type KeyboardEvent, type RefObject } from 'react';
 import {
   GUIDE_TYPE_LABELS,
-  groupGuideSections,
   guideLink,
-  guideNavLabel,
   searchGuidePages,
   type GuidePage,
 } from '@spark-outpost/contracts';
-import { ChevronIcon, SearchIcon, XIcon } from '../ui/icons.tsx';
+import { SearchIcon, XIcon } from '../ui/icons.tsx';
 import { openDoc } from './doc-route.ts';
+import { DocsNav, type DocsNavMemory } from './DocsNav.tsx';
 import { recordMissedSearch } from './missed-searches.ts';
 
 const MISSED_SEARCH_SETTLE_MS = 1_500;
@@ -27,16 +26,22 @@ function DocsSearchBox({
   query,
   onQuery,
   onSubmit,
+  onArrowDown,
 }: {
   query: string;
   onQuery: (query: string) => void;
   onSubmit: () => void;
+  onArrowDown: () => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
       onSubmit();
+    }
+    if (event.key === 'ArrowDown' && query) {
+      event.preventDefault();
+      onArrowDown();
     }
     if (event.key === 'Escape' && query) {
       event.stopPropagation();
@@ -75,11 +80,15 @@ function DocsSearchBox({
 function SearchResults({
   pages,
   query,
+  list,
   onPicked,
+  onLeaveTop,
 }: {
   pages: readonly GuidePage[];
   query: string;
+  list: RefObject<HTMLDivElement | null>;
   onPicked: () => void;
+  onLeaveTop: () => void;
 }) {
   const hits = useMemo(() => searchGuidePages(pages, query), [pages, query]);
   const missed = hits.length === 0;
@@ -88,8 +97,17 @@ function SearchResults({
     const timer = window.setTimeout(() => recordMissedSearch(query), MISSED_SEARCH_SETTLE_MS);
     return () => window.clearTimeout(timer);
   }, [missed, query]);
+  const onResultKey = (event: KeyboardEvent<HTMLUListElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const links = [...event.currentTarget.querySelectorAll<HTMLElement>('a')];
+    const next =
+      links.indexOf(document.activeElement as HTMLElement) + (event.key === 'ArrowDown' ? 1 : -1);
+    if (next < 0) onLeaveTop();
+    else links[Math.min(next, links.length - 1)]?.focus();
+  };
   return (
-    <div className="docs-results">
+    <div className="docs-results" ref={list}>
       <p className="docs-results-count" role="status">
         {hits.length === 0
           ? `No pages match “${query.trim()}”.`
@@ -105,7 +123,7 @@ function SearchResults({
         </p>
       )}
       {hits.length > 0 && (
-        <ul aria-label="Search results">
+        <ul aria-label="Search results" onKeyDown={onResultKey}>
           {hits.map((hit) => (
             <li key={hit.slug}>
               <a href={guideLink(hit.slug, hit.anchor)} onClick={onPicked}>
@@ -126,58 +144,6 @@ function SearchResults({
   );
 }
 
-function PageList({
-  pages,
-  current,
-  onPicked,
-}: {
-  pages: readonly GuidePage[];
-  current: string;
-  onPicked: () => void;
-}) {
-  const sections = useMemo(() => groupGuideSections(pages), [pages]);
-  const currentSection = pages.find((page) => page.slug === current)?.section;
-  const [toggled, setToggled] = useState<Readonly<Record<string, boolean>>>({});
-  return (
-    <nav id="docs-nav" className="docs-nav" aria-label="Guide pages">
-      {sections.map((group) => {
-        const id = `docs-sec-${group.pages[0]!.slug}`;
-        const open = toggled[group.section] ?? group.section === currentSection;
-        return (
-          <section key={group.section} aria-labelledby={id}>
-            <h2 id={id}>
-              <button
-                type="button"
-                aria-expanded={open}
-                aria-controls={`${id}-pages`}
-                onClick={() => setToggled((state) => ({ ...state, [group.section]: !open }))}
-              >
-                <ChevronIcon />
-                <span className="docs-nav-name">{group.section}</span>
-                <span className="docs-nav-count">{group.pages.length}</span>
-              </button>
-            </h2>
-            <ul id={`${id}-pages`} hidden={!open}>
-              {group.pages.map((page) => (
-                <li key={page.slug}>
-                  <a
-                    href={guideLink(page.slug)}
-                    aria-current={page.slug === current ? 'page' : undefined}
-                    onClick={onPicked}
-                  >
-                    <span className="docs-nav-name">{guideNavLabel(page)}</span>
-                    {page.comingSoon && <span className="docs-soon">Soon</span>}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
-    </nav>
-  );
-}
-
 export function DocsSidebar({
   pages,
   current,
@@ -188,6 +154,9 @@ export function DocsSidebar({
   onPicked,
 }: DocsSidebarProps) {
   const searching = query.trim().length > 0;
+  const side = useRef<HTMLElement>(null);
+  const results = useRef<HTMLDivElement>(null);
+  const navMemory = useRef<DocsNavMemory>({ scrollTop: 0, shown: null });
   const openFirst = () => {
     const [first] = searchGuidePages(pages, query, 1);
     if (!first) return;
@@ -195,7 +164,22 @@ export function DocsSidebar({
     openDoc(first.slug, first.anchor);
   };
   return (
-    <aside className="docs-side" data-open={navOpen || undefined}>
+    <aside
+      ref={side}
+      className="docs-side"
+      aria-label="Guide contents"
+      data-open={navOpen || undefined}
+    >
+      <a
+        className="docs-skip"
+        href={guideLink(current)}
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById('docs-page-title')?.focus();
+        }}
+      >
+        Skip to the page
+      </a>
       <div className="docs-side-head">
         <p className="docs-side-title">User guide</p>
         <button
@@ -208,11 +192,22 @@ export function DocsSidebar({
           Contents
         </button>
       </div>
-      <DocsSearchBox query={query} onQuery={onQuery} onSubmit={openFirst} />
+      <DocsSearchBox
+        query={query}
+        onQuery={onQuery}
+        onSubmit={openFirst}
+        onArrowDown={() => results.current?.querySelector<HTMLElement>('li a')?.focus()}
+      />
       {searching ? (
-        <SearchResults pages={pages} query={query} onPicked={onPicked} />
+        <SearchResults
+          pages={pages}
+          query={query}
+          list={results}
+          onPicked={onPicked}
+          onLeaveTop={() => side.current?.querySelector<HTMLElement>('.docs-find input')?.focus()}
+        />
       ) : (
-        <PageList pages={pages} current={current} onPicked={onPicked} />
+        <DocsNav pages={pages} current={current} memoryRef={navMemory} onPicked={onPicked} />
       )}
     </aside>
   );

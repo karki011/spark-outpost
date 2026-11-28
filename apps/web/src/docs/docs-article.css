@@ -95,6 +95,10 @@
   text-decoration: underline;
 }
 
+.docs-outline a[aria-current] {
+  font-weight: 600;
+}
+
 .docs-body {
   font-size: 15px;
   line-height: 1.6;
@@ -332,7 +336,14 @@
     color: var(--muted);
   }
 
-  .docs-article > .docs-outline a:hover {
+  .docs-article > .docs-outline a:hover,
+  .docs-article > .docs-outline a[aria-current] {
     color: var(--accent-text);
+  }
+
+  .docs-article > .docs-outline a[aria-current] {
+    margin-left: -15px;
+    padding-left: 13px;
+    border-left: 2px solid var(--accent);
   }
 }

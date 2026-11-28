@@ -5,6 +5,7 @@
 }
 
 .docs-side {
+  position: relative;
   min-height: 0;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -16,6 +17,34 @@
 .docs-side-head,
 .docs-find {
   margin-right: 12px;
+}
+
+.docs-skip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.docs-skip:not(:focus-visible) {
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .docs-nav,
