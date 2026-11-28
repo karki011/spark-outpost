@@ -156,7 +156,7 @@ The copy the app falls back to when no own copy is connected takes uploads from 
 
 ### Spark's own copy
 
-Spark's shared service keeps its first name and bucket, `spark-outpost-share` and `spark-outpost-shares`, so its address and stored pages don't move. They are in `wrangler.hosted.toml`, which also sets `MAX_EXPIRY_DAYS = "1"`. Deploy it with `npx wrangler@4 deploy --config wrangler.hosted.toml`; a plain `wrangler deploy` makes a separate `spark-outpost-artifact-share`. In the commands below, use the hosted names when you work on Spark's own copy.
+Spark's shared service keeps its first name and bucket, `spark-outpost-share` and `spark-outpost-shares`, so its address and stored pages don't move. It also answers at `https://share.sparkoutpost.dev`, a custom domain on the same worker; the `workers.dev` address stays on for installs and links that already use it. They are in `wrangler.hosted.toml`, which also sets `MAX_EXPIRY_DAYS = "1"`. Deploy it with `npx wrangler@4 deploy --config wrangler.hosted.toml`; a plain `wrangler deploy` makes a separate `spark-outpost-artifact-share`. In the commands below, use the hosted names when you work on Spark's own copy.
 
 ## Set up and deploy
 
