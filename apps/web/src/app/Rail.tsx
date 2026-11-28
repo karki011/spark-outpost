@@ -1,7 +1,8 @@
 import { memo, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
-import { UserAvatar } from '../brand/UserAvatar.tsx';
+import type { ScoutMood } from '../brand/BlobScout.tsx';
+import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import { useRecordingId } from '../meetings/index.ts';
 import { useRemoteClient } from '../phone/use-remote-client.ts';
@@ -43,6 +44,7 @@ interface RailProps {
   ticketsWaiting: number;
   ticketNotices: number;
   githubUpdates: boolean;
+  mood: ScoutMood;
   onView: (view: AppView) => void;
   onIntent: (view: AppView) => void;
   onSettingsIntent: () => void;
@@ -246,6 +248,7 @@ export const Rail = memo(function Rail({
   ticketsWaiting,
   ticketNotices,
   githubUpdates,
+  mood,
   onView,
   onIntent,
   onSettingsIntent,
@@ -328,7 +331,7 @@ export const Rail = memo(function Rail({
         onFocus={onSettingsIntent}
         onClick={onProfile}
       >
-        <UserAvatar displayName={name} size={40} />
+        <UserBlob displayName={name} size={40} mood={mood} />
       </button>
       {!phone && <SparkSwitcher onManage={() => onView('phone')} />}
       <span
