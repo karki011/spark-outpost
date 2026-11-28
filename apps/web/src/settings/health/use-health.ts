@@ -4,11 +4,14 @@ import { setupApi, setupKey } from '../../api/setup.ts';
 import { useCalendarStatus } from '../../calendar/use-calendar.ts';
 import { agentConfigQuery } from '../../chat/project/use-agent-config.ts';
 import { useProjects } from '../../chat/project/use-chat-repos.ts';
+import { usePageHidden } from '../../ui/use-page-hidden.ts';
 import { desktopSpeech, useSpeechStatus } from '../../voice/speech-bridge.ts';
 import { useMacControlStatus } from '../mac-control-status.ts';
 import { useSparkRules } from '../spark-rules/use-spark-rules.ts';
 import { useUserPlugins } from '../use-user-plugins.ts';
+import { cloudflareApi, cloudflareKeys } from '../../cloudflare/cloudflare-api.ts';
 import {
+  cloudflareHealth,
   failedChatsHealth,
   helpersHealth,
   pluginsHealth,
@@ -18,6 +21,8 @@ import {
   terminalsHealth,
   type HealthItem,
 } from './health-model.ts';
+
+const CLOUDFLARE_POLL_MS = 30_000;
 
 export type HealthSourceState = 'checking' | 'failed' | 'ready';
 
@@ -81,6 +86,26 @@ function useHelpersSource(): HealthSource {
   };
 }
 
+function useCloudflareSource(): HealthSource {
+  const refetchInterval = usePageHidden() ? false : CLOUDFLARE_POLL_MS;
+  const connection = useQuery({
+    queryKey: cloudflareKeys.connection,
+    queryFn: cloudflareApi.connection,
+    refetchInterval,
+  });
+  const reach = useQuery({
+    queryKey: cloudflareKeys.reach,
+    queryFn: cloudflareApi.reach,
+    refetchInterval,
+  });
+  return {
+    id: 'cloudflare',
+    label: 'Cloudflare',
+    state: stateOf([connection, reach]),
+    items: connection.data && reach.data ? cloudflareHealth(connection.data, reach.data) : [],
+  };
+}
+
 export function useHealth(): HealthSource[] {
   const rules = useSparkRules();
   const plugins = useUserPlugins();
@@ -91,6 +116,7 @@ export function useHealth(): HealthSource[] {
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const projects = useProjectsSource();
   const helpers = useHelpersSource();
+  const cloudflare = useCloudflareSource();
   return [
     source('rules', 'Spark rules', rules, rulesHealth),
     projects,
@@ -98,6 +124,7 @@ export function useHealth(): HealthSource[] {
     source('terminals', 'Terminal sessions', chats, terminalsHealth),
     source('chats', 'Chats', chats, failedChatsHealth),
     source('providers', 'AI providers', setup, (data) => providersHealth(data.providers)),
+    cloudflare,
     helpers,
   ];
 }

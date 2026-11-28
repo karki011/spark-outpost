@@ -11,6 +11,7 @@ import type {
   VoiceStatus,
 } from '@spark-outpost/contracts';
 import {
+  cloudflareHealth,
   agentConfigHealth,
   failedChatsHealth,
   helpersHealth,
@@ -211,6 +212,38 @@ describe('providersHealth', () => {
       detail: 'Signed out',
       fix: { section: 'ai' },
     });
+  });
+});
+
+describe('cloudflareHealth', () => {
+  const fine = { connected: true, problem: null };
+  const running = { connected: 'spark.example.com', tunnel: 'running' as const };
+
+  it('says nothing while the share service and the tunnel work, or are not set up', () => {
+    expect(cloudflareHealth(fine, running)).toEqual([]);
+    expect(
+      cloudflareHealth({ connected: false, problem: null }, { connected: null, tunnel: 'off' }),
+    ).toEqual([]);
+    expect(cloudflareHealth(fine, { ...running, tunnel: 'starting' })).toEqual([]);
+  });
+
+  it('lists a share service whose last check failed, with what the check said', () => {
+    const [item] = cloudflareHealth(
+      { connected: true, problem: 'The share service refused that upload key.' },
+      running,
+    );
+    expect(item).toMatchObject({
+      key: 'cloudflare:share',
+      status: 'broken',
+      detail: 'The share service refused that upload key.',
+    });
+    expect(item?.fix).toMatchObject({ kind: 'note' });
+  });
+
+  it('lists a tunnel that stopped for the address this computer is reached at', () => {
+    const [item] = cloudflareHealth(fine, { ...running, tunnel: 'stopped' });
+    expect(item?.title).toBe('The Cloudflare tunnel for spark.example.com isn’t connected');
+    expect(cloudflareHealth(fine, { connected: null, tunnel: 'stopped' })).toEqual([]);
   });
 });
 

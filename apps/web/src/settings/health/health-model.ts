@@ -1,6 +1,8 @@
 import {
   terminalModText,
   type CalendarStatus,
+  type CloudflareConnection,
+  type CloudflareReach,
   type ConversationSummary,
   type MacControlStatus,
   type Project,
@@ -229,6 +231,41 @@ export function providersHealth(providers: readonly ProviderSetup[]): HealthItem
       },
     ];
   });
+}
+
+const OPEN_CONNECTORS: HealthFix = {
+  kind: 'note',
+  text: 'Open Connections → Connectors → Cloudflare and select Check again, or set it up again.',
+};
+const OPEN_REMOTE_CONTROL: HealthFix = {
+  kind: 'note',
+  text: 'Open Remote control. If the tunnel was deleted in Cloudflare, turn the address off and set it up again.',
+};
+
+export function cloudflareHealth(
+  connection: Pick<CloudflareConnection, 'connected' | 'problem'>,
+  reach: Pick<CloudflareReach, 'connected' | 'tunnel'>,
+): HealthItem[] {
+  const items: HealthItem[] = [];
+  if (connection.connected && connection.problem) {
+    items.push({
+      key: 'cloudflare:share',
+      status: 'broken',
+      title: 'Your Cloudflare share service isn’t working',
+      detail: connection.problem,
+      fix: OPEN_CONNECTORS,
+    });
+  }
+  if (reach.connected && reach.tunnel === 'stopped') {
+    items.push({
+      key: 'cloudflare:tunnel',
+      status: 'broken',
+      title: `The Cloudflare tunnel for ${reach.connected} isn’t connected`,
+      detail: 'Devices can’t reach this computer at that address. Spark keeps trying.',
+      fix: OPEN_REMOTE_CONTROL,
+    });
+  }
+  return items;
 }
 
 export interface HelperStates {
