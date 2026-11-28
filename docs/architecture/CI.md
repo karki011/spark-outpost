@@ -36,7 +36,7 @@ On `windows-2025` it runs `scripts/windows-smoke.ts`, which checks:
 - Git Bash is present;
 - the Claude and Codex ACP adapters answer `initialize`.
 
-It then runs the session host tests (`apps/server/src/terminal/session-host`, a real host and a real ConPTY) and the Windows Terminal session tests (an npm shim run directly and in a ConPTY, a batch file through `cmd.exe`, Claude's hook command in Git Bash and Codex's through `cmd /C`, the netstat reader) as a step that fails the job, then the Cloudflare tunnel tests the same way (the runner ends a real process; the pinned Windows `cloudflared` and where the app looks for it), and the unit tests with `continue-on-error`, writes the failing files to the job summary through `scripts/vitest-summary.ts`, and uploads `vitest-windows.json` as `windows-unit-report`, kept 14 days. Run the smoke script locally with `pnpm exec tsx scripts/windows-smoke.ts`.
+It then runs the session host tests (`apps/server/src/terminal/session-host`, a real host and a real ConPTY) and the Windows Terminal session tests (an npm shim run directly and in a ConPTY, a batch file through `cmd.exe`, Claude's hook command in Git Bash and Codex's through `cmd /C`, the netstat reader) as a step that fails the job, then the Cloudflare tunnel tests the same way (the runner ends a real process; the pinned Windows `cloudflared` and when the app offers it), and the unit tests with `continue-on-error`, writes the failing files to the job summary through `scripts/vitest-summary.ts`, and uploads `vitest-windows.json` as `windows-unit-report`, kept 14 days. Run the smoke script locally with `pnpm exec tsx scripts/windows-smoke.ts`.
 
 ## Minutes
 

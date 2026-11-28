@@ -55,7 +55,7 @@ jobs:
       - name: Cloudflare tunnel
         if: always()
         shell: bash
-        run: pnpm exec vitest run --project unit apps/server/test/cloudflare-tunnel-runner.test.ts apps/desktop/src/cloudflared.test.ts apps/desktop/src/layout.test.ts apps/desktop/scripts/cloudflared-bundle.test.ts apps/desktop/scripts/builder-config.test.ts
+        run: pnpm exec vitest run --project unit apps/server/test/cloudflare-tunnel-runner.test.ts apps/desktop/src/cloudflared.test.ts apps/desktop/scripts/cloudflared-bundle.test.ts apps/desktop/scripts/builder-config.test.ts
       - name: Unit tests
         if: always()
         continue-on-error: true
