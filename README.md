@@ -26,7 +26,7 @@ Windows 10 and 11 (x64) is an unsigned alpha for testing: Windows SmartScreen wa
 <a href="LICENSE"><img alt="FSL-1.1-MIT license" src="https://img.shields.io/badge/license-FSL--1.1--MIT-555555"></a>
 </p>
 
-<a href="https://spark-outpost.karki011.workers.dev">Website</a> · <a href="#features">Features</a> · <a href="#local-first-stated-honestly">Privacy</a> · <a href="docs/guide/getting-started.md">User guide</a> · <a href="#develop">Develop</a>
+<a href="https://sparkoutpost.dev">Website</a> · <a href="#features">Features</a> · <a href="#local-first-stated-honestly">Privacy</a> · <a href="docs/guide/getting-started.md">User guide</a> · <a href="#develop">Develop</a>
 
 <br><br>
 

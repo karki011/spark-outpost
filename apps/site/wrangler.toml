@@ -1,0 +1,10 @@
+name = "spark-outpost"
+compatibility_date = "2026-09-01"
+workers_dev = true
+routes = [
+  { pattern = "sparkoutpost.dev", custom_domain = true },
+  { pattern = "www.sparkoutpost.dev", custom_domain = true },
+]
+
+[assets]
+directory = "./dist"
