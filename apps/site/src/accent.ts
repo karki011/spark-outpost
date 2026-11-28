@@ -1,6 +1,7 @@
 interface SiteAccent {
   choose(accent: string): void;
   current(): string;
+  darkSkin(): string;
 }
 
 declare global {
@@ -22,6 +23,9 @@ export function setUpAccentPicker(): void {
 
   const sync = () => {
     const current = accent.current();
+    for (const dark of document.querySelectorAll<HTMLElement>('[data-dark-skin]')) {
+      dark.dataset.skin = accent.darkSkin();
+    }
     for (const input of inputs) {
       input.checked = input.value === current;
       if (input.checked) name.textContent = labelOf(input);
@@ -32,6 +36,7 @@ export function setUpAccentPicker(): void {
     const input = event.target as HTMLInputElement;
     accent.choose(input.value);
     sync();
+    picker.dispatchEvent(new CustomEvent('spark-accent', { bubbles: true }));
   });
   sync();
 }

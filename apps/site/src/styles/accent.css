@@ -1,5 +1,6 @@
 :root {
   --jet: #111316;
+  --pit: #08090b;
   --cta: var(--brand);
   --cta-ink: var(--brand-ink);
 }

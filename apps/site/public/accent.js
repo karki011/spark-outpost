@@ -43,5 +43,8 @@
     current: function () {
       return root.dataset.accent;
     },
+    darkSkin: function () {
+      return SKINS[root.dataset.accent][1];
+    },
   };
 })();

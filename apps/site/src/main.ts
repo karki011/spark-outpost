@@ -4,6 +4,8 @@ import '../../web/public/theme.css';
 import './styles/accent.css';
 import './styles/base.css';
 import './styles/hero.css';
+import './styles/sheet.css';
+import './styles/story.css';
 import './styles/demos.css';
 import './styles/demos-mac.css';
 import './styles/demos-more.css';
@@ -17,6 +19,9 @@ import { mountPhone } from './features/phone.ts';
 import { mountPrivacy } from './features/privacy.ts';
 import { mountWaterfall } from './features/waterfall.ts';
 import { setUpAccentPicker } from './accent.ts';
+import { setUpEffects } from './effects.ts';
+import { mountHero } from './hero/hero.ts';
+import { mountStory } from './story.ts';
 import { reducedMotion } from './motion.ts';
 
 const DEMOS: Record<string, (host: HTMLElement, still: boolean) => void> = {
@@ -39,4 +44,7 @@ function mountDemos(): void {
 
 setUpAccentPicker();
 void setUpDownloads();
+mountHero(reducedMotion());
+mountStory();
 mountDemos();
+setUpEffects(reducedMotion());
