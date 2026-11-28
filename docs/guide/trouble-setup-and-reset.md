@@ -24,7 +24,7 @@ Providers: [Providers and keys](trouble-providers.md). Runs: [Runs and pull requ
 
 ## Check Health
 
-**Settings → Health** lists what's broken or quietly ignored, marked **Broken** or **Ignored**, each with its fix: rules file problems, skipped repo settings, plugins that can't load, Terminal mods that didn't load, failed turns, provider checks and missing helpers.
+**Settings → Health** lists what's **Broken** or **Ignored**, each with its fix: rules file problems, skipped repo settings, plugins that can't load, Terminal mods that didn't load, failed turns, provider checks, Cloudflare problems and missing helpers.
 
 ## Run setup again
 

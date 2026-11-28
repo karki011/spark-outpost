@@ -8,7 +8,9 @@ import { desktopSpeech, useSpeechStatus } from '../../voice/speech-bridge.ts';
 import { useMacControlStatus } from '../mac-control-status.ts';
 import { useSparkRules } from '../spark-rules/use-spark-rules.ts';
 import { useUserPlugins } from '../use-user-plugins.ts';
+import { cloudflareApi, cloudflareKeys } from '../../cloudflare/cloudflare-api.ts';
 import {
+  cloudflareHealth,
   failedChatsHealth,
   helpersHealth,
   pluginsHealth,
@@ -81,6 +83,20 @@ function useHelpersSource(): HealthSource {
   };
 }
 
+function useCloudflareSource(): HealthSource {
+  const connection = useQuery({
+    queryKey: cloudflareKeys.connection,
+    queryFn: cloudflareApi.connection,
+  });
+  const reach = useQuery({ queryKey: cloudflareKeys.reach, queryFn: cloudflareApi.reach });
+  return {
+    id: 'cloudflare',
+    label: 'Cloudflare',
+    state: stateOf([connection, reach]),
+    items: connection.data && reach.data ? cloudflareHealth(connection.data, reach.data) : [],
+  };
+}
+
 export function useHealth(): HealthSource[] {
   const rules = useSparkRules();
   const plugins = useUserPlugins();
@@ -91,6 +107,7 @@ export function useHealth(): HealthSource[] {
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const projects = useProjectsSource();
   const helpers = useHelpersSource();
+  const cloudflare = useCloudflareSource();
   return [
     source('rules', 'Spark rules', rules, rulesHealth),
     projects,
@@ -98,6 +115,7 @@ export function useHealth(): HealthSource[] {
     source('terminals', 'Terminal sessions', chats, terminalsHealth),
     source('chats', 'Chats', chats, failedChatsHealth),
     source('providers', 'AI providers', setup, (data) => providersHealth(data.providers)),
+    cloudflare,
     helpers,
   ];
 }

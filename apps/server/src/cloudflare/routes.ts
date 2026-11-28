@@ -47,6 +47,7 @@ export interface CloudflareRouteDeps {
 }
 
 const NOT_CONNECTED = 'Cloudflare is not connected.';
+export const SHARE_RECHECK_MS = 60 * 60_000;
 const PROBLEM_STATUS: Record<CloudflareProblem, number> = {
   address: 400,
   key: 400,
@@ -154,20 +155,32 @@ export function cloudflareRoutes(deps: CloudflareRouteDeps): Router {
     await answer(res);
   });
 
-  router.post('/cloudflare/check', async (_req, res) => {
+  const recheck = async (quiet: boolean): Promise<boolean> => {
     const { row, key } = await inTurn(async () => ({
       row: await cloudflareRow(db, workspaceId),
       key: await storedUploadKey(secrets),
     }));
-    if (!row) throw new BadRequestError(NOT_CONNECTED);
+    if (!row) return false;
     const origin = shareServiceOrigin(row.origin);
     const checked: ServiceCheckResult = !origin
       ? { problem: 'address' }
       : !key
         ? { problem: 'key' }
         : await checkShareService(check, origin, key);
+    if (quiet && checked.problem === 'unreachable') return true;
     const maxDays = checked.problem === null ? checked.maxDays : null;
     await recordCloudflareCheck(db, workspaceId, row.origin, checked.problem, maxDays);
+    return true;
+  };
+
+  if (deps.cloudflareBoot) {
+    const quietly = () => void recheck(true).catch(() => undefined);
+    quietly();
+    setInterval(quietly, SHARE_RECHECK_MS).unref();
+  }
+
+  router.post('/cloudflare/check', async (_req, res) => {
+    if (!(await recheck(false))) throw new BadRequestError(NOT_CONNECTED);
     await answer(res);
   });
 

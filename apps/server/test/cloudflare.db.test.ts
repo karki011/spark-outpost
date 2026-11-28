@@ -4,7 +4,9 @@ import {
   CLOUDFLARE_PROBLEMS,
   cloudflareConnectionSchema,
 } from '@spark-outpost/contracts';
+import { createApp } from '../src/api/app.ts';
 import { CLOUDFLARE_UPLOAD_KEY_SECRET, memorySecretStore } from '../src/setup/secrets.ts';
+import { testAppOptions } from './app-support.ts';
 import {
   HTML,
   ShareHarness,
@@ -211,6 +213,38 @@ describe('the Cloudflare connection', { timeout: 30_000 }, () => {
     const lost = await client.send('post', '/api/cloudflare/check').expect(200);
     expect(lost.body.problem).toBe(CLOUDFLARE_PROBLEMS.key);
     expect(JSON.stringify([refused.body, fine.body, lost.body])).not.toContain(UPLOAD_KEY);
+  });
+
+  it('checks the saved service by itself when Spark starts, and does not blame it for being offline', async () => {
+    const client = s.client();
+    const problem = async () => (await client.get('/api/cloudflare')).body.problem as string | null;
+    const start = () =>
+      createApp({ ...testAppOptions(s.t, { secrets: s.secrets }), cloudflareBoot: true });
+    const settles = async (wanted: string | null) => {
+      for (let tries = 0; tries < 100 && (await problem()) !== wanted; tries += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      expect(await problem()).toBe(wanted);
+    };
+    await connect(client, { address: own.origin, uploadKey: UPLOAD_KEY }).expect(200);
+
+    own.fake.uploadKey = `${UPLOAD_KEY}-rotated`;
+    start();
+    await settles(CLOUDFLARE_PROBLEMS.refused);
+
+    own.fake.uploadKey = UPLOAD_KEY;
+    start();
+    await settles(null);
+
+    const gone = await startFakeWorker();
+    gone.fake.uploadKey = UPLOAD_KEY;
+    await connect(client, { address: gone.origin, uploadKey: UPLOAD_KEY }).expect(200);
+    await gone.close();
+    start();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(await problem()).toBeNull();
+    const asked = await client.send('post', '/api/cloudflare/check').expect(200);
+    expect(asked.body.problem).toBe(CLOUDFLARE_PROBLEMS.unreachable);
   });
 
   it('disconnects without taking shared pages down, and they can still be stopped', async () => {
