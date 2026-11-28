@@ -137,7 +137,7 @@ async function ask(page: Page, text: string, card: RegExp) {
 async function answer(page: Page, card: RegExp, button: string) {
   await waitingCard(page, card).getByRole('button', { name: button, exact: true }).click();
   const stop = page.getByRole('button', { name: 'Stop', exact: true });
-  if (await stop.isVisible()) await stop.click();
+  if (await stop.isVisible()) await stop.click({ timeout: 5000 }).catch(() => undefined);
   await expect(stop).toBeHidden({ timeout: 20_000 });
 }
 

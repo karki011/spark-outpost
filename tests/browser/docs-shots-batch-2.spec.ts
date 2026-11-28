@@ -11,6 +11,7 @@ import {
 import { monoFixture } from './map-fixture.ts';
 import { openMap, tree } from './map-page.ts';
 import { openChats } from './navigation.ts';
+import { permissionChip, pickMode } from './permissions-kit.ts';
 import { connectTickets, resetTicketFakes } from './ticket-seed.ts';
 import { toggleHeaderPane } from './header-menu.ts';
 import { fixtures, mockPlugins, openPlugins } from './user-plugin-fixtures.ts';
@@ -114,6 +115,9 @@ test('Spark tools screenshots', async ({ page }) => {
   await connectTickets(page, ['linear']);
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
+  await permissionChip(page).click();
+  await pickMode(page, 'Manual');
+  await page.keyboard.press('Escape');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(
     '#build #spark spark_create_ticket {"project":"ENG","title":"Invoice CSV export drops the currency","priority":"high"}',
