@@ -155,10 +155,9 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
       include: [{ email: { email: 'owner@example.com' } }],
     });
     expect(runner.started).toEqual([FAKE_TUNNEL_TOKEN]);
-    expect(JSON.parse((await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)) ?? '{}')).toEqual({
-      tunnel: 'tun1',
-      token: FAKE_TUNNEL_TOKEN,
-    });
+    expect(JSON.parse((await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)) ?? '[]')).toEqual([
+      { tunnel: 'tun1', token: FAKE_TUNNEL_TOKEN },
+    ]);
     expect(cloudflare.revoked).toHaveLength(1);
     const stored = JSON.stringify([
       reach,
@@ -191,7 +190,7 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     );
     await secrets.set(
       CLOUDFLARE_TUNNEL_TOKEN_SECRET,
-      JSON.stringify({ tunnel: 'older', token: 'older-token-0123456789' }),
+      JSON.stringify([{ tunnel: 'older', token: 'older-token-0123456789' }]),
     );
     await saveRemoteHostname(t.db, t.workspaceId, 'spark.example.com', 'custom');
     runner.started.length = 0;
@@ -321,6 +320,53 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     expect((await removed).tunnel).toBe('off');
     secrets.get = read;
     expect(runner.current).toBe('off');
+    expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
+  });
+
+  it('keeps the earlier tunnel’s key until the saved address switches', async () => {
+    const client = localClient(app());
+    await setUp(client);
+    await saveRemoteHostname(t.db, t.workspaceId, 'spark.example.com', 'custom');
+    await secrets.set(
+      CLOUDFLARE_TUNNEL_TOKEN_SECRET,
+      JSON.stringify([
+        { tunnel: 'newer', token: 'newer-token-0123456789' },
+        { tunnel: 'tun1', token: FAKE_TUNNEL_TOKEN },
+      ]),
+    );
+    runner.stop();
+    runner.started.length = 0;
+    expect((await client.get(REACH).expect(200)).body.tunnel).toBe('running');
+    expect(runner.started).toEqual([FAKE_TUNNEL_TOKEN]);
+  });
+
+  it('stops when the sign-in page has more rules than Spark can read at once', async () => {
+    cloudflare.accessApps.push({ id: 'app1', domain: WANTED.hostname });
+    cloudflare.policies = Array.from({ length: 50 }, () => ({
+      decision: 'allow',
+      include: [{ email: { email: WANTED.email } }],
+    }));
+    const { reach } = await setUp(localClient(app()));
+    expect(failed(reach)).toMatchObject({ id: 'signInPage', fix: 'cloudflare' });
+  });
+
+  it('refuses a new set-up while a removal is still finishing', async () => {
+    let release = () => undefined as void;
+    cloudflare.tokenHeld = new Promise<void>((resolve) => (release = resolve));
+    const asked = new Promise<void>((resolve) => (cloudflare.tokenAsked = resolve));
+    const client = localClient(app());
+    const started = cloudflareReachSchema.parse(
+      (await client.send('post', REACH, WANTED).expect(200)).body,
+    );
+    await comeBack(started);
+    await asked;
+    const removing = client.send('delete', REACH).expect(200);
+    const removed = removing.then(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await client.send('post', REACH, WANTED).expect(400);
+    release();
+    await removed;
+    expect((await t.db.query('SELECT 1 FROM cloudflare_reach')).rowCount).toBe(0);
     expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
   });
 

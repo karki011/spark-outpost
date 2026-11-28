@@ -172,8 +172,11 @@ export async function accessPolicies(
   zoneId: string,
   appId: string,
 ): Promise<AccessPolicy[]> {
-  return policiesSchema.parse(await cloudflareCall(api, 'GET', policies(zoneId, appId)));
+  const path = `${policies(zoneId, appId)}?per_page=${ACCESS_POLICY_PAGE}`;
+  return policiesSchema.parse(await cloudflareCall(api, 'GET', path));
 }
+
+export const ACCESS_POLICY_PAGE = 50;
 
 const emailRule = z.strictObject({ email: z.strictObject({ email: z.string() }) });
 

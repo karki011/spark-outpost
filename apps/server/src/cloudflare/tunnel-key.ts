@@ -1,16 +1,17 @@
 import { z } from 'zod';
 
 const keySchema = z.object({ tunnel: z.string().min(1), token: z.string().min(1) });
+const keysSchema = z.array(keySchema).max(2);
 export type TunnelKey = z.infer<typeof keySchema>;
 
-export const packTunnelKey = (key: TunnelKey): string => JSON.stringify(key);
+export const packTunnelKeys = (keys: TunnelKey[]): string => JSON.stringify(keys);
 
-export function unpackTunnelKey(stored: string | null): TunnelKey | null {
-  if (!stored) return null;
+export function unpackTunnelKeys(stored: string | null): TunnelKey[] {
+  if (!stored) return [];
   try {
-    const parsed = keySchema.safeParse(JSON.parse(stored));
-    return parsed.success ? parsed.data : null;
+    const parsed = keysSchema.safeParse(JSON.parse(stored));
+    return parsed.success ? parsed.data : [];
   } catch {
-    return null;
+    return [];
   }
 }

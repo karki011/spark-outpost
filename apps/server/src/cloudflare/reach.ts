@@ -15,6 +15,7 @@ import { firstAccount, type CloudflareAccount, type CloudflareAccountApi } from 
 import type { CloudflareClientConfig } from './client.ts';
 import { revokeCloudflareToken, type CloudflareToken } from './oauth.ts';
 import {
+  ACCESS_POLICY_PAGE,
   accessPolicies,
   accessAppId,
   allowEmail,
@@ -46,7 +47,7 @@ import {
 import { deleteReach, reachRow, saveReach } from './reach-store.ts';
 import { CLOUDFLARE_DASH_URL, SETUP_SIGN_IN_ENDED, StepFailure } from './setup-problems.ts';
 import { beginCloudflareSignIn, type CloudflareSignIn } from './sign-in.ts';
-import { packTunnelKey, unpackTunnelKey } from './tunnel-key.ts';
+import { packTunnelKeys, unpackTunnelKeys } from './tunnel-key.ts';
 import type { TunnelRunner } from './tunnel-runner.ts';
 
 const EXPIRY_MARGIN_MS = 60_000;
@@ -130,6 +131,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
   let signIn: CloudflareSignIn | null = null;
   let generation = 0;
   let attempts = 0;
+  let removing = false;
   let graceUntil = 0;
   let connected: string | null = null;
   let work: Promise<void> = Promise.resolve();
@@ -173,18 +175,19 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     local = next.catch(() => undefined);
     return next;
   };
-  const savedKey = async () => unpackTunnelKey(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET));
+  const savedKeys = async () => unpackTunnelKeys(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET));
+  const keyFor = async (tunnelId: string) =>
+    (await savedKeys()).find((key) => key.tunnel === tunnelId) ?? null;
 
   const bind = (runToken: string, mine: number) =>
     exclusive(async () => {
       if (mine !== generation) return;
       const hostname = need(progress.hostname);
       const tunnelId = need(progress.tunnelId);
+      const fresh = { tunnel: tunnelId, token: runToken };
+      const earlier = (await savedKeys()).filter((key) => key.tunnel !== tunnelId).slice(0, 1);
       try {
-        await secrets.set(
-          CLOUDFLARE_TUNNEL_TOKEN_SECRET,
-          packTunnelKey({ tunnel: tunnelId, token: runToken }),
-        );
+        await secrets.set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, packTunnelKeys([fresh, ...earlier]));
       } catch {
         throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
       }
@@ -194,6 +197,9 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
         zoneId: need(progress.zone).id,
         tunnelId,
       });
+      await secrets
+        .set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, packTunnelKeys([fresh]))
+        .catch(() => undefined);
       connected = hostname;
       progress.runToken = null;
     });
@@ -249,7 +255,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
         await allowEmail(access, zone.id, appId, email);
         return;
       }
-      if (!letsInOnly(policies, email)) {
+      if (policies.length >= ACCESS_POLICY_PAGE || !letsInOnly(policies, email)) {
         throw new StepFailure(REACH_PAGE_TAKEN, 'cloudflare', ZERO_TRUST_URL);
       }
     },
@@ -257,10 +263,9 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       if (!runner) throw new StepFailure(REACH_NO_TUNNEL_PROGRAM, null);
       if (progress.runToken) await bind(progress.runToken, mine);
       if (mine !== generation) return;
-      const key = await savedKey();
-      if (!key || (progress.tunnelId !== null && key.tunnel !== progress.tunnelId)) {
-        throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
-      }
+      const bound = progress.tunnelId ?? (await reachRow(db, workspaceId))?.tunnelId ?? null;
+      const key = bound ? await keyFor(bound) : null;
+      if (!key) throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
       graceUntil = now() + SETUP_GRACE_MS;
       if (!(await runner.start(key.token))) throw new StepFailure(REACH_NOT_CONNECTED, 'retry');
     },
@@ -396,8 +401,8 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
         return;
       }
       if (runner.state() !== 'off') return;
-      const key = await savedKey();
-      if (key && key.tunnel === row.tunnelId) void runner.start(key.token);
+      const key = await keyFor(row.tunnelId);
+      if (key) void runner.start(key.token);
     });
   };
 
@@ -413,7 +418,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     async start(request) {
       if (!client) throw new StepFailure(REACH_UNAVAILABLE, null);
       if (!runner) throw new StepFailure(REACH_NO_TUNNEL_PROGRAM, null);
-      if (status === 'working') throw new StepFailure(REACH_BUSY, null);
+      if (status === 'working' || removing) throw new StepFailure(REACH_BUSY, null);
       await reset();
       progress = { ...freshProgress(), hostname: request.hostname, email: request.email };
       await beginSignIn(client);
@@ -421,6 +426,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     },
     async resume() {
       if (!client) throw new StepFailure(REACH_UNAVAILABLE, null);
+      if (removing) throw new StepFailure(REACH_BUSY, null);
       if (status === 'working') return view();
       if (!progress.hostname) throw new StepFailure(REACH_UNAVAILABLE, null);
       if (canResume()) {
@@ -437,15 +443,20 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       return view();
     },
     async remove() {
-      await reset();
-      await work.catch(() => undefined);
-      await exclusive(async () => {
-        graceUntil = 0;
-        runner?.stop();
-        await secrets.delete(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
-        await deleteReach(db, workspaceId);
-        connected = null;
-      });
+      removing = true;
+      try {
+        await reset();
+        await work.catch(() => undefined);
+        await exclusive(async () => {
+          graceUntil = 0;
+          runner?.stop();
+          await secrets.delete(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
+          await deleteReach(db, workspaceId);
+          connected = null;
+        });
+      } finally {
+        removing = false;
+      }
       return view();
     },
   };

@@ -39,6 +39,7 @@ export class FakeCloudflare {
   accessOn = true;
   accessApps: { id: string; domain: string }[] = [];
   policyFails = false;
+  policies: unknown[] | null = null;
   tokenHeld: Promise<void> | null = null;
   tokenAsked: () => void = () => undefined;
   readonly reach: { tunnelRoute: unknown; cname: unknown; policy: unknown } = {
@@ -149,7 +150,7 @@ export class FakeCloudflare {
       return ok({ id: 'app1' });
     }
     if (path === '/zones/zone1/access/apps/app1/policies' && method === 'GET') {
-      return ok(this.reach.policy ? [this.reach.policy] : []);
+      return ok(this.policies ?? (this.reach.policy ? [this.reach.policy] : []));
     }
     if (path === '/zones/zone1/access/apps/app1/policies') {
       if (this.policyFails) return refused(500, 1000, 'Try again.');
