@@ -4,6 +4,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { promisify } from 'node:util';
+import {
+  CLOUDFLARED_VERSION,
+  checkCloudflaredBinary,
+  checkCloudflaredStarts,
+} from '../apps/desktop/scripts/cloudflared-bundle.ts';
 import { checkWinHelperAnswers } from '../apps/desktop/scripts/win-helper-bundle.ts';
 import { startWithPgCtl } from '../apps/desktop/src/postgres-windows.ts';
 
@@ -24,6 +29,11 @@ const POSTGRES_BIN = path.join(
   'resources/app/node_modules/@embedded-postgres/windows-x64/native/bin',
 );
 const WIN_HELPER = path.join(INSTALL_ROOT, 'resources/win-helper/spark-win-helper.exe');
+const CLOUDFLARED = path.join(INSTALL_ROOT, 'resources/cloudflared/bin/cloudflared.exe');
+const CLOUDFLARED_LICENCE = path.join(
+  INSTALL_ROOT,
+  'resources/cloudflared/licenses/cloudflared-LICENSE.txt',
+);
 const LAUNCH_WAIT_MS = 120_000;
 const results: Result[] = [];
 
@@ -161,7 +171,7 @@ function present(file: string): Promise<boolean> {
 
 async function uninstall(): Promise<string> {
   await runFile(UNINSTALLER, ['/S'], { timeout: 120_000 });
-  const files = [APP_EXE, path.join(POSTGRES_BIN, 'pg_ctl.exe'), WIN_HELPER];
+  const files = [APP_EXE, path.join(POSTGRES_BIN, 'pg_ctl.exe'), WIN_HELPER, CLOUDFLARED];
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const left = (await Promise.all(files.map(present))).some(Boolean);
     if (!left) return 'removed, Postgres included';
@@ -180,6 +190,12 @@ if (results[0]!.ok) {
   await check('Windows helper in the installed app answers', true, async () => {
     await exists(WIN_HELPER);
     return checkWinHelperAnswers(WIN_HELPER);
+  });
+  await check('cloudflared in the installed app is the pinned file and starts', true, async () => {
+    await checkCloudflaredBinary(CLOUDFLARED, 'x64', 'win');
+    await checkCloudflaredStarts(CLOUDFLARED);
+    await exists(CLOUDFLARED_LICENCE);
+    return `${await exists(CLOUDFLARED)}, sha256 as pinned, --version prints ${CLOUDFLARED_VERSION}, licence beside it`;
   });
   await check('Launch the installed app', false, launch);
   await check('Uninstall silently', true, uninstall);

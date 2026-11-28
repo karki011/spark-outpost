@@ -148,7 +148,7 @@ describe('builderConfig', () => {
     expect(config).not.toHaveProperty('dmg');
   });
 
-  it('copies only the runtime, server and web into the Windows resources folder', async () => {
+  it('copies the runtime, server and web into the Windows resources folder and refuses a build without the pinned cloudflared', async () => {
     const stageDir = await mkdtemp(path.join(os.tmpdir(), 'spark-stage-'));
     const appOutDir = await mkdtemp(path.join(os.tmpdir(), 'spark-out-'));
     for (const file of [
@@ -161,10 +161,19 @@ describe('builderConfig', () => {
     }
     const config = builderConfig({ ...base, stageDir, archs: ['x64'], env: {}, platform: 'win' });
     const afterPack = config.afterPack as (context: unknown) => Promise<void>;
-    await afterPack({ appOutDir, arch: Arch.x64 });
+    await expect(afterPack({ appOutDir, arch: Arch.x64 })).rejects.toThrow(
+      /Windows cloudflared .* can't be bundled: it is missing/,
+    );
     const resources = path.join(appOutDir, 'resources');
     expect((await readdir(resources)).sort()).toEqual(['app', 'server', 'web']);
     expect(await readdir(path.join(resources, 'app/node_modules'))).toEqual(['pg']);
+    const staged = path.join(stageDir, 'x64/cloudflared/bin/cloudflared.exe');
+    await mkdir(path.dirname(staged), { recursive: true });
+    await writeFile(staged, 'not cloudflared');
+    await expect(afterPack({ appOutDir, arch: Arch.x64 })).rejects.toThrow(
+      /it has sha256 [0-9a-f]{64}; the pinned one is 555b46c8/,
+    );
+    expect(await readdir(path.join(resources, 'cloudflared/bin'))).toEqual(['cloudflared.exe']);
   });
 
   it('says why the app asks for the microphone and calendars, and grants both entitlements', async () => {

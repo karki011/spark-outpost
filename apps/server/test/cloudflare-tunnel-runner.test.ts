@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
-import type { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
+import { once } from 'node:events';
 import { describe, expect, it } from 'vitest';
 import { createTunnelRunner } from '../src/cloudflare/tunnel-runner.ts';
 
@@ -20,13 +21,19 @@ class FakeChild extends EventEmitter {
 function fakeSpawn() {
   const children: FakeChild[] = [];
   const envs: (NodeJS.ProcessEnv | undefined)[] = [];
-  const launch = ((_bin: string, _args: string[], options: { env?: NodeJS.ProcessEnv }) => {
+  const options: { windowsHide?: boolean }[] = [];
+  const launch = ((
+    _bin: string,
+    _args: string[],
+    given: { env?: NodeJS.ProcessEnv; windowsHide?: boolean },
+  ) => {
     const child = new FakeChild();
     children.push(child);
-    envs.push(options.env);
+    envs.push(given.env);
+    options.push(given);
     return child;
   }) as unknown as typeof spawn;
-  return { children, envs, launch };
+  return { children, envs, options, launch };
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -71,6 +78,7 @@ describe('the Cloudflare tunnel runner', () => {
       readyMs: 20,
       retryMs: [10],
       killGraceMs: 20,
+      platform: 'darwin',
     });
     const started = runner.start('run-token');
     children[0]!.stubborn = true;
@@ -79,5 +87,52 @@ describe('the Cloudflare tunnel runner', () => {
     expect(children[0]!.signals).toEqual(['SIGTERM', 'SIGKILL']);
     expect(children.length).toBeGreaterThan(1);
     runner.stop();
+  });
+
+  it('on Windows ends a child at once, with no window and no second try', async () => {
+    const { children, options, launch } = fakeSpawn();
+    const runner = createTunnelRunner({
+      bin: 'cloudflared.exe',
+      spawn: launch,
+      readyMs: 20,
+      retryMs: [10],
+      killGraceMs: 20,
+      platform: 'win32',
+    });
+    expect(await runner.start('run-token')).toBe(false);
+    await wait(100);
+    expect(options[0]?.windowsHide).toBe(true);
+    expect(children[0]!.signals).toEqual(['SIGKILL']);
+    expect(children.length).toBeGreaterThan(1);
+    runner.stop();
+    const connected = runner.start('run-token');
+    const last = children.at(-1)!;
+    last.stderr.emit('data', 'INF Registered tunnel connection connIndex=0');
+    expect(await connected).toBe(true);
+    runner.stop();
+    expect(last.signals).toEqual(['SIGKILL']);
+    expect(runner.state()).toBe('off');
+  });
+
+  it('ends a real process on this system when stopped', async () => {
+    const started: ChildProcess[] = [];
+    const launch = ((_bin: string, _args: string[], given: object) => {
+      const child = spawn(
+        process.execPath,
+        ['-e', "console.error('Registered tunnel connection');setInterval(() => {}, 1000)"],
+        given,
+      );
+      started.push(child);
+      return child;
+    }) as unknown as typeof spawn;
+    const runner = createTunnelRunner({ bin: 'cloudflared', spawn: launch, readyMs: 20_000 });
+    expect(await runner.start('run-token')).toBe(true);
+    const child = started[0]!;
+    const exited = once(child, 'exit');
+    runner.stop();
+    await exited;
+    expect(child.exitCode === null ? child.signalCode : child.exitCode).not.toBe(0);
+    expect(runner.state()).toBe('off');
+    expect(started).toHaveLength(1);
   });
 });

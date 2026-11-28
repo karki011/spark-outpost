@@ -19,6 +19,7 @@ describe('appLayout', () => {
         appPath: '/repo/apps/desktop',
         resourcesPath: '/electron/Resources',
         arch: 'arm64',
+        platform: 'darwin',
       }),
     ).toEqual(
       native(
@@ -46,12 +47,24 @@ describe('appLayout', () => {
     );
   });
 
+  it('names the Windows cloudflared, packaged and from source', () => {
+    const source = { appPath: '/repo/apps/desktop', resourcesPath: '/app/resources' };
+    const platform = 'win32' as const;
+    expect(appLayout({ ...source, isPackaged: true, platform }).cloudflaredBin).toBe(
+      path.join('/app/resources', 'cloudflared/bin/cloudflared.exe'),
+    );
+    expect(appLayout({ ...source, isPackaged: false, arch: 'x64', platform }).cloudflaredBin).toBe(
+      path.resolve('/repo/.local/cloudflared/win-x64/bin/cloudflared.exe'),
+    );
+  });
+
   it('runs them from the app bundle resources when packaged', () => {
     expect(
       appLayout({
         isPackaged: true,
         appPath: '/Applications/Spark Outpost.app/Contents/Resources/app',
         resourcesPath: '/Applications/Spark Outpost.app/Contents/Resources',
+        platform: 'darwin',
       }),
     ).toEqual(
       native({
