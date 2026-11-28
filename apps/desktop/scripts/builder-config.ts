@@ -231,7 +231,7 @@ export function packagedShareUrl(env: Env): string | null {
   const origin = shareServiceOrigin(value);
   if (!origin) {
     throw new Error(
-      `${SHARE_URL_ENV} must be the share service's https origin with no path, such as https://spark-outpost-share.<subdomain>.workers.dev.`,
+      `${SHARE_URL_ENV} must be the share service's https origin with no path, such as https://spark-outpost-artifact-share.<subdomain>.workers.dev.`,
     );
   }
   return origin;

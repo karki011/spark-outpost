@@ -11,7 +11,9 @@ import { outsideTarget } from '../browser/outside-link.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { BookIcon, ExternalLinkIcon } from '../ui/icons.tsx';
 import { CloudflareAuto } from './CloudflareAuto.tsx';
+import { CloudflareKeys } from './CloudflareKeys.tsx';
 import { cloudflareApi } from './cloudflare-api.ts';
+import { newShareKeys } from './share-keys.ts';
 import { useCloudflareSaved, useCloudflareSetup } from './use-cloudflare.ts';
 
 const CLOUDFLARE_SIGN_UP_URL = 'https://dash.cloudflare.com/sign-up';
@@ -49,11 +51,11 @@ function keyProblem(uploadKey: string): string | null {
   return ARTIFACT_SHARE_UPLOAD_KEY_PATTERN.test(uploadKey.trim()) ? null : CLOUDFLARE_PROBLEMS.key;
 }
 
-function ConnectForm() {
+function ConnectForm({ madeKey }: { madeKey: string }) {
   const ids = useId();
   const saved = useCloudflareSaved();
   const [address, setAddress] = useState('');
-  const [uploadKey, setUploadKey] = useState('');
+  const [uploadKey, setUploadKey] = useState(madeKey);
   const [revealed, setRevealed] = useState(false);
   const connect = useMutation({ mutationFn: cloudflareApi.connect, onSuccess: saved });
   const addressError = addressProblem(address);
@@ -85,7 +87,7 @@ function ConnectForm() {
           inputMode="url"
           required
           value={address}
-          placeholder="https://spark-outpost-share.example.workers.dev"
+          placeholder="https://spark-outpost-artifact-share.example.workers.dev"
           disabled={connect.isPending}
           autoComplete="off"
           spellCheck={false}
@@ -131,7 +133,8 @@ function ConnectForm() {
           </p>
         )}
         <p id={`${ids}key-help`} className="tk-field-help">
-          Kept in this computer’s keychain. Only Spark with this key can add pages.
+          Filled in with the key Spark made above; for a service you deployed earlier, paste its key
+          instead. Kept in this computer’s keychain.
         </p>
       </div>
       {connect.isError && (
@@ -150,6 +153,7 @@ function ConnectForm() {
 
 function ByHand({ deployUrl }: { deployUrl: string }) {
   const needsId = useId();
+  const [keys] = useState(newShareKeys);
   const docs = use(DocsReachable);
   return (
     <>
@@ -175,14 +179,15 @@ function ByHand({ deployUrl }: { deployUrl: string }) {
           <OutsideButton href={CLOUDFLARE_SIGN_UP_URL}>Create a free account</OutsideButton>
         </Step>
         <Step title="Deploy the share service">
+          <CloudflareKeys keys={keys} />
           <OutsideButton href={deployUrl}>Deploy to Cloudflare</OutsideButton>
           <p>
             Opens Cloudflare in your browser. It creates a Worker and a storage bucket in your
-            account and asks you to set an upload key.
+            account and asks for the two keys.
           </p>
         </Step>
         <Step title="Connect it to Spark">
-          <ConnectForm />
+          <ConnectForm madeKey={keys.uploadKey} />
         </Step>
       </ol>
     </>

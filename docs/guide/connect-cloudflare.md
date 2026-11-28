@@ -23,9 +23,9 @@ Spark asks to see the account, create a storage bucket, and create the share ser
 
 No **Set it up for me**? Select **Set it up by hand instead**:
 
-1. Run `openssl rand -hex 32` twice.
-2. Select **Deploy to Cloudflare**, connect GitHub or GitLab, and paste one value as `UPLOAD_KEY` and the other as `SIGNING_KEY`.
-3. Paste the address and the `UPLOAD_KEY` value into Spark and select **Connect**.
+1. Spark made `UPLOAD_KEY` and `SIGNING_KEY`; select **Copy** beside each.
+2. Select **Deploy to Cloudflare**, connect GitHub or GitLab, and paste each key into the box with its name.
+3. Paste the address Cloudflare shows into Spark and select **Connect**.
 
 | Fact                                  | Detail                                                             |
 | ------------------------------------- | ------------------------------------------------------------------ |

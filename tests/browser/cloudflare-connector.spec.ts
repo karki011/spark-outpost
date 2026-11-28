@@ -106,5 +106,5 @@ test('the user connects their own share service, shares from it and disconnects 
   );
   await dialog.getByRole('button', { name: 'Disconnect', exact: true }).click();
   await expect(cloudflare.getByLabel('Service address')).toBeVisible();
-  await expect(cloudflare.getByLabel('Upload key')).toHaveValue('');
+  await expect(cloudflare.getByLabel('Upload key')).toHaveValue(/^[A-Za-z0-9_-]{43}$/);
 });

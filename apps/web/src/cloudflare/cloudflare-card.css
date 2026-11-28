@@ -248,3 +248,14 @@
 .cf-fix button.btn:not(:disabled) {
   color: var(--text);
 }
+.cf-keys {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  max-width: 520px;
+}
+.cf-keys dt {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+}
