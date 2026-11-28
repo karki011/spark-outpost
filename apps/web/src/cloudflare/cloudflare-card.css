@@ -299,3 +299,26 @@
   width: 16px;
   height: 16px;
 }
+
+.cf-asks > summary {
+  padding: 4px 0;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cf-asks[open] > summary {
+  margin-bottom: 8px;
+}
+
+.cf-or {
+  margin: 20px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@media (pointer: coarse) {
+  .cf-asks > summary {
+    padding: 12px 0;
+  }
+}

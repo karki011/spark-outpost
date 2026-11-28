@@ -19,11 +19,11 @@ import { useCloudflareReach } from './use-cloudflare-reach.ts';
 
 export const REACH_HEADING = 'Set it up with Cloudflare';
 export const REACH_LEDE =
-  'Sign in to Cloudflare once and Spark gives this computer an address on a domain you have there, with a sign-in page in front. About 2 minutes.';
+  'Sign in to Cloudflare once. Spark gives this computer an address on your domain, with a sign-in page in front. About 2 minutes.';
+export const REACH_ASKS = 'What Spark asks Cloudflare for (5 permissions)';
 export const REACH_KEEPS =
-  'Spark asks for nothing else and ends the sign-in when set-up finishes. It keeps the tunnel’s key in this computer’s keychain and runs the tunnel while Spark is open.';
-export const REACH_EMAIL_HELP =
-  'Only this email can get past Cloudflare’s sign-in page. Pairing a device still needs a code you confirm on this computer.';
+  'The sign-in ends when set-up finishes. Spark keeps only the tunnel’s key, in this computer’s keychain.';
+export const REACH_EMAIL_HELP = 'Only this email can open the address.';
 
 const PERMISSIONS: Record<CloudflareReachPermission, PermissionCopy> = {
   account: {
@@ -191,7 +191,10 @@ export function CloudflareReachSetup({ onSaved }: CloudflareReachSetupProps) {
               {emailProblem ?? REACH_EMAIL_HELP}
             </p>
           </div>
-          <PermissionList permissions={reach.permissions} copy={PERMISSIONS} />
+          <details className="cf-asks">
+            <summary>{REACH_ASKS}</summary>
+            <PermissionList permissions={reach.permissions} copy={PERMISSIONS} />
+          </details>
           <p>{REACH_KEEPS}</p>
           <div className="cx-actions">
             <button type="submit" className="btn primary sm" disabled={auto.busy}>
