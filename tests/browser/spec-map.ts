@@ -290,7 +290,7 @@ export const SPEC_GROUPS = {
     'phone-passkey',
   ],
   'remote-sparks': ['remote-sparks', 'remote-custom-domain'],
-  'docs-help': ['docs', 'help'],
+  'docs-help': ['docs', 'docs-layout', 'help'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type SpecGroup = keyof typeof SPEC_GROUPS;

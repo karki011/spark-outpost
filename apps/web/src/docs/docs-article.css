@@ -1,7 +1,7 @@
 .docs-article {
-  max-width: 1040px;
+  max-width: 784px;
   margin: 0 auto;
-  padding: 36px 40px 64px;
+  padding: 36px 32px 64px;
 }
 
 .docs-crumb {
@@ -71,8 +71,6 @@
   margin: 0 0 6px;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--faint);
 }
 
@@ -98,7 +96,8 @@
 }
 
 .docs-body {
-  font-size: 14.5px;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .docs-body h2 {
@@ -122,8 +121,9 @@
   white-space: nowrap;
 }
 
-.docs-body > :is(p, ul, blockquote) {
-  max-width: 88ch;
+.docs-lede,
+.docs-body > :is(p, ul, ol, blockquote) {
+  max-width: 42em;
 }
 
 .docs-body th:first-child,
@@ -293,20 +293,21 @@
   text-align: right;
 }
 
-@media (min-width: 1280px) {
-  .docs-article[data-outlined] {
-    max-width: 1320px;
+@container docs-main (min-width: 900px) {
+  .docs-article {
+    max-width: 1016px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 200px;
+    grid-template-columns: minmax(0, 720px) 200px;
     grid-template-rows: auto auto 1fr;
-    column-gap: 40px;
+    justify-content: center;
+    column-gap: 32px;
   }
 
-  .docs-article[data-outlined] > * {
+  .docs-article > * {
     grid-column: 1;
   }
 
-  .docs-article[data-outlined] > .docs-outline {
+  .docs-article > .docs-outline {
     grid-column: 2;
     grid-row: 1 / 4;
     align-self: start;
@@ -320,23 +321,18 @@
     background: transparent;
   }
 
-  .docs-article[data-outlined] > .docs-outline ul {
+  .docs-article > .docs-outline ul {
     grid-template-columns: 1fr;
   }
 
-  .docs-article[data-outlined] > .docs-outline a {
+  .docs-article > .docs-outline a {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     color: var(--muted);
   }
 
-  .docs-article[data-outlined] > .docs-outline a:hover {
+  .docs-article > .docs-outline a:hover {
     color: var(--accent-text);
-  }
-}
-
-@media (min-width: 1680px) {
-  .docs-article[data-outlined] {
-    max-width: 1560px;
-    grid-template-columns: minmax(0, 1fr) 220px;
-    column-gap: 48px;
   }
 }

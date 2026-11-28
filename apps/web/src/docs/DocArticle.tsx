@@ -10,6 +10,7 @@ import {
 } from '@spark-outpost/contracts';
 import { codeComponents, remarkPlugins } from '../chat/markdown/Markdown.tsx';
 import { remarkCallouts } from './callouts.ts';
+import { restoreDocScroll, savedDocScroll, useRememberDocScroll } from './doc-scroll.ts';
 import { guideImage } from './guide-content.ts';
 import { DOC_HEADING_PREFIX, remarkHeadingIds } from './heading-ids.ts';
 import { useColorScheme } from './use-color-scheme.ts';
@@ -60,6 +61,12 @@ function useScrollToTarget(page: GuidePage, anchor: string | null) {
   useEffect(() => {
     const initial = first.current;
     first.current = false;
+    const saved = savedDocScroll(page.slug);
+    if (saved !== null) {
+      restoreDocScroll(titleRef.current, saved);
+      if (!initial) titleRef.current?.focus({ preventScroll: true });
+      return;
+    }
     const target = anchor ? document.getElementById(`${DOC_HEADING_PREFIX}${anchor}`) : null;
     if (target) {
       target.scrollIntoView({ block: 'start' });
@@ -69,6 +76,7 @@ function useScrollToTarget(page: GuidePage, anchor: string | null) {
     titleRef.current?.closest('article')?.scrollIntoView({ block: 'start' });
     if (!initial) titleRef.current?.focus({ preventScroll: true });
   }, [page.slug, anchor]);
+  useRememberDocScroll(titleRef, page.slug);
   return titleRef;
 }
 

@@ -153,7 +153,7 @@ function PageList({
                 onClick={() => setToggled((state) => ({ ...state, [group.section]: !open }))}
               >
                 <ChevronIcon />
-                {group.section}
+                <span className="docs-nav-name">{group.section}</span>
                 <span className="docs-nav-count">{group.pages.length}</span>
               </button>
             </h2>
@@ -165,7 +165,7 @@ function PageList({
                     aria-current={page.slug === current ? 'page' : undefined}
                     onClick={onPicked}
                   >
-                    {guideNavLabel(page)}
+                    <span className="docs-nav-name">{guideNavLabel(page)}</span>
                     {page.comingSoon && <span className="docs-soon">Soon</span>}
                   </a>
                 </li>
