@@ -8,6 +8,8 @@ const zone = (zoneId: string) => `/zones/${encodeURIComponent(zoneId)}`;
 
 const ZONES_PER_PAGE = 50;
 const ZONE_PAGES_MAX = 40;
+export const REACH_DOMAINS_UNREADABLE =
+  'Cloudflare sent a list of domains Spark couldn’t read. Try again.';
 export const REACH_TOO_MANY_DOMAINS =
   'This Cloudflare account has more domains than Spark can look through. Use Custom domain and run your own tunnel.';
 const zonesSchema = z.array(z.object({ id, name: z.string().min(1).max(253) }));
@@ -28,7 +30,7 @@ export async function listZones(
       page: String(page),
     });
     const found = zonesSchema.safeParse(await cloudflareCall(api, 'GET', `/zones?${query}`));
-    if (!found.success) return zones;
+    if (!found.success) throw new StepFailure(REACH_DOMAINS_UNREADABLE, 'retry');
     zones.push(...found.data);
     if (found.data.length < ZONES_PER_PAGE) return zones;
   }
@@ -159,11 +161,9 @@ export async function createAccessApp(
 const policies = (zoneId: string, appId: string) =>
   `${zone(zoneId)}/access/apps/${encodeURIComponent(appId)}/policies`;
 
+const rules = z.array(z.record(z.string(), z.unknown())).optional();
 const policiesSchema = z.array(
-  z.object({
-    decision: z.string(),
-    include: z.array(z.object({ email: z.object({ email: z.string() }).optional() })).optional(),
-  }),
+  z.object({ decision: z.string(), include: rules, require: rules, exclude: rules }),
 );
 export type AccessPolicy = z.infer<typeof policiesSchema>[number];
 
@@ -175,12 +175,18 @@ export async function accessPolicies(
   return policiesSchema.parse(await cloudflareCall(api, 'GET', policies(zoneId, appId)));
 }
 
+const emailRule = z.strictObject({ email: z.strictObject({ email: z.string() }) });
+
+function allowsOnly(policy: AccessPolicy, email: string): boolean {
+  if (policy.decision !== 'allow') return false;
+  if ((policy.require ?? []).length > 0 || (policy.exclude ?? []).length > 0) return false;
+  const include = policy.include ?? [];
+  const rule = include.length === 1 ? emailRule.safeParse(include[0]) : null;
+  return rule?.success === true && rule.data.email.email.toLowerCase() === email.toLowerCase();
+}
+
 export function letsInOnly(found: AccessPolicy[], email: string): boolean {
-  const wanted = email.toLowerCase();
-  const allows = (policy: AccessPolicy) =>
-    policy.decision === 'allow' &&
-    (policy.include ?? []).some((rule) => rule.email?.email.toLowerCase() === wanted);
-  return found.some(allows) && found.every((policy) => policy.decision !== 'bypass');
+  return found.length > 0 && found.every((policy) => allowsOnly(policy, email));
 }
 
 export async function allowEmail(

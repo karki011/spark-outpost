@@ -267,6 +267,63 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
   });
 
+  it.each([
+    ['excludes the email', { exclude: [{ email: { email: WANTED.email } }] }],
+    ['also lets everyone in', { include: [{ email: { email: WANTED.email } }, { everyone: {} }] }],
+    ['adds a requirement', { require: [{ geo: { country_code: 'US' } }] }],
+  ])('stops when the existing sign-in page %s', async (_what, change) => {
+    cloudflare.accessApps.push({ id: 'app1', domain: WANTED.hostname });
+    cloudflare.reach.policy = {
+      decision: 'allow',
+      include: [{ email: { email: WANTED.email } }],
+      ...change,
+    };
+    const { reach } = await setUp(localClient(app()));
+    expect(failed(reach)).toMatchObject({ id: 'signInPage', fix: 'cloudflare' });
+    expect(runner.started).toEqual([]);
+  });
+
+  it('stops when a later page of domains can’t be read', async () => {
+    cloudflare.zones = [
+      ...Array.from({ length: 50 }, (_, index) => ({
+        id: `other${index}`,
+        name: `other${index}.test`,
+      })),
+      { id: '', name: 'example.com' },
+    ];
+    const { reach } = await setUp(localClient(app()));
+    expect(failed(reach)).toMatchObject({ id: 'domain', fix: 'retry' });
+  });
+
+  it('leaves the tunnel stopped when a removal overlaps the background check', async () => {
+    const client = localClient(app());
+    await setUp(client);
+    await saveRemoteHostname(t.db, t.workspaceId, 'spark.example.com', 'custom');
+    runner.stop();
+    const read = secrets.get.bind(secrets);
+    let release = () => undefined as void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const asked = new Promise<void>((resolve) => {
+      secrets.get = async (name) => {
+        resolve();
+        await held;
+        return read(name);
+      };
+    });
+    const checking = client.get(REACH).expect(200);
+    const checked = checking.then(() => undefined);
+    await asked;
+    const removing = client.send('delete', REACH).expect(200);
+    const removed = removing.then((response) => response.body as CloudflareReach);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    release();
+    await checked;
+    expect((await removed).tunnel).toBe('off');
+    secrets.get = read;
+    expect(runner.current).toBe('off');
+    expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
+  });
+
   it('says so when the tunnel does not connect', async () => {
     runner.connects = false;
     const { reach } = await setUp(localClient(app()));
