@@ -2,7 +2,7 @@
 title: Jira tools for agents
 section: Reference
 type: reference
-order: 619
+order: 1270
 summary: Every Jira read and change an agent can make through Spark, and what each change shows on its card.
 ---
 

@@ -1,9 +1,9 @@
 ---
 title: Control another computer's Spark
 nav: Another computer's Spark
-section: Mac app and providers
+section: Other devices
 type: how-to
-order: 420
+order: 1030
 summary: Add another computer's Spark Outpost and open it in its own window.
 ---
 

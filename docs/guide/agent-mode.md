@@ -3,7 +3,7 @@ title: Pick the model, effort and mode
 nav: Model, effort and mode
 section: Chats
 type: how-to
-order: 212
+order: 230
 summary: Pick a model, set how hard the agent thinks, and choose what it may do without asking in one chat.
 ---
 

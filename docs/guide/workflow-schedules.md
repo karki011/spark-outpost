@@ -1,9 +1,9 @@
 ---
 title: Run a workflow on a schedule
 nav: Run on a schedule
-section: Chats
+section: Sparks and workflows
 type: how-to
-order: 235
+order: 570
 summary: Have a workflow start by itself every N minutes, hours, days or weeks, and see what ran, what was skipped and what was held.
 ---
 

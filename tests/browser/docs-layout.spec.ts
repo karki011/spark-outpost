@@ -100,8 +100,9 @@ test('Back returns to where you were reading', async ({ page }) => {
 });
 
 test('the open page stays in view in the sidebar and the list does not jump', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 700 });
+  await page.setViewportSize({ width: 1440, height: 500 });
   await page.goto('/#/docs/start-a-chat');
+  await expect(article(page)).toHaveAttribute('data-page', 'start-a-chat');
   const nav = docs(page).getByRole('navigation', { name: 'Guide pages' });
   const projects = nav.getByRole('button', { name: /^Projects and shipping/ });
   await open(page, 'sub-chat-reports');

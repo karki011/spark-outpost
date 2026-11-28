@@ -1,9 +1,9 @@
 ---
 title: Connect GitHub and ticket trackers
 nav: GitHub and ticket trackers
-section: Projects and shipping
+section: Connections
 type: how-to
-order: 330
+order: 810
 summary: Connect GitHub so Spark can open pull requests, connect Atlassian (Jira, Confluence), Linear or ServiceNow, and keep tickets in step with pull requests.
 ---
 

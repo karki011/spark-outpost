@@ -2,7 +2,7 @@
 title: Choose where a chat works
 section: Projects and shipping
 type: how-to
-order: 310
+order: 710
 summary: Let each chat work in its own git worktree, start it from another branch, or have it edit your files directly.
 ---
 

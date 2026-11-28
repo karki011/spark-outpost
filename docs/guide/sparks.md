@@ -1,8 +1,8 @@
 ---
 title: Make a Spark
-section: Chats
+section: Sparks and workflows
 type: how-to
-order: 229
+order: 510
 summary: Make a named teammate on the Sparks page with a face, a role, defaults, instructions and skills, then talk to it or hand it one job with @.
 ---
 

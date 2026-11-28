@@ -1,9 +1,9 @@
 ---
 title: Start and check chats from anywhere
 nav: Chats from anywhere
-section: Mac app and providers
+section: Mac app
 type: how-to
-order: 412
+order: 920
 summary: Start a chat from any app with ⌥Space, open the inbox with ⌥⇧Space, ask Spark a question, and change the shortcuts.
 ---
 

@@ -2,7 +2,7 @@
 title: Spark tools for agents
 section: Reference
 type: reference
-order: 618
+order: 1250
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 

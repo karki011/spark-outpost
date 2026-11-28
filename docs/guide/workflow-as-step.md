@@ -1,8 +1,8 @@
 ---
 title: Use a workflow as a step
-section: Chats
+section: Sparks and workflows
 type: how-to
-order: 237
+order: 590
 summary: Build one workflow on top of another by adding it as a step, and see how its steps run, fail and show in a run.
 ---
 

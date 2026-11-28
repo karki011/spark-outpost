@@ -25,6 +25,7 @@ export const TITLE_CHARS_MAX = 40;
 export const NAV_CHARS_MAX = 26;
 export const HEADING_CHARS_MAX = 40;
 export const TABLE_COLUMNS_MAX = 4;
+export const SECTION_PAGES_MAX = 15;
 const SEQUENCE_TYPES: readonly GuidePageType[] = ['start', 'how-to'];
 
 export interface GuideViolation {
@@ -258,6 +259,15 @@ export function checkPages(pages: readonly GuidePage[]): GuideViolation[] {
     orders.set(slot, page.slug);
     for (const message of [...pageNaming(page), ...pageShape(page), ...pageLinks(page, pages)]) {
       violations.push({ page: page.slug, message });
+    }
+  }
+  for (const section of GUIDE_SECTIONS) {
+    const count = pages.filter((page) => page.section === section).length;
+    if (count > SECTION_PAGES_MAX) {
+      violations.push({
+        page: section,
+        message: `${count} pages; a section holds up to ${SECTION_PAGES_MAX}, so split it`,
+      });
     }
   }
   return violations;

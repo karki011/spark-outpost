@@ -2,7 +2,7 @@
 title: How Spark works
 section: Understand Spark
 type: concept
-order: 510
+order: 1110
 summary: What Spark adds around Claude, Codex and Z.ai, and the path a message takes from the message box to a pull request.
 ---
 

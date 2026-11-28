@@ -1,8 +1,8 @@
 ---
 title: Sign in to an MCP server
-section: Projects and shipping
+section: Connections
 type: how-to
-order: 336
+order: 840
 summary: Sign in once to an MCP server that asks for it, and what Spark keeps so agents can use it without asking again.
 ---
 

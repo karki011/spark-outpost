@@ -2,7 +2,7 @@
 title: Connect an AI provider
 section: Get started
 type: start
-order: 120
+order: 130
 summary: Connect Claude, Codex, Z.ai or a custom endpoint with the local CLI, an API key or a server address, then send a test message.
 ---
 

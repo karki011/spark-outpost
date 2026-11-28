@@ -2,7 +2,7 @@
 title: Statuses and limits
 section: Reference
 type: reference
-order: 622
+order: 1290
 summary: What each status label means across providers, chats, Sparks, tickets, the Map and Spark Island, and the fixed limits.
 ---
 

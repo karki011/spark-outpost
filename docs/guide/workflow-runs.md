@@ -1,8 +1,8 @@
 ---
 title: Follow a workflow run
-section: Chats
+section: Sparks and workflows
 type: how-to
-order: 234
+order: 560
 summary: Run a workflow from the Sparks page and follow each step live, read a step's output, stop the run and open past runs.
 ---
 

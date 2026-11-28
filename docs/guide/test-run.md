@@ -1,8 +1,8 @@
 ---
 title: Do a test run
-section: Chats
+section: Sparks and workflows
 type: how-to
-order: 233
+order: 540
 summary: Try a workflow or one Spark with real agents on a throw-away copy of a project. Nothing is pushed, posted or saved, and the copy is deleted when you close it.
 ---
 

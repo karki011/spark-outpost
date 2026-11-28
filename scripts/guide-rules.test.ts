@@ -9,6 +9,7 @@ import {
   NAV_CHARS_MAX,
   PARAGRAPH_WORDS_MAX,
   proseWords,
+  SECTION_PAGES_MAX,
   TABLE_COLUMNS_MAX,
   tableProblems,
   TITLE_CHARS_MAX,
@@ -125,6 +126,15 @@ describe('sidebar rules', () => {
     expect(messages([stray, first, second])).toEqual([
       `stray: unknown section "Chatz"; sections are ${GUIDE_SECTIONS.join(', ')}`,
       'second: same order 900 as first in Chats',
+    ]);
+  });
+
+  it('caps the pages in a section', () => {
+    const crowd = Array.from({ length: SECTION_PAGES_MAX + 1 }, (_, index) =>
+      page(`p${index}`, 'concept', 'Text.'),
+    );
+    expect(messages(crowd)).toEqual([
+      `Chats: ${SECTION_PAGES_MAX + 1} pages; a section holds up to ${SECTION_PAGES_MAX}, so split it`,
     ]);
   });
 

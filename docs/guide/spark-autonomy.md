@@ -3,7 +3,7 @@ title: Choose how much Spark does alone
 nav: How much Spark does alone
 section: Chats
 type: how-to
-order: 214
+order: 250
 summary: Set Spark autonomy for a chat or for every new chat - keep changes automatically, or keep them and open a pull request.
 ---
 

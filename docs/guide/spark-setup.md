@@ -1,8 +1,8 @@
 ---
 title: Set up a Spark
-section: Chats
+section: Sparks and workflows
 type: how-to
-order: 232
+order: 520
 summary: Choose what a Spark runs on, read what that means, use it for every new chat and see where it is used.
 ---
 

@@ -1,8 +1,8 @@
 ---
 title: Connect Slack
-section: Projects and shipping
+section: Connections
 type: how-to
-order: 331
+order: 820
 summary: Sign in with Slack, or connect your own Slack app, pick the channels and direct messages Spark may use, and see what Spark reads, stores and sends.
 ---
 

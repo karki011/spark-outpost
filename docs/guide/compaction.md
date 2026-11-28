@@ -2,7 +2,7 @@
 title: Manage a long chat
 section: Chats
 type: how-to
-order: 224
+order: 280
 summary: Watch the context ring, choose when Spark compacts a long chat, and read the summary it leaves behind.
 ---
 

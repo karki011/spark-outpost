@@ -1,8 +1,8 @@
 ---
 title: Let agents use Mac apps
-section: Mac app and providers
+section: Mac app
 type: how-to
-order: 422
+order: 970
 summary: Let an agent read another Mac app and press its buttons and menus, and see what it never does.
 ---
 

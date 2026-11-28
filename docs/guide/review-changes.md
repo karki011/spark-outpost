@@ -1,9 +1,9 @@
 ---
 title: Review, keep or revert changes
 nav: Review changes
-section: Chats
+section: Approve and review
 type: how-to
-order: 222
+order: 330
 summary: Read the diff in the Changes drawer, undo a run or one file, and bring kept changes into your own checkout.
 ---
 

@@ -2,7 +2,7 @@
 title: Stacked pull requests
 section: Projects and shipping
 type: concept
-order: 324
+order: 770
 summary: How a sub-chat stacked on another builds on that branch, where its pull request points, when it starts, and how to update and merge the stack.
 ---
 

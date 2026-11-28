@@ -3,7 +3,7 @@ title: Keep files and keys away from agents
 nav: Keep files from agents
 section: Projects and shipping
 type: how-to
-order: 312
+order: 730
 summary: List files in .sparkignore so agents can't read or change them, and keep API keys out of chat messages.
 ---
 
