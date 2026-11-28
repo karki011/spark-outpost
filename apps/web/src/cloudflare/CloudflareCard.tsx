@@ -104,7 +104,8 @@ function Connected({ connection }: { connection: CloudflareConnection }) {
         </p>
       )}
       <p>
-        Usage and any cost are on your Cloudflare account. Spark never sees your Cloudflare sign-in.
+        Usage and any cost are on your Cloudflare account. Spark keeps the upload key in this
+        computer’s keychain and no Cloudflare sign-in.
       </p>
       <div className="cx-actions">
         <button
