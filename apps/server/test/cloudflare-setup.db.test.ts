@@ -6,6 +6,7 @@ import {
   SETUP_NO_SUBDOMAIN,
   SETUP_R2_OFF,
   SETUP_UNAVAILABLE,
+  SETUP_TOO_MANY_COPIES,
   SETUP_WORKER_EXISTS,
   SETUP_WRONG_STATE,
 } from '../src/cloudflare/setup-problems.ts';
@@ -14,6 +15,7 @@ import {
   memorySecretStore,
   type SecretStore,
 } from '../src/setup/secrets.ts';
+import { SHARE_COPIES_MAX, shareNames } from '../src/cloudflare/share-install.ts';
 import { localClient, testAppOptions } from './app-support.ts';
 import {
   FAKE_ACCOUNT,
@@ -199,14 +201,91 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
     await client.send('delete', SETUP).expect(200);
   });
 
-  it('never replaces a worker that is already in the account', async () => {
-    cloudflare.scriptExists = true;
+  it('never replaces a worker that is already in the account: it makes the next free copy', async () => {
+    cloudflare.scripts.add('spark-outpost-artifact-share');
+    cloudflare.scripts.add('spark-outpost-artifact-share-2');
     const client = localClient(app());
     const { setup } = await approve(client);
 
-    expect(failed(setup)).toMatchObject({ id: 'worker', problem: SETUP_WORKER_EXISTS, fix: null });
+    expect(setup.status).toBe('done');
+    expect(cloudflare.buckets).toEqual(['spark-outpost-artifact-shares-3']);
+    expect(cloudflare.uploadedBucket).toBe('spark-outpost-artifact-shares-3');
+    expect([...cloudflare.scripts]).toContain('spark-outpost-artifact-share-3');
+    const scripts = `/accounts/${FAKE_ACCOUNT}/workers/scripts/spark-outpost-artifact-share`;
+    expect(cloudflare.calls).toContain(`PUT ${scripts}-3`);
+    expect(cloudflare.calls).not.toContain(`PUT ${scripts}`);
+    expect(cloudflare.calls).not.toContain(`PUT ${scripts}-2`);
+    expect(cloudflare.calls.filter((call) => !call.startsWith('GET '))).not.toContainEqual(
+      expect.stringMatching(/artifact-share(-2)?\//),
+    );
+    expect((await client.get('/api/cloudflare').expect(200)).body).toMatchObject({
+      connected: true,
+      origin: 'https://spark-outpost-artifact-share-3.hazel.workers.dev',
+    });
+  });
+
+  it('picks another name when the one it chose is taken before the upload', async () => {
+    cloudflare.takeNameBeforeUpload = 'spark-outpost-artifact-share';
+    const client = localClient(app());
+    const { setup } = await approve(client);
+    expect(failed(setup)).toMatchObject({
+      id: 'worker',
+      problem: SETUP_WORKER_EXISTS,
+      fix: 'retry',
+    });
     expect(cloudflare.uploadedKey).toBeNull();
-    expect((await client.get('/api/cloudflare').expect(200)).body.connected).toBe(false);
+
+    await client.send('post', SETUP).expect(200);
+    expect((await settled(client)).status).toBe('done');
+    expect(cloudflare.uploadedBucket).toBe('spark-outpost-artifact-shares-2');
+    expect(cloudflare.buckets).toEqual([
+      'spark-outpost-artifact-shares',
+      'spark-outpost-artifact-shares-2',
+    ]);
+  });
+
+  it('stops when the account already holds every copy it may make', async () => {
+    for (let copy = 1; copy <= SHARE_COPIES_MAX; copy += 1) {
+      cloudflare.scripts.add(shareNames(copy).worker);
+    }
+    const client = localClient(app());
+    const { setup } = await approve(client);
+    expect(failed(setup)).toMatchObject({
+      id: 'bucket',
+      problem: SETUP_TOO_MANY_COPIES,
+      fix: null,
+    });
+    expect(cloudflare.buckets).toEqual([]);
+  });
+
+  it('makes nothing for a set-up that was cancelled while it was choosing a name', async () => {
+    let asked = () => undefined as void;
+    let answer = () => undefined as void;
+    const waiting = new Promise<void>((resolve) => (asked = resolve));
+    const held = new Promise<void>((resolve) => (answer = resolve));
+    cloudflare.onScriptAsked = async () => {
+      cloudflare.onScriptAsked = null;
+      asked();
+      await held;
+    };
+    const client = localClient(app());
+    const started = cloudflareSetupSchema.parse(
+      (await client.send('post', SETUP).expect(200)).body,
+    );
+    const authorize = new URL(started.authorizeUrl!);
+    const back = new URL(authorize.searchParams.get('redirect_uri')!);
+    back.searchParams.set('code', 'code-from-cloudflare');
+    back.searchParams.set('state', authorize.searchParams.get('state')!);
+    await fetch(back);
+    await waiting;
+
+    await client.send('delete', SETUP).expect(200);
+    answer();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(cloudflare.buckets).toEqual([]);
+    expect(cloudflare.uploadedKey).toBeNull();
+    expect(states(await settled(client))).toMatchObject({ bucket: 'todo', worker: 'todo' });
   });
 
   it('finishes with the same key when the answer to the upload was lost', async () => {
