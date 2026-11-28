@@ -3,12 +3,22 @@ import { FakeContents } from './electron.fixture.ts';
 import { guardRemoteNavigation, remoteNavigation } from './navigation.ts';
 
 const HOST = 'studio.tail1234.ts.net';
+const CUSTOM = 'spark.example.com';
+const SIGN_IN = 'https://team-1.cloudflareaccess.com/cdn-cgi/access/login/spark.example.com?kid=1';
 
 describe('where a remote Spark window may go', () => {
   it('stays on the saved origin', () => {
     expect(remoteNavigation(`https://${HOST}/`, HOST)).toBe('allow');
     expect(remoteNavigation(`https://${HOST}/chats/1#code=1`, HOST)).toBe('allow');
     expect(remoteNavigation(`https://${HOST.toUpperCase()}/`, HOST)).toBe('allow');
+  });
+
+  it('may show Cloudflare\u2019s sign-in page in front of a custom domain, never a Tailscale one', () => {
+    expect(remoteNavigation(SIGN_IN, CUSTOM)).toBe('allow');
+    expect(remoteNavigation(SIGN_IN, HOST)).toBe('external');
+    expect(remoteNavigation('https://team.cloudflareaccess.com.evil.example/', CUSTOM)).toBe(
+      'external',
+    );
   });
 
   it('sends another web origin to the default browser', () => {
@@ -48,6 +58,16 @@ describe('the navigation guard on a remote Spark window', () => {
   it('cancels a link to another origin and opens it in the default browser', () => {
     expect(contents.navigates('https://example.com/docs')).toBe(false);
     expect(external).toEqual(['https://example.com/docs']);
+  });
+
+  it('follows a custom domain\u2019s redirect to Cloudflare\u2019s sign-in page and back', () => {
+    const custom = new FakeContents();
+    guardRemoteNavigation(custom, CUSTOM, (url) => external.push(url));
+    expect(custom.redirects(SIGN_IN)).toBe(true);
+    expect(custom.navigates(SIGN_IN)).toBe(true);
+    expect(custom.redirects(`https://${CUSTOM}/cdn-cgi/access/authorized?nonce=1`)).toBe(true);
+    expect(contents.redirects(SIGN_IN)).toBe(false);
+    expect(external).toEqual([]);
   });
 
   it('cancels a redirect to another origin without opening anything', () => {

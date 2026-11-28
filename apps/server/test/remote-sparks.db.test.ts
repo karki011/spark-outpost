@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SPARK_ADDRESS_PROBLEMS, remoteSparkListSchema } from '@spark-outpost/contracts';
-import { memorySecretStore, remoteSparkSecret, type SecretStore } from '../src/setup/secrets.ts';
+import {
+  memorySecretStore,
+  remoteSparkAccessSecret,
+  remoteSparkSecret,
+  type SecretStore,
+} from '../src/setup/secrets.ts';
+
+const ACCESS_COOKIE = `access-sign-in-${'a'.repeat(900)}`;
 import { localClient } from './app-support.ts';
 import { REMOTE_HOST, pairDevice, remoteClient, turnRemoteOn } from './remote-support.ts';
 import {
@@ -65,6 +72,7 @@ describe('saved Sparks', () => {
         deviceName: THIS_MAC,
         code: 'ABCD-EFGH-JKLM',
         cookie: null,
+        access: null,
       },
     ]);
     expect(await list()).toEqual({ available: true, local: UNNAMED, sparks: [response.body] });
@@ -168,6 +176,7 @@ describe('saved Sparks', () => {
       deviceName: THIS_MAC,
       code: null,
       cookie: STUDIO_COOKIE,
+      access: null,
     });
     expect(JSON.stringify(opened.body)).not.toContain(STUDIO_COOKIE);
     expect(JSON.stringify(await list())).not.toContain(STUDIO_COOKIE);
@@ -204,10 +213,12 @@ describe('saved Sparks', () => {
   it('removes a saved Spark with its keychain entry and closes its window', async () => {
     const id = await added();
     await secrets.set(remoteSparkSecret(id), STUDIO_COOKIE);
+    await secrets.set(remoteSparkAccessSecret(id), ACCESS_COOKIE);
 
     await localClient(app).send('delete', `/api/remote-sparks/${id}`).expect(204);
 
     expect(await cookieIn(secrets, id)).toBeNull();
+    expect(await secrets.get(remoteSparkAccessSecret(id))).toBeNull();
     expect((await list()).sparks).toEqual([]);
     expect(desktop.posted.at(-1)).toEqual({ kind: 'remote-spark:close', id });
     await localClient(app).send('delete', `/api/remote-sparks/${id}`).expect(404);
@@ -253,6 +264,28 @@ describe('the cookie the desktop captures', () => {
     expect(await everyRow(t)).not.toContain(STUDIO_COOKIE);
     expect(JSON.stringify([...errors.mock.calls, ...logs.mock.calls])).not.toContain(STUDIO_COOKIE);
     vi.restoreAllMocks();
+  });
+
+  it('keeps the sign-in of a page in front of the address in the keychain, and opens with it', async () => {
+    const id = await added();
+    const access = { kind: 'remote-spark:access', id, hostname: STUDIO };
+
+    desktop.send({ ...access, value: ACCESS_COOKIE });
+    await eventually(
+      async () => (await secrets.get(remoteSparkAccessSecret(id))) === ACCESS_COOKIE,
+    );
+    await localClient(app).send('post', `/api/remote-sparks/${id}/open`).expect(200);
+
+    expect(desktop.posted.at(-1)).toMatchObject({
+      kind: 'remote-spark:open',
+      access: ACCESS_COOKIE,
+    });
+    expect(JSON.stringify(await list())).not.toContain(ACCESS_COOKIE);
+    expect(await everyRow(t)).not.toContain(ACCESS_COOKIE);
+
+    desktop.send({ ...access, hostname: 'other.tail1234.ts.net', value: 'elsewhere' });
+    desktop.send({ ...access, value: null });
+    await eventually(async () => (await secrets.get(remoteSparkAccessSecret(id))) === null);
   });
 
   it('is not stored for another hostname or an unknown Spark', async () => {
@@ -328,6 +361,7 @@ describe('reset and saved Sparks', () => {
     const recording = recordingStore(secrets);
     await secrets.set(remoteSparkSecret(first), STUDIO_COOKIE);
     await secrets.set(remoteSparkSecret(second), 'garage-cookie');
+    await secrets.set(remoteSparkAccessSecret(first), ACCESS_COOKIE);
 
     const response = await postReset(t, recording, { keepApiKeys: true }).expect(200);
 
@@ -337,6 +371,7 @@ describe('reset and saved Sparks', () => {
     );
     expect(await cookieIn(secrets, first)).toBeNull();
     expect(await cookieIn(secrets, second)).toBeNull();
+    expect(await secrets.get(remoteSparkAccessSecret(first))).toBeNull();
     expect((await list()).sparks).toEqual([]);
   });
 });

@@ -11,6 +11,8 @@ import type { AttentionList } from './attention-items.ts';
 
 export const REMOTE_SPARK_NAME_MAX = 60;
 export const REMOTE_SPARK_COOKIE_MAX = 512;
+export const REMOTE_ACCESS_COOKIE = 'CF_Authorization';
+export const REMOTE_ACCESS_COOKIE_MAX = 4096;
 export const REMOTE_SPARK_PARTITION_PREFIX = 'spark-remote-';
 export const REMOTE_SPARK_WATCH_MS = 60_000;
 export const REMOTE_SPARK_NEEDS_YOU_MAX = 999;
@@ -29,6 +31,19 @@ const TAILSCALE_SUFFIX = '.ts.net';
 
 export function reachOfHostname(hostname: string): RemoteReach {
   return hostname.toLowerCase().endsWith(TAILSCALE_SUFFIX) ? 'tailscale' : 'custom';
+}
+
+const ACCESS_SIGN_IN_SUFFIX = '.cloudflareaccess.com';
+const ACCESS_TEAM = /^[a-z0-9-]+$/;
+
+export function isAccessSignInUrl(value: string, hostname: string): boolean {
+  if (reachOfHostname(hostname) !== 'custom') return false;
+  const url = parseUrl(value);
+  if (!url || url.protocol !== 'https:' || url.port !== '') return false;
+  if (url.username !== '' || url.password !== '') return false;
+  const host = url.hostname.toLowerCase();
+  if (!host.endsWith(ACCESS_SIGN_IN_SUFFIX)) return false;
+  return ACCESS_TEAM.test(host.slice(0, -ACCESS_SIGN_IN_SUFFIX.length));
 }
 
 export const REMOTE_DEVICE_KIND_LABELS: Record<RemoteDeviceKind, string> = {
@@ -190,6 +205,7 @@ export function remoteSparkWindowTitle(name: string, hostname: string): string {
 }
 
 const cookieValue = z.string().min(1).max(REMOTE_SPARK_COOKIE_MAX);
+const accessValue = z.string().min(1).max(REMOTE_ACCESS_COOKIE_MAX).nullable().default(null);
 
 export const remoteSparkBridgeToHostSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -200,12 +216,20 @@ export const remoteSparkBridgeToHostSchema = z.discriminatedUnion('kind', [
     deviceName: z.string().min(1).max(REMOTE_DEVICE_NAME_MAX),
     code: pairingCode.nullable(),
     cookie: cookieValue.nullable(),
+    access: accessValue,
   }),
   z.object({ kind: z.literal('remote-spark:close'), id: z.uuid() }),
   z.object({
     kind: z.literal('remote-spark:watch'),
     sparks: z
-      .array(z.object({ id: z.uuid(), hostname: remoteHostnameSchema, cookie: cookieValue }))
+      .array(
+        z.object({
+          id: z.uuid(),
+          hostname: remoteHostnameSchema,
+          cookie: cookieValue,
+          access: accessValue,
+        }),
+      )
       .max(REMOTE_SPARKS_MAX),
   }),
 ]);
@@ -217,6 +241,12 @@ export const remoteSparkBridgeFromHostSchema = z.discriminatedUnion('kind', [
     id: z.uuid(),
     hostname: remoteHostnameSchema,
     value: cookieValue,
+  }),
+  z.object({
+    kind: z.literal('remote-spark:access'),
+    id: z.uuid(),
+    hostname: remoteHostnameSchema,
+    value: accessValue,
   }),
   z.object({ kind: z.literal('remote-spark:signed-out'), id: z.uuid() }),
   z.object({

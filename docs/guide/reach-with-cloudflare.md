@@ -9,7 +9,7 @@ summary: Sign in to Cloudflare once and Spark gives this computer a private addr
 
 Use Remote control without Tailscale. About 2 minutes. Needs macOS 15 or later, or Windows.
 
-You need a free Cloudflare account with a domain in it, and Zero Trust turned on there (free; may ask for a payment method). A domain bought elsewhere works once you add it to Cloudflare. No domain? Use Tailscale.
+You need a free Cloudflare account with a domain in it and Zero Trust on (free; may ask for a payment method). No domain? Use Tailscale.
 
 1. Open **Remote control** and choose **Custom domain**.
 2. Under **Set it up with Cloudflare**, type an **Address** on your domain, such as `spark.example.com`, and **Your email**.
@@ -25,6 +25,7 @@ Remote control turns on there. Pair a device: [Control Spark from another device
 | ------------------ | ------------------------------------------------------------------------------------------------------- |
 | What Spark creates | One tunnel, one DNS record and one sign-in page, in your account                                        |
 | Who gets in        | Cloudflare's sign-in page lets in only the email you typed; pairing still needs a code you confirm here |
+| For Other Sparks   | In Zero Trust, add the **One-time PIN** identity provider                                               |
 | What Spark keeps   | The tunnel's key, in this computer's keychain; no access to your Cloudflare account                     |
 | When it works      | While Spark is open on this computer                                                                    |
 | Status             | **Cloudflare Tunnel: Connected** under the address                                                      |

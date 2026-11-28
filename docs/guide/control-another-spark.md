@@ -7,7 +7,7 @@ order: 1030
 summary: Add another computer's Spark Outpost and open it in its own window.
 ---
 
-Open the Spark on another of your computers from this one. About 5 minutes. Needs Tailscale or a custom domain.
+Open another computer's Spark from this one. About 5 minutes. Needs Tailscale or a custom domain.
 
 On the other computer:
 
@@ -24,7 +24,7 @@ On the other computer:
 
 6. Check the codes match, see **Spark Outpost** under the name, then **Confirm**.
 
-**Computers** then appears atop the left bar: its menu lists each Spark's status and waiting requests; choose one to open it.
+**Computers** then tops the left bar, listing each Spark's status and waiting requests; choose one to open it.
 
 | Fact                            | Detail                                                                                 |
 | ------------------------------- | -------------------------------------------------------------------------------------- |
@@ -35,6 +35,7 @@ On the other computer:
 | Status and counts               | Checked each minute; counts cards and Terminal waits                                   |
 | Names and icons                 | **Rename** and **Change icon…** in each row's **Actions**; icons stay on this computer |
 | Other computer asleep or off    | The window says it did not load; select **Try again**                                  |
+| Cloudflare sign-in page         | Enter the emailed code; kept in the keychain                                           |
 | Not available                   | Downloads, notifications, adding a Spark from a paired device                          |
 
 **Custom domain.** Without Tailscale, choose **Custom domain**, type your **Domain**, point your proxy or tunnel at **Forward requests to**, tick the box and **Turn on**. Or [use Cloudflare](reach-with-cloudflare.md).

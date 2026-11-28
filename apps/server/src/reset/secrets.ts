@@ -10,6 +10,7 @@ import {
   SLACK_SIGN_IN_SECRET,
   googleCalendarSecret,
   microsoftCalendarSecret,
+  remoteSparkAccessSecret,
   remoteSparkSecret,
   type SecretId,
 } from '../setup/secrets.ts';
@@ -32,6 +33,9 @@ export async function storedSecretIds(db: Queryable, keepApiKeys: boolean): Prom
     ...signIns,
     ...(await cloudSubjects(db, 'google')).map(googleCalendarSecret),
     ...(await cloudSubjects(db, 'microsoft')).map(microsoftCalendarSecret),
-    ...(await remoteSparkIds(db)).map(remoteSparkSecret),
+    ...(await remoteSparkIds(db)).flatMap((id) => [
+      remoteSparkSecret(id),
+      remoteSparkAccessSecret(id),
+    ]),
   ];
 }
