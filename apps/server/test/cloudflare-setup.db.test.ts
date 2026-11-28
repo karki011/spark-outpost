@@ -258,6 +258,36 @@ describe('setting up Cloudflare with one sign-in', { timeout: 30_000 }, () => {
     expect(cloudflare.buckets).toEqual([]);
   });
 
+  it('makes nothing for a set-up that was cancelled while it was choosing a name', async () => {
+    let asked = () => undefined as void;
+    let answer = () => undefined as void;
+    const waiting = new Promise<void>((resolve) => (asked = resolve));
+    const held = new Promise<void>((resolve) => (answer = resolve));
+    cloudflare.onScriptAsked = async () => {
+      cloudflare.onScriptAsked = null;
+      asked();
+      await held;
+    };
+    const client = localClient(app());
+    const started = cloudflareSetupSchema.parse(
+      (await client.send('post', SETUP).expect(200)).body,
+    );
+    const authorize = new URL(started.authorizeUrl!);
+    const back = new URL(authorize.searchParams.get('redirect_uri')!);
+    back.searchParams.set('code', 'code-from-cloudflare');
+    back.searchParams.set('state', authorize.searchParams.get('state')!);
+    await fetch(back);
+    await waiting;
+
+    await client.send('delete', SETUP).expect(200);
+    answer();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(cloudflare.buckets).toEqual([]);
+    expect(cloudflare.uploadedKey).toBeNull();
+    expect(states(await settled(client))).toMatchObject({ bucket: 'todo', worker: 'todo' });
+  });
+
   it('finishes with the same key when the answer to the upload was lost', async () => {
     cloudflare.loseUploadAnswer = true;
     const client = localClient(app());

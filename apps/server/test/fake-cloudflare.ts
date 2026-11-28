@@ -28,6 +28,7 @@ export class FakeCloudflare {
   readonly buckets: string[] = [];
   uploadedBucket: string | null = null;
   takeNameBeforeUpload: string | null = null;
+  onScriptAsked: (() => Promise<void>) | null = null;
   answersAfter = 0;
   loseUploadAnswer = false;
   onServiceAsked: (() => Promise<void>) | null = null;
@@ -100,6 +101,7 @@ export class FakeCloudflare {
     }
     const [, scriptName = '', scriptPart = ''] = scriptPath ?? [];
     if (scriptPath && scriptPart === '/settings') {
+      await this.onScriptAsked?.();
       const exists = this.scripts.has(scriptName);
       if (this.takeNameBeforeUpload === scriptName) {
         this.takeNameBeforeUpload = null;

@@ -181,29 +181,34 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
     return progress.account.id;
   };
 
-  const freeNames = async (): Promise<ShareNames> => {
-    if (progress.names) return progress.names;
+  const freeNames = async (own: Progress): Promise<ShareNames> => {
+    if (own.names) return own.names;
     const id = accountId();
     const workers = api('workers');
     for (let copy = 1; copy <= SHARE_COPIES_MAX; copy += 1) {
       const names = shareNames(copy);
       if (await scriptExists(workers, id, names.worker)) continue;
-      progress.names = names;
+      own.names = names;
       return names;
     }
     throw new StepFailure(SETUP_TOO_MANY_COPIES, null);
   };
 
-  const makeBucket = async () => {
-    const names = await freeNames();
-    await createBucket(api('storage'), accountId(), names.bucket);
+  const makeBucket = async (mine: number) => {
+    const storage = api('storage');
+    const id = accountId();
+    const names = await freeNames(progress);
+    if (mine !== generation) return;
+    await createBucket(storage, id, names.bucket);
   };
 
-  const installWorker = async () => {
+  const installWorker = async (mine: number) => {
+    const own = progress;
     const id = accountId();
     const workers = api('workers');
-    const names = await freeNames();
+    const names = await freeNames(own);
     const subdomain = await workersSubdomain(workers, id);
+    if (mine !== generation) return;
     if (!subdomain) {
       throw new StepFailure(
         SETUP_NO_SUBDOMAIN,
@@ -211,10 +216,11 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
         `${CLOUDFLARE_DASH_URL}/${id}/workers-and-pages`,
       );
     }
-    if (!progress.uploadKey) {
+    if (!own.uploadKey) {
       const exists = await scriptExists(workers, id, names.worker);
-      if (exists && !progress.pendingKeys) {
-        progress.names = null;
+      if (mine !== generation) return;
+      if (exists && !own.pendingKeys) {
+        own.names = null;
         set('bucket', { state: 'todo' });
         throw new StepFailure(SETUP_WORKER_EXISTS, 'retry');
       }
@@ -222,15 +228,16 @@ export function createCloudflareSetup(deps: CloudflareSetupDeps): CloudflareSetu
         const module = await deps.readWorker(client!.workerFile).catch(() => {
           throw new StepFailure(SETUP_NO_WORKER_FILE, null);
         });
-        progress.pendingKeys ??= newShareKeys();
-        await uploadScript(workers, id, shareWorkerUpload(module, progress.pendingKeys, names));
+        if (mine !== generation) return;
+        own.pendingKeys ??= newShareKeys();
+        await uploadScript(workers, id, shareWorkerUpload(module, own.pendingKeys, names));
       }
-      progress.uploadKey = progress.pendingKeys!.uploadKey;
-      progress.pendingKeys = null;
+      own.uploadKey = own.pendingKeys!.uploadKey;
+      own.pendingKeys = null;
     }
     await setSchedule(workers, id, names.worker, SHARE_WORKER_CRON);
     await enableWorkersDev(workers, id, names.worker);
-    progress.origin = shareWorkerOrigin(names.worker, subdomain);
+    own.origin = shareWorkerOrigin(names.worker, subdomain);
   };
 
   const connect = async (mine: number) => {

@@ -34,7 +34,7 @@ No **Set it up for me**? Select **Set it up by hand instead**:
 | Upload key                            | Kept in this computer's keychain; only Spark with it can add pages |
 | Cost                                  | Yours; a few shared pages fit Cloudflare's free plan               |
 | What Spark keeps                      | The address and the key; no access to your Cloudflare account      |
-| More than one computer                | Each gets its own service; Spark numbers the name                  |
+| More than one computer                | **Set it up for me** gives each its own, numbered                  |
 | **Share artifacts from this account** | Off sends new shares to Spark's shared service again               |
 
 **Check again** tests the address and key. **Disconnect…** deletes the key from this computer; shared pages stay up until they expire or you stop sharing.
