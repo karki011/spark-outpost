@@ -31,10 +31,12 @@ Remote control turns on there. Pair a device: [Control Spark from another device
 | Tailscale          | Turned off for Remote control while a custom domain is on                                               |
 | Cost               | The free plan covers this                                                                               |
 
-**Turn off** stops the tunnel and deletes its key from this computer. The tunnel, DNS record and sign-in page stay in Cloudflare; delete them there.
+**Turn off** stops the tunnel and deletes its key here. What Spark made stays in Cloudflare; delete it there.
 
-Spark never replaces a DNS record it did not make; if the address is taken, pick another. To use a domain that is not in Cloudflare, fill in **Or use your own reverse proxy or tunnel**.
+Spark never replaces a DNS record it did not make, and reuses an existing sign-in page only if it lets in just your email on every path. Otherwise pick another address.
 
-An agent can fill in the address and email; you still select **Allow on Cloudflare**.
+For a domain outside Cloudflare, use **Or use your own reverse proxy or tunnel**.
+
+An agent can prefill the form; you still select **Allow on Cloudflare**.
 
 **Next:** [Answer cards from a paired device](answer-remotely.md)
