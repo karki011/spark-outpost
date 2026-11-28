@@ -7,6 +7,7 @@ import {
   NARROW,
   openPairingPage,
   openPhone,
+  openTab,
   REMOTE_TURN_MS,
   pairFromPhone,
   resetPhone,
@@ -131,16 +132,23 @@ test('the blob works while phone access turns on or off, and is unsure when it f
 }) => {
   const main = await openPhone(page);
   const scene = main.locator('.ph-scene');
+  const flip = async () => {
+    await openTab(page, 'Set up');
+    await main.getByRole('switch', { name: 'Remote control' }).click();
+    await openTab(page, 'Devices');
+  };
   await expect(scene).toHaveAttribute('data-blob', 'asleep');
   expect((await loops(scene)).filter((name) => name.startsWith('ph-'))).toEqual([]);
 
   const on = holdTurn(page, 'on');
   await on.ready;
-  await main.getByRole('switch', { name: 'Remote control' }).click();
+  await flip();
   await expect(scene).toHaveAttribute('data-blob', 'working');
   await expect(scene).toHaveAttribute('data-stage', 'setup');
   await expect(scene.locator('.scout')).toHaveClass(/working/);
-  await expect(main.getByRole('status').first()).toHaveText('Turning remote control on…');
+  await expect(main.getByRole('status', { includeHidden: true }).first()).toHaveText(
+    'Turning remote control on…',
+  );
   await expect.poll(() => loops(scene)).toEqual(expect.arrayContaining(['ph-bob', 'sc-spin']));
   await frames(page, scene, 'activating');
   await page.waitForTimeout(1200);
@@ -152,7 +160,7 @@ test('the blob works while phone access turns on or off, and is unsure when it f
 
   const off = holdTurn(page, 'off');
   await off.ready;
-  await main.getByRole('switch', { name: 'Remote control' }).click();
+  await flip();
   await expect(scene).toHaveAttribute('data-blob', 'working');
   await expect(main.getByRole('status').first()).toHaveText('Turning remote control off…');
   await expect(main.getByRole('button', { name: 'Pair a device' })).toBeDisabled();
@@ -165,7 +173,7 @@ test('the blob works while phone access turns on or off, and is unsure when it f
 
   setFakeTailscale({ failServe: true });
   const refused = page.waitForResponse('**/api/remote/tailscale/on');
-  await main.getByRole('switch', { name: 'Remote control' }).click();
+  await flip();
   expect(await (await refused).json()).toMatchObject({ status: 'error' });
   const reread = await page.waitForResponse(
     (response) =>
@@ -176,14 +184,16 @@ test('the blob works while phone access turns on or off, and is unsure when it f
   await expect(scene).toHaveAttribute('data-blob', 'unsure');
   await expect(scene.locator('.scout')).toHaveClass(/sad/);
   await expect(main.getByRole('status').first()).toHaveText('Remote control did not turn on.');
+  await openTab(page, 'Set up');
   await expect(main.getByRole('alert')).toHaveText(/serve config denied/);
   await expect(main.getByRole('heading', { name: 'Remote control is off' })).toBeVisible();
+  await openTab(page, 'Devices');
   await frames(page, scene, 'activation-failed');
 
   setFakeTailscale(null);
-  await main.getByRole('switch', { name: 'Remote control' }).click();
+  await flip();
   await expect(scene).toHaveAttribute('data-blob', 'ready', { timeout: REMOTE_TURN_MS });
-  await expect(main.getByRole('alert')).toHaveCount(0);
+  await expect(main.getByRole('alert', { includeHidden: true })).toHaveCount(0);
 });
 
 async function placedAtEachSize(page: Page, scene: Locator) {
@@ -248,11 +258,12 @@ test('waiting motion follows the countdown and leaves the QR still, wide and at 
   await expect(scene).not.toHaveAttribute('data-paused');
   await expect.poll(() => loops(scene)).toContain('ph-nudge');
 
-  await page.setViewportSize(NARROW);
+  await page.setViewportSize({ ...NARROW, height: 320 });
   await main.locator('.ph-scroll').evaluate((scroller) => scroller.scrollTo(0, 100_000));
   await expect(scene).toHaveAttribute('data-paused', 'true');
   expect(await loops(scene)).toEqual([]);
   await main.locator('.ph-scroll').evaluate((scroller) => scroller.scrollTo(0, 0));
+  await page.setViewportSize(NARROW);
   await expect(scene).not.toHaveAttribute('data-paused');
   await page.setViewportSize(WIDE);
 

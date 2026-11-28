@@ -8,6 +8,7 @@ import {
   setFakeTailscale,
   startPairing,
   turnOn,
+  openTab,
   WIDE,
   expand,
 } from './phone-support.ts';
@@ -75,6 +76,7 @@ test('groups the switches by risk and keeps each count current', async ({ page }
   const main = await openPhone(page);
   await turnOn(page);
   const region = main.getByRole('region', { name: 'What paired devices can do' });
+  await openTab(page, 'Permissions');
   await expect(region.getByText('Read chats, send messages, answer ordinary cards')).toBeVisible();
   await expect(region.getByText('stay on the Mac')).toBeVisible();
   const everyday = region.getByRole('group', { name: 'Everyday' });
@@ -114,7 +116,9 @@ test('a device row menu renames and removes by keyboard', async ({ page, browser
   await expect(devices.getByRole('listitem').filter({ hasText: 'Kitchen phone' })).toBeVisible({
     timeout: 15_000,
   });
+  await openTab(page, 'Set up');
   await expect(main.getByRole('heading', { name: /1 device can reach this Mac/ })).toBeVisible();
+  await openTab(page, 'Devices');
 
   const actions = devices.getByRole('button', { name: 'Actions for Kitchen phone' });
   await actions.focus();
@@ -150,5 +154,6 @@ test('a device row menu renames and removes by keyboard', async ({ page, browser
   await expect(page.getByRole('menuitem', { name: 'Revoke' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(devices.getByText('No device is paired yet.')).toBeVisible();
+  await openTab(page, 'Set up');
   await expect(main.getByRole('heading', { name: /No device is paired yet/ })).toBeVisible();
 });

@@ -178,6 +178,9 @@ h2[data-status='https_off'] .ph-dot {
   gap: 16px;
   min-width: 0;
 }
+.ph-tab-panel[hidden] {
+  display: none;
+}
 .ph-tab-panel > .ph-rail {
   max-width: 560px;
 }

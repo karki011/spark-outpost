@@ -6,6 +6,7 @@ import {
   denyWaitingPhones,
   expand,
   openPhone,
+  openTab,
   resetPhone,
   setFakeTailscale,
   startPairing,
@@ -124,6 +125,11 @@ test('this computer is reached at a custom domain, then turned off', async ({ pa
   await expect(turnOn).toBeEnabled();
   await turnOn.click();
 
+  await expect(page.getByRole('tab', { name: 'Devices', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await openTab(page, 'Set up');
   await expect(main.getByRole('heading', { name: /^Remote control is on/ })).toBeVisible();
   await expect(main.getByText(ON_NOTE)).toBeVisible();
   await expect(main.getByText(/Only devices on your own tailnet/)).toHaveCount(0);
@@ -138,6 +144,7 @@ test('this computer is reached at a custom domain, then turned off', async ({ pa
   );
 
   await page.reload();
+  await openTab(page, 'Set up');
   await expect(main.getByText(ON_NOTE)).toBeVisible();
   await main.getByRole('button', { name: 'Turn off' }).click();
   await expect(domain).toBeVisible();

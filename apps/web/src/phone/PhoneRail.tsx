@@ -78,7 +78,7 @@ function Address({ address, connected }: { address: string; connected: boolean }
   );
 }
 
-function DisconnectAll() {
+export function DisconnectAll() {
   const queryClient = useQueryClient();
   const disconnect = useMutation({
     mutationFn: phoneApi.disconnectAll,
@@ -88,7 +88,7 @@ function DisconnectAll() {
     },
   });
   return (
-    <div className="ph-rail-part">
+    <div className="ph-card ph-disconnect">
       <HoldToConfirm
         label="Hold to disconnect all"
         hint="Every device will need to pair again. Their passkeys are removed too."
@@ -201,7 +201,6 @@ export function PhoneRail({
           <Fact label="Last request" value={lastRequest ? relativeTime(lastRequest) : 'None yet'} />
         </dl>
       </div>
-      {active.length > 0 && <DisconnectAll />}
     </aside>
   );
 }

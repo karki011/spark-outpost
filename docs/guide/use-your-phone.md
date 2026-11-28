@@ -10,14 +10,14 @@ summary: Pair a device over Tailscale and choose what it may do.
 Use Spark elsewhere; work stays on the Mac or PC. About 5 minutes. Needs Tailscale or [Cloudflare](reach-with-cloudflare.md).
 
 1. Open **Remote control** above **Settings**: Tailscale, HTTPS, turn on.
-2. Under **Devices**, select **Pair a device**; scan or type the code at the address.
+2. On the **Devices** tab, select **Pair a device**; scan or type the code at the address.
 3. Check the codes match; **Confirm**.
 
 **Passkey.** Select **Save a passkey for this device**, then **Sign in with a passkey** in another browser. It never pairs a new device. **Devices** has **Allow passkey sign-in**.
 
 Each device's **Actions** menu has **Rename**, **Send a test notification**, **Remove passkeys** and **Revoke**; **Remove old entry** clears a duplicate.
 
-**What paired devices can do** groups switches by risk. A phone's **More** holds Remote control and Settings.
+The **Permissions** tab groups switches by risk. A phone's **More** holds Remote control and Settings.
 
 The right panel: address, QR code, **Hold to disconnect all**.
 

@@ -10,7 +10,7 @@ summary: Let a paired device answer Sparks and workflows, plugins, calendar, Spa
 Answer more cards away from the Mac. About 2 minutes. Needs a [paired device](use-your-phone.md).
 
 1. On the Mac, open **More** at the bottom of the left bar, then **Remote control**.
-2. In **What paired devices can do**, open **Cards can be answered from** and choose **Paired devices**. It starts at **Mac only**.
+2. On the **Permissions** tab, open **Cards can be answered from** and choose **Paired devices**. It starts at **Mac only**.
 3. Under **Keep on the Mac**, tick any kind to keep back. **Spark rules** and **Mac control** start ticked.
 4. For Spark rules, Mac control and press-and-hold cards, save a passkey on the device: **Save a passkey for this device**.
 

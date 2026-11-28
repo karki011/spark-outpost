@@ -15,6 +15,7 @@ import {
   setFakeTailscale,
   startPairing,
   turnOn,
+  openTab,
   WIDE,
   expand,
 } from './phone-support.ts';
@@ -123,9 +124,10 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
 }) => {
   const main = await openPhone(page);
   await turnOn(page);
-  await expect(main.getByText(PHONE_ADDRESS)).toBeVisible();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');
   await expect(main.getByRole('button', { name: 'Pair a device' })).toBeFocused();
+  await openTab(page, 'Set up');
+  await expect(main.getByText(PHONE_ADDRESS)).toBeVisible();
 
   const code = await startPairing(page);
   await expect(main.getByRole('img', { name: /QR code/ })).toBeVisible();
@@ -195,6 +197,7 @@ test('turns on, pairs a phone through its pairing page, renames and revokes it',
   await chooseDeviceAction(page, 'Hall phone', 'Revoke');
   await expect(devices.getByText('No device is paired yet.')).toBeVisible();
 
+  await openTab(page, 'Set up');
   await main.getByRole('switch', { name: 'Remote control' }).click();
   await expect(main.getByRole('heading', { name: 'Remote control is off' })).toBeVisible();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'setup');
@@ -275,6 +278,7 @@ test('keeps what the phone can do across reloads', async ({ page }) => {
   await expand(main, 'Recent remote activity');
 
   await page.reload();
+  await openTab(page, 'Permissions');
   await expect(page.getByRole('switch', { name: 'Reset or delete data' })).toHaveAttribute(
     'aria-checked',
     'false',
@@ -282,6 +286,7 @@ test('keeps what the phone can do across reloads', async ({ page }) => {
   await expect(
     page.getByRole('switch', { name: 'Add, change and approve saved sign-ins' }),
   ).toHaveAttribute('aria-checked', 'true');
+  await openTab(page, 'Devices');
   await expect(
     page
       .getByRole('region', { name: 'Recent remote activity' })
@@ -293,8 +298,8 @@ test('chooses where cards can be answered and keeps it across reloads', async ({
   const main = await openPhone(page);
   await turnOn(page);
   const cards = main.getByRole('region', { name: 'Cards can be answered from' });
-  await expand(cards, 'Cards can be answered from');
   await expand(main, 'Recent remote activity');
+  await expand(cards, 'Cards can be answered from');
   const macOnly = cards.getByRole('radio', { name: 'Mac only' });
   const devices = cards.getByRole('radio', { name: 'Paired devices' });
   const rules = cards.getByRole('checkbox', { name: 'Spark rules' });
@@ -310,10 +315,12 @@ test('chooses where cards can be answered and keeps it across reloads', async ({
   await expect(rules).not.toBeChecked();
 
   await page.reload();
+  await openTab(page, 'Permissions');
   const again = page.getByRole('region', { name: 'Cards can be answered from' });
   await expect(again.getByRole('radio', { name: 'Paired devices' })).toBeChecked();
   await expect(again.getByRole('checkbox', { name: 'Calendar' })).toBeChecked();
   await expect(again.getByRole('checkbox', { name: 'Spark rules' })).not.toBeChecked();
+  await openTab(page, 'Devices');
   await expect(
     page
       .getByRole('region', { name: 'Recent remote activity' })
@@ -412,10 +419,9 @@ test('disconnects every device after a hold', async ({ page, browser }) => {
   await context.close();
   await expect(main.locator('.ph-scene')).toHaveAttribute('data-stage', 'ready');
 
-  const rail = main.locator('.ph-rail');
-  const hold = rail.getByRole('button', { name: 'Hold to disconnect all' });
+  const hold = main.getByRole('button', { name: 'Hold to disconnect all' });
   await hold.click();
-  await expect(rail.getByText('Released early. Nothing happened.')).toBeVisible();
+  await expect(main.getByText('Released early. Nothing happened.')).toBeVisible();
   await expect(devices.getByRole('listitem').filter({ hasText: 'Hold phone' })).toBeVisible();
   await hold.focus();
   await page.keyboard.down('Space');
