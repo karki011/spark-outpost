@@ -17,11 +17,11 @@ Use Spark elsewhere; work stays on the Mac or PC. About 5 minutes. Needs Tailsca
 
 Each device's **Actions** menu has **Rename**, **Send a test notification**, **Remove passkeys** and **Revoke**; **Remove old entry** clears a duplicate.
 
-The **Permissions** tab groups switches by risk. A phone's **More** holds Remote control and Settings.
+**Permissions** groups switches by risk. A phone's **More** holds Remote control and Settings.
 
-The right panel: address, QR code, **Hold to disconnect all**.
+**Set up** has the address and QR code; **Devices**, **Hold to disconnect all**.
 
-Devices read the [**Sub-chats**](sub-chats.md#find-a-sub-chat) tab.
+Devices read [**Sub-chats**](sub-chats.md#find-a-sub-chat).
 
 **Link a new folder or clone a repo** also allows **New folder** and agents' clones.
 

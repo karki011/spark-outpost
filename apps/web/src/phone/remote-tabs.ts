@@ -7,10 +7,10 @@ export const REMOTE_TABS: readonly { id: RemoteTab; label: string }[] = [
   { id: 'others', label: 'Other computers' },
 ];
 
-export function remoteTab(
-  chosen: { tab: RemoteTab; setup: boolean } | null,
-  setup: boolean,
-): RemoteTab {
-  if (chosen && (chosen.setup === setup || chosen.tab !== 'setup')) return chosen.tab;
-  return setup ? 'setup' : 'devices';
+export function remoteTab(chosen: RemoteTab | null, setup: boolean): RemoteTab {
+  return chosen ?? (setup ? 'setup' : 'devices');
+}
+
+export function afterSetupChange(chosen: RemoteTab | null): RemoteTab | null {
+  return chosen === 'setup' ? null : chosen;
 }
