@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { cloudflareCall, type CloudflareAccountApi } from './account-api.ts';
+import { StepFailure } from './setup-problems.ts';
 
 const id = z.string().min(1).max(64);
 const account = (accountId: string) => `/accounts/${encodeURIComponent(accountId)}`;
@@ -7,6 +8,8 @@ const zone = (zoneId: string) => `/zones/${encodeURIComponent(zoneId)}`;
 
 const ZONES_PER_PAGE = 50;
 const ZONE_PAGES_MAX = 40;
+export const REACH_TOO_MANY_DOMAINS =
+  'This Cloudflare account has more domains than Spark can look through. Use Custom domain and run your own tunnel.';
 const zonesSchema = z.array(z.object({ id, name: z.string().min(1).max(253) }));
 export interface CloudflareZone {
   id: string;
@@ -25,11 +28,11 @@ export async function listZones(
       page: String(page),
     });
     const found = zonesSchema.safeParse(await cloudflareCall(api, 'GET', `/zones?${query}`));
-    if (!found.success) break;
+    if (!found.success) return zones;
     zones.push(...found.data);
-    if (found.data.length < ZONES_PER_PAGE) break;
+    if (found.data.length < ZONES_PER_PAGE) return zones;
   }
-  return zones;
+  throw new StepFailure(REACH_TOO_MANY_DOMAINS, null);
 }
 
 const tunnelsSchema = z.array(z.object({ id }));

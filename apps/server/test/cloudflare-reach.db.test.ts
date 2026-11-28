@@ -155,7 +155,10 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
       include: [{ email: { email: 'owner@example.com' } }],
     });
     expect(runner.started).toEqual([FAKE_TUNNEL_TOKEN]);
-    expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBe(FAKE_TUNNEL_TOKEN);
+    expect(JSON.parse((await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)) ?? '{}')).toEqual({
+      tunnel: 'tun1',
+      token: FAKE_TUNNEL_TOKEN,
+    });
     expect(cloudflare.revoked).toHaveLength(1);
     const stored = JSON.stringify([
       reach,
@@ -163,6 +166,37 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     ]);
     expect(stored).not.toContain(FAKE_TUNNEL_TOKEN);
     expect(stored).not.toContain('token-1');
+  });
+
+  it('finds the domain on a later page of a large account', async () => {
+    cloudflare.zones = [
+      ...Array.from({ length: 50 }, (_, index) => ({
+        id: `other${index}`,
+        name: `other${index}.test`,
+      })),
+      ...cloudflare.zones,
+    ];
+    const { reach } = await setUp(localClient(app()));
+    expect(reach.status).toBe('done');
+  });
+
+  it('never runs a key that belongs to another tunnel', async () => {
+    const client = localClient(app());
+    await setUp(client);
+    await client.send('delete', REACH).expect(200);
+    await t.db.query(
+      `INSERT INTO cloudflare_reach (workspace_id, hostname, account_id, zone_id, tunnel_id)
+       VALUES ($1, 'spark.example.com', 'acct', 'zone1', 'tun1')`,
+      [t.workspaceId],
+    );
+    await secrets.set(
+      CLOUDFLARE_TUNNEL_TOKEN_SECRET,
+      JSON.stringify({ tunnel: 'older', token: 'older-token-0123456789' }),
+    );
+    await saveRemoteHostname(t.db, t.workspaceId, 'spark.example.com', 'custom');
+    runner.started.length = 0;
+    expect((await client.get(REACH).expect(200)).body.tunnel).toBe('off');
+    expect(runner.started).toEqual([]);
   });
 
   it('stops when the account has no domain for the address', async () => {

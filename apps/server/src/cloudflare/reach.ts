@@ -46,6 +46,7 @@ import {
 import { deleteReach, reachRow, saveReach } from './reach-store.ts';
 import { CLOUDFLARE_DASH_URL, SETUP_SIGN_IN_ENDED, StepFailure } from './setup-problems.ts';
 import { beginCloudflareSignIn, type CloudflareSignIn } from './sign-in.ts';
+import { packTunnelKey, unpackTunnelKey } from './tunnel-key.ts';
 import type { TunnelRunner } from './tunnel-runner.ts';
 
 const EXPIRY_MARGIN_MS = 60_000;
@@ -166,25 +167,36 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     return value;
   };
 
-  const bind = async (runToken: string, mine: number) => {
-    const hostname = need(progress.hostname);
-    await saveReach(db, workspaceId, {
-      hostname,
-      accountId: need(progress.account).id,
-      zoneId: need(progress.zone).id,
-      tunnelId: need(progress.tunnelId),
-    });
-    try {
-      await secrets.set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, runToken);
-    } catch {
-      await deleteReach(db, workspaceId);
-      connected = null;
-      throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
-    }
-    if (mine !== generation) return;
-    connected = hostname;
-    progress.runToken = null;
+  let local: Promise<unknown> = Promise.resolve();
+  const exclusive = <T>(job: () => Promise<T>): Promise<T> => {
+    const next = local.then(job, job);
+    local = next.catch(() => undefined);
+    return next;
   };
+  const savedKey = async () => unpackTunnelKey(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET));
+
+  const bind = (runToken: string, mine: number) =>
+    exclusive(async () => {
+      if (mine !== generation) return;
+      const hostname = need(progress.hostname);
+      const tunnelId = need(progress.tunnelId);
+      try {
+        await secrets.set(
+          CLOUDFLARE_TUNNEL_TOKEN_SECRET,
+          packTunnelKey({ tunnel: tunnelId, token: runToken }),
+        );
+      } catch {
+        throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
+      }
+      await saveReach(db, workspaceId, {
+        hostname,
+        accountId: need(progress.account).id,
+        zoneId: need(progress.zone).id,
+        tunnelId,
+      });
+      connected = hostname;
+      progress.runToken = null;
+    });
 
   const WORK: Record<Work, (mine: number) => Promise<void>> = {
     async domain(mine) {
@@ -245,10 +257,12 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       if (!runner) throw new StepFailure(REACH_NO_TUNNEL_PROGRAM, null);
       if (progress.runToken) await bind(progress.runToken, mine);
       if (mine !== generation) return;
-      const runToken = await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
-      if (!runToken) throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
+      const key = await savedKey();
+      if (!key || (progress.tunnelId !== null && key.tunnel !== progress.tunnelId)) {
+        throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
+      }
       graceUntil = now() + SETUP_GRACE_MS;
-      if (!(await runner.start(runToken))) throw new StepFailure(REACH_NOT_CONNECTED, 'retry');
+      if (!(await runner.start(key.token))) throw new StepFailure(REACH_NOT_CONNECTED, 'retry');
     },
   };
 
@@ -271,13 +285,13 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     await dropToken();
   };
 
-  const signedIn = async (fresh: CloudflareToken, mine: number) => {
+  const signedIn = async (fresh: CloudflareToken, mine: number, attempt: number) => {
     if (mine !== generation) {
       await revoke(fresh);
       return;
     }
     await dropToken();
-    if (mine !== generation) {
+    if (mine !== generation || attempt !== attempts) {
       await revoke(fresh);
       return;
     }
@@ -318,7 +332,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
           if (result.ok) await revoke(result.token);
           return;
         }
-        if (result.ok) await signedIn(result.token, mine);
+        if (result.ok) await signedIn(result.token, mine, attempt);
         else stop('signIn', new StepFailure(result.problem, 'allow'));
       },
     );
@@ -372,18 +386,19 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
 
   const reconcile = async () => {
     if (!runner) return;
-    const mine = generation;
-    const row = await reachRow(db, workspaceId);
-    connected = row?.hostname ?? null;
-    const access = await remoteAccess(db, workspaceId);
-    const serving = row !== null && access.reach === 'custom' && access.hostname === row.hostname;
-    if (serving) {
+    await exclusive(async () => {
+      const row = await reachRow(db, workspaceId);
+      connected = row?.hostname ?? null;
+      const access = await remoteAccess(db, workspaceId);
+      const serving = row !== null && access.reach === 'custom' && access.hostname === row.hostname;
+      if (!serving) {
+        if (now() >= graceUntil && runner.state() !== 'off') runner.stop();
+        return;
+      }
       if (runner.state() !== 'off') return;
-      const runToken = await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
-      if (runToken && mine === generation) void runner.start(runToken);
-      return;
-    }
-    if (now() >= graceUntil && runner.state() !== 'off') runner.stop();
+      const key = await savedKey();
+      if (key && key.tunnel === row.tunnelId) void runner.start(key.token);
+    });
   };
 
   return {
@@ -424,11 +439,13 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     async remove() {
       await reset();
       await work.catch(() => undefined);
-      graceUntil = 0;
-      runner?.stop();
-      await secrets.delete(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
-      await deleteReach(db, workspaceId);
-      connected = null;
+      await exclusive(async () => {
+        graceUntil = 0;
+        runner?.stop();
+        await secrets.delete(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
+        await deleteReach(db, workspaceId);
+        connected = null;
+      });
       return view();
     },
   };

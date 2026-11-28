@@ -75,7 +75,7 @@ export class FakeCloudflare {
     const base = `/accounts/${FAKE_ACCOUNT}`;
     const script = `${base}/workers/scripts/spark-outpost-artifact-share`;
     if (path === '/accounts') return ok([{ id: FAKE_ACCOUNT, name: 'Hazel’s account' }]);
-    const reached = await this.reachCall(method, path, init);
+    const reached = await this.reachCall(method, path, init, url.searchParams);
     if (reached) return reached;
     if (path === `${base}/r2/buckets`) {
       return this.r2Enabled
@@ -114,10 +114,15 @@ export class FakeCloudflare {
     method: string,
     path: string,
     init: RequestInit | undefined,
+    query: URLSearchParams,
   ): Promise<Response | null> {
     const tunnels = `/accounts/${FAKE_ACCOUNT}/cfd_tunnel`;
     const body = () => JSON.parse(String(init?.body)) as Record<string, unknown>;
-    if (path === '/zones') return ok(this.zones);
+    if (path === '/zones') {
+      const page = Number(query.get('page') ?? '1');
+      const size = Number(query.get('per_page') ?? '50');
+      return ok(this.zones.slice((page - 1) * size, page * size));
+    }
     if (path === tunnels && method === 'GET') return ok(this.tunnelExists ? [{ id: 'tun1' }] : []);
     if (path === tunnels && method === 'POST') {
       this.tunnelExists = true;
