@@ -1,0 +1,29 @@
+name = "spark-outpost-share"
+main = "src/worker.ts"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[vars]
+MAX_EXPIRY_DAYS = "1"
+
+[triggers]
+crons = ["17 3 * * *"]
+
+[[r2_buckets]]
+binding = "SHARES"
+bucket_name = "spark-outpost-shares"
+
+[[analytics_engine_datasets]]
+binding = "EVENTS"
+dataset = "spark_outpost_share_events"
+
+[[durable_objects.bindings]]
+name = "COUNTERS"
+class_name = "ShareCounters"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ShareCounters"]
+
+[observability]
+enabled = false

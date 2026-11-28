@@ -24,28 +24,3 @@ new_sqlite_classes = ["ShareCounters"]
 
 [observability]
 enabled = false
-
-[env.hosted]
-name = "spark-outpost-share"
-workers_dev = true
-
-[env.hosted.triggers]
-crons = ["17 3 * * *"]
-
-[env.hosted.vars]
-MAX_EXPIRY_DAYS = "1"
-
-[[env.hosted.r2_buckets]]
-binding = "SHARES"
-bucket_name = "spark-outpost-shares"
-
-[[env.hosted.analytics_engine_datasets]]
-binding = "EVENTS"
-dataset = "spark_outpost_share_events"
-
-[[env.hosted.durable_objects.bindings]]
-name = "COUNTERS"
-class_name = "ShareCounters"
-
-[env.hosted.observability]
-enabled = false

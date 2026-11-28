@@ -156,7 +156,7 @@ The copy the app falls back to when no own copy is connected takes uploads from 
 
 ### Spark's own copy
 
-Spark's shared service keeps its first name and bucket, `spark-outpost-share` and `spark-outpost-shares`, so its address and stored pages don't move. They are the `hosted` environment in `wrangler.toml`, which also sets `MAX_EXPIRY_DAYS = "1"`. Deploy it with `npx wrangler@4 deploy --env hosted`; a plain `wrangler deploy` makes a separate `spark-outpost-artifact-share`. In the commands below, use the hosted names when you work on Spark's own copy.
+Spark's shared service keeps its first name and bucket, `spark-outpost-share` and `spark-outpost-shares`, so its address and stored pages don't move. They are in `wrangler.hosted.toml`, which also sets `MAX_EXPIRY_DAYS = "1"`. Deploy it with `npx wrangler@4 deploy --config wrangler.hosted.toml`; a plain `wrangler deploy` makes a separate `spark-outpost-artifact-share`. In the commands below, use the hosted names when you work on Spark's own copy.
 
 ## Set up and deploy
 
@@ -174,8 +174,8 @@ For Spark's own copy, the same three steps use the hosted names:
 
 ```sh
 npx wrangler@4 r2 bucket create spark-outpost-shares
-openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY --env hosted
-npx wrangler@4 deploy --env hosted
+openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY --config wrangler.hosted.toml
+npx wrangler@4 deploy --config wrangler.hosted.toml
 ```
 
 `package.json` pins the same Wrangler major for the Deploy button and for `npm install && npm run deploy`; it is not part of the repo's pnpm workspace.
