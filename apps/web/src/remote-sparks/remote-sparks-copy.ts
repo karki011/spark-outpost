@@ -6,13 +6,13 @@ import {
 import type { DisconnectCopy } from '../connectors/DisconnectDialog.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 
-export const OTHER_SPARKS_TITLE = 'Other Sparks';
-export const ADD_SPARK = 'Add a Spark';
+export const OTHER_SPARKS_TITLE = 'Other computers';
+export const ADD_SPARK = 'Add a computer';
 export const OTHER_SPARKS_INTRO =
   'This computer controls another computer’s Spark as a paired device. What you do there runs on that computer.';
-export const OTHER_SPARKS_UNAVAILABLE = 'Other Sparks open from the Spark Outpost app.';
-export const OTHER_SPARKS_EMPTY = 'No other Spark is saved yet.';
-export const NAME_PROBLEM = 'Give this Spark a name.';
+export const OTHER_SPARKS_UNAVAILABLE = 'Other computers open from the Spark Outpost app.';
+export const OTHER_SPARKS_EMPTY = 'No other computer is saved yet.';
+export const NAME_PROBLEM = 'Give this computer a name.';
 
 export const CHANGE_ICON_ITEM = 'Change icon…';
 export const REMOVE_ICON_ITEM = 'Remove icon';
@@ -22,9 +22,9 @@ export const ICON_PROBLEM = 'That image could not be used. Pick a PNG, JPEG, Web
 export const LOCAL_SPARK_NOTE =
   'The other computer sees this name when this one pairs. Icons stay on this computer.';
 
-export const SWITCHER_MENU = 'Sparks';
-export const ADD_SPARK_ITEM = 'Add a Spark…';
-export const MANAGE_SPARKS_ITEM = 'Manage Sparks…';
+export const SWITCHER_MENU = 'Computers';
+export const ADD_SPARK_ITEM = 'Add a computer…';
+export const MANAGE_SPARKS_ITEM = 'Manage computers…';
 
 export const THIS_COMPUTER = 'This computer';
 export const SWITCHER_LABEL = 'Computers';
@@ -40,7 +40,7 @@ export function waitingTotal(sparks: readonly Pick<RemoteSpark, 'needsYou'>[]): 
 export function switcherName(name: string, total: number): string {
   if (total === 0) return name;
   const requests = total === 1 ? '1 request' : `${total} requests`;
-  return `${name}. ${requests} waiting on other Sparks`;
+  return `${name}. ${requests} waiting on other computers`;
 }
 
 export function lastOpenedLine(spark: Pick<RemoteSpark, 'lastOpenedAt'>, now: number): string {

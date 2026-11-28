@@ -129,7 +129,10 @@ describe('AddSparkDialog', () => {
     type(ADDRESS, 'studio.tail1234.ts.net');
     expect(screen.queryByText(UNTRUSTED_LEAD)).toBeNull();
     expect(screen.queryByLabelText(TRUST_LABEL)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Add a Spark' })).toHaveProperty('disabled', false);
+    expect(screen.getByRole('button', { name: 'Add a computer' })).toHaveProperty(
+      'disabled',
+      false,
+    );
   });
 
   it('asks to trust a custom domain before it can be added', async () => {
@@ -138,7 +141,7 @@ describe('AddSparkDialog', () => {
     type(ADDRESS, 'https://spark.example.com');
     type('Name', 'Cabin Mac');
     expect(screen.getByText(UNTRUSTED_LEAD).tagName).toBe('B');
-    const add = screen.getByRole('button', { name: 'Add a Spark' });
+    const add = screen.getByRole('button', { name: 'Add a computer' });
     expect(add).toHaveProperty('disabled', true);
     fireEvent.submit(screen.getByLabelText(ADDRESS).closest('form')!);
     expect(sent).toHaveLength(0);

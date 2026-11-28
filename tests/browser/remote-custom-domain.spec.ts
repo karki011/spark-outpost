@@ -57,12 +57,12 @@ test.afterAll(() => {
 test('a Spark at a custom domain needs the trust tick and carries its tag', async ({ page }) => {
   await asMacApp(page);
   const main = await openPhone(page);
-  await expand(main, 'Other Sparks');
-  const card = main.getByRole('region', { name: 'Other Sparks' });
-  await card.getByRole('button', { name: 'Add a Spark' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Add a Spark' });
+  await expand(main, 'Other computers');
+  const card = main.getByRole('region', { name: 'Other computers' });
+  await card.getByRole('button', { name: 'Add a computer' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add a computer' });
   const address = dialog.getByLabel('Address or pairing link');
-  const add = dialog.getByRole('button', { name: 'Add a Spark' });
+  const add = dialog.getByRole('button', { name: 'Add a computer' });
   const trust = dialog.getByLabel('I trust this address');
 
   await address.fill('studio.tail1234.ts.net');
@@ -90,7 +90,7 @@ test('a Spark at a custom domain needs the trust tick and carries its tag', asyn
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: /^This computer/ })
     .click();
-  const item = page.getByRole('menu', { name: 'Sparks' }).getByRole('menuitem', { name: /Cabin/ });
+  const item = page.getByRole('menu', { name: 'Computers' }).getByRole('menuitem', { name: /Cabin/ });
   await expect(item.getByText('Custom domain')).toBeVisible();
 });
 

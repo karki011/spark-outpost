@@ -132,7 +132,7 @@ const SECTION_TABS: Record<string, string> = {
   'Set up work': 'Permissions',
   'High risk': 'Permissions',
   'Cards can be answered from': 'Permissions',
-  'Other Sparks': 'Other computers',
+  'Other computers': 'Other computers',
 };
 
 export async function openTab(scope: Page | Locator, name: string): Promise<void> {
