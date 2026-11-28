@@ -4,6 +4,11 @@ Newest first. Each release adds a section before packaging; the release script t
 
 Changes awaiting a release: [Unreleased notes](../../docs/UNRELEASED.md).
 
+## 0.1.0-beta.24
+
+- **Set it up with Cloudflare on Windows.** The Windows build now includes Cloudflare's tunnel program, so **Set it up with Cloudflare** under **Remote control → Custom domain** is offered there too.
+- The website has a new home at [sparkoutpost.dev](https://sparkoutpost.dev).
+
 ## 0.1.0-beta.23
 
 - **Control another computer's Spark.** **Remote control → Other Sparks** adds the Spark Outpost on another of your computers and opens it in its own window, as a paired device of that computer. Once one is saved, the left bar shows a switcher with each Spark's status and how many requests wait there, and each Spark can have its own name and icon.

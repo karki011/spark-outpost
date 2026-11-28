@@ -8,6 +8,7 @@ The full history is in the [changelog](../apps/desktop/CHANGELOG.md).
 
 | Version | Released | Apple silicon | Intel |
 | --- | --- | --- | --- |
+| [0.1.0-beta.24](0.1.0-beta.24.md) | 2026-11-28 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.24-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.24-x64.dmg) |
 | [0.1.0-beta.23](0.1.0-beta.23.md) | 2026-11-27 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.23-x64.dmg) |
 | [0.1.0-beta.22](0.1.0-beta.22.md) | 2026-11-25 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.22-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.22-x64.dmg) |
 | [0.1.0-beta.21](0.1.0-beta.21.md) | 2026-11-25 | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.21-arm64.dmg) | [Download](https://pub-aae3512121074a13b84ee166f8d153af.r2.dev/Spark-Outpost-0.1.0-beta.21-x64.dmg) |
