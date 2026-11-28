@@ -1,4 +1,4 @@
-import { remoteSparkOrigin } from '@spark-outpost/contracts';
+import { isAccessSignInUrl, remoteSparkOrigin } from '@spark-outpost/contracts';
 
 export type RemoteNavigation = 'allow' | 'external' | 'refuse';
 
@@ -13,7 +13,8 @@ export function remoteNavigation(value: string, hostname: string): RemoteNavigat
   }
   if (!WEB_SCHEMES.has(url.protocol)) return 'refuse';
   if (url.username !== '' || url.password !== '') return 'refuse';
-  return url.origin === remoteSparkOrigin(hostname) ? 'allow' : 'external';
+  if (url.origin === remoteSparkOrigin(hostname)) return 'allow';
+  return isAccessSignInUrl(value, hostname) ? 'allow' : 'external';
 }
 
 interface Preventable {
