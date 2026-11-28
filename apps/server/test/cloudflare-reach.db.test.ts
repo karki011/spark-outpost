@@ -33,6 +33,7 @@ class FakeRunner implements TunnelRunner {
   current: TunnelState = 'off';
   readonly started: string[] = [];
   state = () => this.current;
+  serving = () => (this.current === 'off' ? null : (this.started.at(-1) ?? null));
   start(token: string) {
     this.started.push(token);
     this.current = this.connects ? 'running' : 'stopped';
@@ -304,9 +305,10 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     const held = new Promise<void>((resolve) => (release = resolve));
     const asked = new Promise<void>((resolve) => {
       secrets.get = async (name) => {
+        const value = await read(name);
         resolve();
         await held;
-        return read(name);
+        return value;
       };
     });
     const checking = client.get(REACH).expect(200);

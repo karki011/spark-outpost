@@ -34,6 +34,7 @@ import {
   REACH_BUSY,
   REACH_NOT_CONNECTED,
   REACH_PAGE_TAKEN,
+  REACH_PAGE_UNCONFIRMED,
   REACH_NO_TUNNEL_PROGRAM,
   REACH_RECORD_TAKEN,
   REACH_SCOPES,
@@ -194,6 +195,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       } catch {
         throw new StepFailure(REACH_TOKEN_NOT_SAVED, 'retry');
       }
+      if (mine !== generation) return;
       await saveReach(db, workspaceId, {
         hostname,
         accountId: need(progress.account).id,
@@ -203,6 +205,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       await secrets
         .set(CLOUDFLARE_TUNNEL_TOKEN_SECRET, packTunnelKeys([fresh]))
         .catch(() => undefined);
+      if (mine !== generation) return;
       connected = hostname;
       progress.runToken = null;
     });
@@ -258,7 +261,10 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
         await allowEmail(access, zone.id, appId, email);
         return;
       }
-      if (policies.length >= ACCESS_POLICY_PAGE || !letsInOnly(policies, email)) {
+      if (policies.length >= ACCESS_POLICY_PAGE) {
+        throw new StepFailure(REACH_PAGE_UNCONFIRMED, 'cloudflare', ZERO_TRUST_URL);
+      }
+      if (!letsInOnly(policies, email)) {
         throw new StepFailure(REACH_PAGE_TAKEN, 'cloudflare', ZERO_TRUST_URL);
       }
     },
@@ -405,9 +411,9 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
         if (now() >= graceUntil && runner.state() !== 'off') runner.stop();
         return;
       }
-      if (runner.state() !== 'off') return;
       const key = await keyFor(row.tunnelId);
-      if (key) void runner.start(key.token);
+      if (!key || (runner.state() !== 'off' && runner.serving() === key.token)) return;
+      void runner.start(key.token);
     });
   };
 

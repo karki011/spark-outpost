@@ -4,6 +4,7 @@ export type TunnelState = 'off' | 'starting' | 'running' | 'stopped';
 
 export interface TunnelRunner {
   state(): TunnelState;
+  serving(): string | null;
   start(token: string): Promise<boolean>;
   stop(): void;
 }
@@ -17,6 +18,7 @@ export interface TunnelRunnerDeps {
 
 const CONNECTED = /Registered tunnel connection/;
 const READY_MS = 45_000;
+const KILL_GRACE_MS = 5_000;
 const RETRY_MS = [5_000, 15_000, 60_000];
 
 export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
@@ -36,8 +38,12 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
       stdio: ['ignore', 'ignore', 'pipe'],
     });
     child = started;
+    let force: NodeJS.Timeout | null = null;
     const deadline = setTimeout(() => {
-      if (child === started && state === 'starting') started.kill('SIGTERM');
+      if (child !== started || state !== 'starting') return;
+      started.kill('SIGTERM');
+      force = setTimeout(() => started.kill('SIGKILL'), KILL_GRACE_MS);
+      force.unref();
     }, readyMs);
     deadline.unref();
     started.stderr?.setEncoding('utf8');
@@ -49,6 +55,7 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
     });
     const ended = () => {
       clearTimeout(deadline);
+      if (force) clearTimeout(force);
       if (child !== started) return;
       child = null;
       state = wanted === null ? 'off' : 'stopped';
@@ -78,6 +85,7 @@ export function createTunnelRunner(deps: TunnelRunnerDeps): TunnelRunner {
 
   return {
     state: () => state,
+    serving: () => wanted,
     stop: halt,
     start(token) {
       if (wanted === token && state === 'running') return Promise.resolve(true);
