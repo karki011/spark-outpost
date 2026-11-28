@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react';
 import type { RemoteAccess } from '@spark-outpost/contracts';
+import { CloudflareReachSetup } from '../cloudflare/CloudflareReachSetup.tsx';
 import { CUSTOM_SETUP_NOTE } from './custom-domain.ts';
 import { CustomDomainForm } from './CustomDomainForm.tsx';
 
@@ -29,6 +30,7 @@ export function CustomDomainSetup({
         </div>
       </div>
       {choice}
+      <CloudflareReachSetup onSaved={onSaved} />
       <CustomDomainForm
         forwardTo={forwardTo}
         replacesTailscale={replacesTailscale}
