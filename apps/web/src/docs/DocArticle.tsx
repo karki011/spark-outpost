@@ -13,11 +13,12 @@ import { DocOutline } from './DocOutline.tsx';
 import { restoreDocScroll, savedDocScroll, useRememberDocScroll } from './doc-scroll.ts';
 import { guideImage } from './guide-content.ts';
 import { DOC_HEADING_PREFIX, remarkHeadingIds } from './heading-ids.ts';
+import { remarkTableLabels } from './table-labels.ts';
 import { useColorScheme } from './use-color-scheme.ts';
 
 const WEB_LINK = /^(https?:|mailto:)/i;
 const OUTLINE_MIN_HEADINGS = 3;
-const plugins = [...remarkPlugins, remarkHeadingIds, remarkCallouts];
+const plugins = [...remarkPlugins, remarkHeadingIds, remarkCallouts, remarkTableLabels];
 
 interface DocArticleProps {
   page: GuidePage;

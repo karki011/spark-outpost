@@ -1,6 +1,6 @@
 import { uniqueAnchors } from '@spark-outpost/contracts';
 
-interface MarkdownNode {
+export interface MarkdownNode {
   type: string;
   value?: string;
   children?: MarkdownNode[];
@@ -9,9 +9,9 @@ interface MarkdownNode {
 
 export const DOC_HEADING_PREFIX = 'doc-';
 
-function plain(node: MarkdownNode): string {
+export function plainText(node: MarkdownNode): string {
   if (typeof node.value === 'string') return node.value;
-  return (node.children ?? []).map(plain).join('');
+  return (node.children ?? []).map(plainText).join('');
 }
 
 function headingsIn(node: MarkdownNode, found: MarkdownNode[] = []): MarkdownNode[] {
@@ -23,7 +23,7 @@ function headingsIn(node: MarkdownNode, found: MarkdownNode[] = []): MarkdownNod
 export function remarkHeadingIds() {
   return (tree: MarkdownNode) => {
     const headings = headingsIn(tree);
-    const anchors = uniqueAnchors(headings.map(plain));
+    const anchors = uniqueAnchors(headings.map(plainText));
     headings.forEach((heading, index) => {
       heading.data = {
         ...heading.data,

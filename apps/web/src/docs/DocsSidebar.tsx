@@ -7,6 +7,7 @@ import {
 } from '@spark-outpost/contracts';
 import { SearchIcon, XIcon } from '../ui/icons.tsx';
 import { openDoc } from './doc-route.ts';
+import type { DocsNavOpen } from './DocsBar.tsx';
 import { DocsNav, type DocsNavMemory } from './DocsNav.tsx';
 import { recordMissedSearch } from './missed-searches.ts';
 
@@ -16,9 +17,9 @@ interface DocsSidebarProps {
   pages: readonly GuidePage[];
   current: string;
   query: string;
-  navOpen: boolean;
+  navOpen: DocsNavOpen;
   onQuery: (query: string) => void;
-  onToggleNav: () => void;
+  onClose: () => void;
   onPicked: () => void;
 }
 
@@ -150,13 +151,18 @@ export function DocsSidebar({
   query,
   navOpen,
   onQuery,
-  onToggleNav,
+  onClose,
   onPicked,
 }: DocsSidebarProps) {
   const searching = query.trim().length > 0;
   const side = useRef<HTMLElement>(null);
   const results = useRef<HTMLDivElement>(null);
   const navMemory = useRef<DocsNavMemory>({ scrollTop: 0, shown: null });
+  const closeButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (navOpen === 'search') side.current?.querySelector<HTMLElement>('.docs-find input')?.focus();
+    if (navOpen === 'contents') closeButton.current?.focus();
+  }, [navOpen]);
   const openFirst = () => {
     const [first] = searchGuidePages(pages, query, 1);
     if (!first) return;
@@ -166,9 +172,13 @@ export function DocsSidebar({
   return (
     <aside
       ref={side}
+      id="docs-side"
       className="docs-side"
       aria-label="Guide contents"
       data-open={navOpen || undefined}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && navOpen) onClose();
+      }}
     >
       <a
         className="docs-skip"
@@ -183,13 +193,13 @@ export function DocsSidebar({
       <div className="docs-side-head">
         <p className="docs-side-title">User guide</p>
         <button
+          ref={closeButton}
           type="button"
-          className="docs-nav-toggle"
-          aria-expanded={navOpen}
-          aria-controls={searching ? undefined : 'docs-nav'}
-          onClick={onToggleNav}
+          className="docs-side-close"
+          aria-label="Close contents"
+          onClick={onClose}
         >
-          Contents
+          <XIcon />
         </button>
       </div>
       <DocsSearchBox

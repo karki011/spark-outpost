@@ -61,10 +61,47 @@
 
 .docs-outline {
   margin: 0 0 22px;
-  padding: 12px 14px;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--panel);
+}
+
+.docs-outline-toggle {
+  width: 100%;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--muted);
+}
+
+.docs-outline-toggle .chev {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.docs-outline-toggle[aria-expanded='true'] .chev {
+  transform: rotate(90deg);
+}
+
+.docs-outline-count {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--faint);
+}
+
+.docs-outline > p,
+.docs-outline:not([data-open]) ul {
+  display: none;
+}
+
+.docs-outline[data-open] ul {
+  padding-bottom: 8px;
 }
 
 .docs-outline p {
@@ -325,8 +362,18 @@
     background: transparent;
   }
 
+  .docs-article > .docs-outline > p {
+    display: block;
+  }
+
+  .docs-article > .docs-outline .docs-outline-toggle {
+    display: none;
+  }
+
   .docs-article > .docs-outline ul {
+    display: grid;
     grid-template-columns: 1fr;
+    padding-bottom: 0;
   }
 
   .docs-article > .docs-outline a {
@@ -345,5 +392,60 @@
     margin-left: -15px;
     padding-left: 13px;
     border-left: 2px solid var(--accent);
+  }
+}
+
+@media (max-width: 640px), (max-height: 500px) and (pointer: coarse) {
+  .docs-outline-toggle {
+    height: 44px;
+  }
+
+  .docs-outline a {
+    padding: 10px 0;
+  }
+
+  .docs-body .md-table:has(td[data-label]) {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .docs-body table:has(td[data-label]) thead {
+    display: none;
+  }
+
+  .docs-body table:has(td[data-label]) :is(tbody, tr, td) {
+    display: block;
+  }
+
+  .docs-body table:has(td[data-label]) tr {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+  }
+
+  .docs-body table:has(td[data-label]) td {
+    min-width: 0;
+    padding: 2px 0;
+    border: 0;
+  }
+
+  .docs-body table:has(td[data-label]) td:first-child {
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .docs-body td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--faint);
+  }
+
+  .docs-body td[data-label]:last-child a {
+    white-space: normal;
   }
 }

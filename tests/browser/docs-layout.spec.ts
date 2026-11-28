@@ -42,7 +42,7 @@ for (const width of [1100, 1440, 1720]) {
 }
 
 test('every sidebar row is one line, with nothing cut off', async ({ page }) => {
-  for (const width of [1440, 700]) {
+  for (const width of [1440, 900]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/#/docs/welcome');
     const nav = docs(page).getByRole('navigation', { name: 'Guide pages' });

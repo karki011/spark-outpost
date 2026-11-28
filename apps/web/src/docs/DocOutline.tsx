@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { guideLink, type GuideHeading } from '@spark-outpost/contracts';
+import { ChevronIcon } from '../ui/icons.tsx';
 import { DOC_HEADING_PREFIX } from './heading-ids.ts';
 
 const READING_LINE = 96;
@@ -52,15 +53,32 @@ export function DocOutline({
   headings: readonly GuideHeading[];
 }) {
   const current = useHeadingInView(slug, headings);
+  const [open, setOpen] = useState(false);
   return (
-    <nav className="docs-outline" aria-labelledby="docs-outline-title">
+    <nav
+      className="docs-outline"
+      aria-labelledby="docs-outline-title"
+      data-open={open || undefined}
+    >
       <p id="docs-outline-title">On this page</p>
-      <ul>
+      <button
+        type="button"
+        className="docs-outline-toggle"
+        aria-expanded={open}
+        aria-controls="docs-outline-list"
+        onClick={() => setOpen((shown) => !shown)}
+      >
+        <ChevronIcon />
+        On this page
+        <span className="docs-outline-count">{headings.length} sections</span>
+      </button>
+      <ul id="docs-outline-list">
         {headings.map((heading) => (
           <li key={heading.anchor}>
             <a
               href={guideLink(slug, heading.anchor)}
               aria-current={heading.anchor === current ? 'location' : undefined}
+              onClick={() => setOpen(false)}
             >
               {heading.text}
             </a>

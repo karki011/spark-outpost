@@ -201,7 +201,7 @@ test('a Settings info link opens the guide at the page for that setting', async 
 test('Docs works at phone width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openDocs(page);
-  const contents = docs(page).getByRole('button', { name: 'Contents' });
+  const contents = docs(page).getByRole('button', { name: 'Contents', exact: true });
   await expect(contents).toHaveAttribute('aria-expanded', 'false');
   await expect(guideNav(page)).toBeHidden();
   await contents.click();

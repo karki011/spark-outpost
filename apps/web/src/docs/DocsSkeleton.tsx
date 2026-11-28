@@ -3,6 +3,7 @@ import './docs.css';
 export function DocsSkeleton() {
   return (
     <main className="page docs" aria-label="Docs" aria-busy="true">
+      <div className="docs-bar" />
       <aside className="docs-side">
         <div className="docs-side-head">
           <p className="docs-side-title">User guide</p>
