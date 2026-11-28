@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import type { WorkerUpload } from './account-api.ts';
 
-export const SHARE_WORKER_NAME = 'spark-outpost-share';
-export const SHARE_BUCKET_NAME = 'spark-outpost-shares';
+export const SHARE_WORKER_NAME = 'spark-outpost-artifact-share';
+export const SHARE_BUCKET_NAME = 'spark-outpost-artifact-shares';
 export const SHARE_WORKER_CRON = '17 3 * * *';
 
 export interface ShareKeys {

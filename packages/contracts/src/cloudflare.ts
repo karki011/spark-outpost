@@ -6,7 +6,7 @@ export const CLOUDFLARE_DEPLOY_URL =
 
 export const CLOUDFLARE_PROBLEMS = {
   address:
-    'Use the https address of your share service alone, with no path, like https://spark-outpost-share.example.workers.dev.',
+    'Use the https address of your share service alone, with no path, like https://spark-outpost-artifact-share.example.workers.dev.',
   key: 'That is not an upload key. Paste the key you set when you deployed the share service.',
   unreachable: 'Spark could not reach that address. Check it and try again.',
   notService: 'That address did not answer as a Spark share service.',

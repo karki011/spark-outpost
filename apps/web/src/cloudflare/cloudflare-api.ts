@@ -12,6 +12,7 @@ import { request } from '../api/client.ts';
 export const cloudflareKeys = {
   connection: ['cloudflare'] as const,
   setup: ['cloudflare-setup'] as const,
+  madeKeys: ['cloudflare-made-keys'] as const,
 };
 
 export const ARTIFACT_SHARE_KEY = ['artifact-share'] as const;
