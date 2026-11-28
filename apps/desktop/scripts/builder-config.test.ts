@@ -77,7 +77,7 @@ describe('packagedHeartbeatUrl', () => {
 });
 
 describe('packagedShareUrl', () => {
-  const origin = 'https://spark-outpost-share.example.workers.dev';
+  const origin = 'https://spark-outpost-artifact-share.example.workers.dev';
 
   it('bakes in the share service origin from the environment', () => {
     expect(packagedShareUrl({ SPARK_SHARE_URL: ` ${origin}/ ` })).toBe(origin);
@@ -224,7 +224,7 @@ describe('builderConfig', () => {
   });
 
   it('writes the share origin into the packaged manifest only when set', () => {
-    const origin = 'https://spark-outpost-share.example.workers.dev';
+    const origin = 'https://spark-outpost-artifact-share.example.workers.dev';
     const shared = builderConfig({ ...base, archs: ['x64'], env: { SPARK_SHARE_URL: origin } });
     const without = builderConfig({ ...base, archs: ['x64'], env: {} });
 

@@ -105,9 +105,11 @@ describe('Cloudflare, not connected', () => {
     expect(deploy.getAttribute('href')).toBe(CLOUDFLARE_DEPLOY_URL);
     expect([BROWSER_OUTSIDE_TARGET, '_blank']).toContain(deploy.getAttribute('target'));
     screen.getByText(
-      'Opens Cloudflare in your browser. It creates a Worker and a storage bucket in your account and asks you to set an upload key.',
+      'Opens Cloudflare in your browser. It creates a Worker and a storage bucket in your account and asks for the two keys.',
     );
-    screen.getByText('Kept in this computer’s keychain. Only Spark with this key can add pages.');
+    screen.getByText(
+      'Filled in with the key Spark made above; for a service you deployed earlier, paste its key instead. Kept in this computer’s keychain.',
+    );
     expect(field('Upload key').type).toBe('password');
   });
 
@@ -323,5 +325,48 @@ describe('setting Cloudflare up for the user', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByLabelText('Service address')).toBeTruthy();
     expect(load).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('the keys for a by-hand set-up', () => {
+  it('makes both keys, copies each by name and fills the upload key in', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    show(NOT_CONNECTED);
+
+    const made = (await screen.findByLabelText('Upload key')) as HTMLInputElement;
+    expect(made.value).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(made.type).toBe('password');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy UPLOAD_KEY' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy SIGNING_KEY' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    const [upload, signing] = writeText.mock.calls.map(([text]) => text as string);
+    expect(upload).toBe(made.value);
+    expect(signing).toMatch(/^[A-Za-z0-9_-]{64}$/);
+    expect(signing).not.toBe(upload);
+    expect(document.body.textContent).not.toContain(upload);
+    expect(await screen.findByRole('button', { name: 'Copied SIGNING_KEY' })).toBeTruthy();
+  });
+
+  it('keeps the same keys when the card is taken away and shown again', async () => {
+    vi.spyOn(phoneApi, 'session').mockResolvedValue({ remote: false } as RemoteSession);
+    vi.spyOn(cloudflareApi, 'setup').mockResolvedValue(NO_SETUP);
+    vi.spyOn(cloudflareApi, 'connection').mockResolvedValue(NOT_CONNECTED);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const card = () => (
+      <QueryClientProvider client={client}>
+        <ul>
+          <CloudflareCard icon={null} open onToggle={() => undefined} />
+        </ul>
+      </QueryClientProvider>
+    );
+    const view = render(card());
+    const first = ((await screen.findByLabelText('Upload key')) as HTMLInputElement).value;
+
+    view.unmount();
+    expect(screen.queryByLabelText('Upload key')).toBeNull();
+    render(card());
+    expect(((await screen.findByLabelText('Upload key')) as HTMLInputElement).value).toBe(first);
   });
 });

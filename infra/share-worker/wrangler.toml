@@ -1,4 +1,4 @@
-name = "spark-outpost-share"
+name = "spark-outpost-artifact-share"
 main = "src/worker.ts"
 compatibility_date = "2026-09-01"
 workers_dev = true
@@ -8,7 +8,7 @@ crons = ["17 3 * * *"]
 
 [[r2_buckets]]
 binding = "SHARES"
-bucket_name = "spark-outpost-shares"
+bucket_name = "spark-outpost-artifact-shares"
 
 [[analytics_engine_datasets]]
 binding = "EVENTS"
@@ -23,4 +23,29 @@ tag = "v1"
 new_sqlite_classes = ["ShareCounters"]
 
 [observability]
+enabled = false
+
+[env.hosted]
+name = "spark-outpost-share"
+workers_dev = true
+
+[env.hosted.triggers]
+crons = ["17 3 * * *"]
+
+[env.hosted.vars]
+MAX_EXPIRY_DAYS = "1"
+
+[[env.hosted.r2_buckets]]
+binding = "SHARES"
+bucket_name = "spark-outpost-shares"
+
+[[env.hosted.analytics_engine_datasets]]
+binding = "EVENTS"
+dataset = "spark_outpost_share_events"
+
+[[env.hosted.durable_objects.bindings]]
+name = "COUNTERS"
+class_name = "ShareCounters"
+
+[env.hosted.observability]
 enabled = false

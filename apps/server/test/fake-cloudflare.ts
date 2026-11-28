@@ -9,7 +9,7 @@ export const FAKE_CLOUDFLARE_CLIENT = {
 };
 
 export const FAKE_ACCOUNT = 'acc0123456789';
-export const FAKE_ORIGIN = 'https://spark-outpost-share.hazel.workers.dev';
+export const FAKE_ORIGIN = 'https://spark-outpost-artifact-share.hazel.workers.dev';
 const ALL_SCOPES = 'account-settings.read workers-r2.write workers-scripts.admin';
 
 const ok = (result: unknown) => jsonResponse(200, { success: true, errors: [], result });
@@ -57,11 +57,11 @@ export class FakeCloudflare {
     const path = url.pathname.replace('/client/v4', '');
     this.calls.push(`${method} ${path}`);
     const base = `/accounts/${FAKE_ACCOUNT}`;
-    const script = `${base}/workers/scripts/spark-outpost-share`;
+    const script = `${base}/workers/scripts/spark-outpost-artifact-share`;
     if (path === '/accounts') return ok([{ id: FAKE_ACCOUNT, name: 'Hazel’s account' }]);
     if (path === `${base}/r2/buckets`) {
       return this.r2Enabled
-        ? ok({ name: 'spark-outpost-shares' })
+        ? ok({ name: 'spark-outpost-artifact-shares' })
         : refused(403, 10042, 'Please enable R2 through the Cloudflare Dashboard.');
     }
     if (path === `${base}/workers/subdomain`) {
@@ -86,7 +86,7 @@ export class FakeCloudflare {
         this.loseUploadAnswer = false;
         throw new Error('The answer was lost.');
       }
-      return ok({ id: 'spark-outpost-share' });
+      return ok({ id: 'spark-outpost-artifact-share' });
     }
     if (path === `${script}/schedules` || path === `${script}/subdomain`) return ok({});
     return refused(404, 7003, 'No route for that URI');

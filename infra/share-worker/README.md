@@ -86,7 +86,7 @@ Markers are never deleted. Each is a zero-byte object with no metadata: one R2 w
 
 ## What gets stored
 
-In the R2 bucket `spark-outpost-shares`:
+In the R2 bucket `spark-outpost-artifact-shares`:
 
 | Key                          | Content                                                                                                                               |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -125,7 +125,7 @@ curl "https://api.cloudflare.com/client/v4/accounts/<account-id>/analytics_engin
 The worker's own limits are the last line. Set these in the account too; none of them is in `wrangler.toml`:
 
 - A rate limiting rule on `POST /v1/shares` (for example 30 requests per 10 minutes per address, block), so floods are stopped before the worker runs.
-- R2 lifecycle rules on `spark-outpost-shares`: delete objects under `shares/` after 8 days (a backstop for the daily run; the longest share is 7 days) and under `reports/` after 90 days.
+- R2 lifecycle rules on `spark-outpost-artifact-shares`: delete objects under `shares/` after 8 days (a backstop for the daily run; the longest share is 7 days) and under `reports/` after 90 days.
 - Keep the bucket's public `r2.dev` access off: pages must only be reachable through the worker.
 - Serve the worker from a domain used for nothing else, not `workers.dev`, so a flagged page can't take other services or every link down with it. Set `SPARK_SHARE_URL` to that origin; links made earlier keep working only while the old address still routes to the worker.
 - A billing alert for Workers, Durable Objects and R2.
@@ -139,9 +139,9 @@ This folder is a complete Worker project (`package.json`, `wrangler.toml`, `src/
 `https://deploy.workers.cloudflare.com/?url=https://github.com/karki011/spark-outpost/tree/main/infra/share-worker`
 
 1. Open the link and sign in to Cloudflare. It copies this folder into a new repository of yours, creates the R2 bucket and the Durable Object, and asks for the two secrets listed in `.dev.vars.example`.
-2. Set `UPLOAD_KEY` to the output of `openssl rand -hex 32` and keep a copy. Without it anyone who finds the address can upload to your account.
-3. Set `SIGNING_KEY` to the output of `openssl rand -base64 48`. You never need it again.
-4. Deploy. Cloudflare shows the worker's address, for example `https://spark-outpost-share.<your-subdomain>.workers.dev`.
+2. Set `UPLOAD_KEY` to the value Spark Outpost shows (Settings → Connectors → Cloudflare, **Copy**), or to the output of `openssl rand -hex 32`, and keep a copy. Without it anyone who finds the address can upload to your account.
+3. Set `SIGNING_KEY` to the value Spark Outpost shows, or to the output of `openssl rand -base64 48`. You never need it again.
+4. Deploy. Cloudflare shows the worker's address, for example `https://spark-outpost-artifact-share.<your-subdomain>.workers.dev`.
 5. In Spark Outpost open Settings → Connectors → Cloudflare and paste the worker's address and the upload key. Spark asks `GET /v1/service` with the key to check both.
 
 Shares from your own copy can last 1 or 7 days. To allow only 1, add `MAX_EXPIRY_DAYS = "1"` under `[vars]` in your copy's `wrangler.toml`, or as a variable in the worker's settings.
@@ -154,6 +154,10 @@ The button has not been run against this folder yet. The steps under [Set up and
 
 The copy the app falls back to when no own copy is connected takes uploads from every install, so it has no `UPLOAD_KEY` and is held back by the limits below and the Cloudflare rules instead. It keeps pages for a day at most: set `MAX_EXPIRY_DAYS = "1"` under `[vars]` in its `wrangler.toml` (or as a variable in the dashboard) before deploying it. `GET /v1/service` then answers `{ "service": "spark-share", "maxDays": 1, "uploadKey": "none" }`.
 
+### Spark's own copy
+
+Spark's shared service keeps its first name and bucket, `spark-outpost-share` and `spark-outpost-shares`, so its address and stored pages don't move. They are the `hosted` environment in `wrangler.toml`, which also sets `MAX_EXPIRY_DAYS = "1"`. Deploy it with `npx wrangler@4 deploy --env hosted`; a plain `wrangler deploy` makes a separate `spark-outpost-artifact-share`. In the commands below, use the hosted names when you work on Spark's own copy.
+
 ## Set up and deploy
 
 You need a Cloudflare account. R2 must be enabled on it (the free tier is enough).
@@ -161,9 +165,17 @@ You need a Cloudflare account. R2 must be enabled on it (the free tier is enough
 ```sh
 cd infra/share-worker
 npx wrangler@4 login
-npx wrangler@4 r2 bucket create spark-outpost-shares
+npx wrangler@4 r2 bucket create spark-outpost-artifact-shares
 openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY
 npx wrangler@4 deploy
+```
+
+For Spark's own copy, the same three steps use the hosted names:
+
+```sh
+npx wrangler@4 r2 bucket create spark-outpost-shares
+openssl rand -base64 48 | npx wrangler@4 secret put SIGNING_KEY --env hosted
+npx wrangler@4 deploy --env hosted
 ```
 
 `package.json` pins the same Wrangler major for the Deploy button and for `npm install && npm run deploy`; it is not part of the repo's pnpm workspace.
@@ -172,12 +184,12 @@ npx wrangler@4 deploy
 
 After a deploy that changes how pages are shown or unlocked, open a passcode share in Safari and Firefox as well as a Chromium browser: the content frame needs the unlock cookie, and only Chromium has been checked.
 
-`wrangler deploy` prints the worker's address, for example `https://spark-outpost-share.<your-subdomain>.workers.dev`. Check it:
+`wrangler deploy` prints the worker's address, for example `https://spark-outpost-artifact-share.<your-subdomain>.workers.dev`. Check it:
 
 ```sh
 TOKEN=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
 ID=$(printf 'spark-share-id:%s' "$TOKEN" | openssl dgst -sha256 -binary | head -c 16 | openssl base64 | tr '+/' '-_' | tr -d '=')
-curl -i -X POST https://spark-outpost-share.<your-subdomain>.workers.dev/v1/shares \
+curl -i -X POST https://spark-outpost-artifact-share.<your-subdomain>.workers.dev/v1/shares \
   -H 'content-type: application/json' \
   -d "{\"id\":\"$ID\",\"deleteToken\":\"$TOKEN\",\"title\":\"Test\",\"html\":\"<h1>Hello</h1>\",\"expiresInDays\":1}"
 ```
@@ -185,7 +197,7 @@ curl -i -X POST https://spark-outpost-share.<your-subdomain>.workers.dev/v1/shar
 Delete the test share with the same token:
 
 ```sh
-curl -i -X DELETE https://spark-outpost-share.<your-subdomain>.workers.dev/v1/shares/$ID \
+curl -i -X DELETE https://spark-outpost-artifact-share.<your-subdomain>.workers.dev/v1/shares/$ID \
   -H "authorization: Bearer $TOKEN"
 ```
 
@@ -196,35 +208,35 @@ To try it locally, run `npx wrangler@4 dev --local --var SIGNING_KEY:$(openssl r
 Set `SPARK_SHARE_URL` to the worker's origin (no path) when you package the desktop app:
 
 ```sh
-SPARK_SHARE_URL=https://spark-outpost-share.<your-subdomain>.workers.dev pnpm desktop:package
+SPARK_SHARE_URL=https://spark-outpost-artifact-share.<your-subdomain>.workers.dev pnpm desktop:package
 ```
 
 ## Reports and taking a page down
 
-Reports are under `reports/` in the bucket. Wrangler has no command to list objects, so browse them in the dashboard (**R2 → spark-outpost-shares → Objects**, filter by `reports/`), or read one you know:
+Reports are under `reports/` in the bucket. Wrangler has no command to list objects, so browse them in the dashboard (**R2 → spark-outpost-artifact-shares → Objects**, filter by `reports/`), or read one you know:
 
 ```sh
-npx wrangler@4 r2 object get spark-outpost-shares/reports/<id>/<name> --remote --pipe
+npx wrangler@4 r2 object get spark-outpost-artifact-shares/reports/<id>/<name> --remote --pipe
 ```
 
 Look at the reported page without running it:
 
 ```sh
-npx wrangler@4 r2 object get spark-outpost-shares/shares/<id> --remote --pipe > reported.html
+npx wrangler@4 r2 object get spark-outpost-artifact-shares/shares/<id> --remote --pipe > reported.html
 ```
 
 Take it down (the link answers 404 from then on):
 
 ```sh
-npx wrangler@4 r2 object delete spark-outpost-shares/shares/<id> --remote
+npx wrangler@4 r2 object delete spark-outpost-artifact-shares/shares/<id> --remote
 ```
 
 Only the holder of that share's delete key could store a page at the id again. To stop that too (the uploader's app still holds the key until the link's end date), write the marker first:
 
 ```sh
 : > empty
-npx wrangler@4 r2 object put spark-outpost-shares/gone/<id> --file empty --remote
-npx wrangler@4 r2 object delete spark-outpost-shares/shares/<id> --remote
+npx wrangler@4 r2 object put spark-outpost-artifact-shares/gone/<id> --file empty --remote
+npx wrangler@4 r2 object delete spark-outpost-artifact-shares/shares/<id> --remote
 ```
 
 Wrangler v4 works on local storage unless you pass `--remote`.
