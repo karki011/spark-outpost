@@ -36,6 +36,7 @@ export const cloudflareReachSchema = z.object({
   account: z.string().nullable(),
   signedIn: z.boolean(),
   hostname: z.string().nullable(),
+  connected: z.string().nullable(),
   tunnel: z.enum(['off', 'starting', 'running', 'stopped']),
   permissions: z.array(
     z.object({

@@ -1,4 +1,5 @@
 import type { RemoteSwitch } from '@spark-outpost/contracts';
+import { NEVER_ROUTES } from './never-routes.ts';
 
 export type RemoteRule = 'always' | 'never' | 'pairing' | 'passkey' | RemoteSwitch;
 
@@ -175,191 +176,6 @@ POST /api/tickets/:source/:key/start
 POST /api/tickets/:source/:key/transition
 `;
 
-const NEVER = `
-GET /api/github/inbox
-GET /api/github/inbox/details
-POST /api/github/inbox/seen
-PUT /api/github/inbox/window
-GET /api/github/review-settings
-PUT /api/github/review-settings
-GET /api/github/reviews
-POST /api/github/reviews
-POST /api/github/reviews/:id/stop
-GET /api/meetings/status
-GET /api/meetings/model
-PUT /api/meetings/model
-GET /api/meetings
-POST /api/meetings
-POST /api/meetings/join-notes
-GET /api/meetings/:id
-PATCH /api/meetings/:id
-DELETE /api/meetings/:id
-POST /api/meetings/:id/stop
-GET /api/meetings/:id/lines
-GET /api/meetings/:id/live
-PUT /api/meetings/:id/notes
-POST /api/meetings/:id/notes/write
-POST /api/meetings/:id/attachments
-DELETE /api/meetings/:id/attachments/:attachmentId
-GET /api/user-plugins
-PUT /api/user-plugins/:key
-POST /api/user-plugins/:key/review
-POST /api/browser-history
-GET /api/browser-history
-POST /api/browser-history/clear
-PUT /api/spark-rules/rule
-PUT /api/spark-rules/gh-allowed
-POST /api/spark-rules/recommended
-POST /api/spark-rules/outside-change
-GET /api/artifacts/:id/versions/:version/file
-GET /api/artifacts/:id/versions/:version/share
-POST /api/artifacts/:id/versions/:version/share
-DELETE /api/artifacts/:id/versions/:version/share
-GET /api/chat-files/:id/content
-GET /api/projects/:id/pull-requests/open
-POST /api/conversations/:id/workspace/adopt
-POST /api/approvals/:id/spark-rule
-GET /api/calendar/status
-POST /api/calendar/connect
-POST /api/calendar/disconnect
-POST /api/calendar/open-settings
-PATCH /api/calendar/calendars/:key
-PATCH /api/calendar/settings
-GET /api/calendar/day
-GET /api/calendar/range
-GET /api/calendar/now
-POST /api/calendar/refresh
-PUT /api/calendar/marks
-POST /api/calendar/open
-POST /api/calendar/event
-GET /api/mcp/servers/:id/sign-in
-POST /api/mcp/servers/:id/sign-in
-DELETE /api/mcp/servers/:id/sign-in
-POST /api/mcp/servers/:id/sign-out
-GET /api/setup-drafts
-DELETE /api/setup-drafts/:target
-POST /api/calendar/reply
-POST /api/calendar/events
-GET /api/calendar/google/sign-in
-POST /api/calendar/google/sign-in
-DELETE /api/calendar/google/sign-in
-DELETE /api/calendar/google/accounts/:id
-GET /api/calendar/microsoft/sign-in
-POST /api/calendar/microsoft/sign-in
-DELETE /api/calendar/microsoft/sign-in
-DELETE /api/calendar/microsoft/accounts/:id
-GET /api/zoom/status
-POST /api/zoom/sign-in
-DELETE /api/zoom/sign-in
-DELETE /api/zoom/account
-GET /api/cloudflare
-PUT /api/cloudflare
-PATCH /api/cloudflare
-POST /api/cloudflare/check
-DELETE /api/cloudflare
-GET /api/cloudflare/setup
-POST /api/cloudflare/setup
-DELETE /api/cloudflare/setup
-GET /api/cloudflare/reach
-POST /api/cloudflare/reach
-POST /api/cloudflare/reach/resume
-DELETE /api/cloudflare/reach/setup
-DELETE /api/cloudflare/reach
-GET /api/island/requests
-POST /api/island/requests/:id/claim
-GET /api/remote/access
-PUT /api/remote/access
-PATCH /api/remote/switches
-PATCH /api/remote/card-answering
-GET /api/remote/push/contact
-PUT /api/remote/push/contact
-GET /api/remote/devices
-PATCH /api/remote/devices/:id
-POST /api/remote/devices/:id/push/test
-DELETE /api/remote/devices/:id
-DELETE /api/remote/devices/:id/passkeys
-POST /api/remote/devices/disconnect-all
-GET /api/remote/pairings
-POST /api/remote/pairings
-POST /api/remote/pairings/:id/confirm
-POST /api/remote/pairings/:id/deny
-GET /api/remote/audit
-GET /api/remote-sparks
-POST /api/remote-sparks
-PATCH /api/remote-sparks/:id
-DELETE /api/remote-sparks/:id
-POST /api/remote-sparks/:id/open
-PUT /api/remote-sparks/local
-GET /api/remote-sparks/local/icon
-PUT /api/remote-sparks/local/icon
-DELETE /api/remote-sparks/local/icon
-GET /api/remote-sparks/:id/icon
-PUT /api/remote-sparks/:id/icon
-DELETE /api/remote-sparks/:id/icon
-GET /api/remote/tailscale
-POST /api/remote/tailscale/on
-POST /api/remote/tailscale/off
-DELETE /api/terminal/sessions/:id
-GET /api/terminal/sessions/:id/busy
-POST /api/terminal/sessions
-POST /api/terminal/sessions/:id/attach
-GET /api/conversations/:id/terminal/usage
-GET /api/terminal-live
-GET /api/terminal-agents
-GET /api/conversations/:id/terminal/start
-POST /api/conversations/:id/terminal
-POST /api/conversations/:id/terminal/images
-DELETE /api/conversations/:id/terminal
-POST /api/terminal/shells
-GET /api/chat-ports
-POST /api/terminal/previews
-GET /api/conversations/:id/agent-terminals/:terminalId/output
-POST /api/conversations/:id/agent-terminals/:terminalId/view
-POST /api/conversations/:id/agent-terminals/:terminalId/stop
-GET /api/conversations/:id/preview
-GET /api/projects/:id/preview
-POST /api/conversations/:id/preview/start
-POST /api/conversations/:id/preview/stop
-PUT /api/projects/:id/preview
-POST /api/conversations/:id/workspace/open
-GET /api/diagnostics/export
-GET /api/instructions-file
-POST /api/setup/git/install
-GET /api/workflows
-GET /api/workflows/:id
-PUT /api/workflows/:id
-DELETE /api/workflows/:id
-GET /api/workflows/:id/runs
-GET /api/workflows/:id/usage
-GET /api/teammates/:id/usage
-PUT /api/teammate-default
-POST /api/workflows/:id/runs
-GET /api/workflow-runs/of-turn/:id
-GET /api/workflow-runs/:id
-POST /api/workflow-runs/:id/stop
-GET /api/workflow-runs/:id/test
-DELETE /api/workflow-runs/:id
-POST /api/teammates/:id/test-runs
-GET /api/crew/builder
-POST /api/crew/builder
-POST /api/crew/builder/:id/done
-GET /api/crew/drafts
-GET /api/workflow-schedules
-GET /api/workflows/:id/schedule
-PUT /api/workflows/:id/schedule
-DELETE /api/workflows/:id/schedule
-GET /api/workflows/:id/schedule/slots
-GET /api/workflow-triggers
-GET /api/workflows/:id/triggers
-PUT /api/workflows/:id/triggers
-DELETE /api/workflows/:id/triggers
-POST /api/workflow-holds/:id/release
-GET /api/teammates/:id/folder
-GET /api/teammates/:id/files
-PUT /api/teammates/:id/files
-DELETE /api/teammates/:id/files
-`;
-
 const PAIRING = `
 POST /api/remote/pair
 POST /api/remote/pair/claim
@@ -495,7 +311,7 @@ function routesOf(block: string): string[] {
 
 export const ROUTE_RULES: ReadonlyMap<string, RemoteRule> = new Map<string, RemoteRule>([
   ...routesOf(ALWAYS).map((route) => [route, 'always'] as const),
-  ...routesOf(NEVER).map((route) => [route, 'never'] as const),
+  ...routesOf(NEVER_ROUTES).map((route) => [route, 'never'] as const),
   ...routesOf(PAIRING).map((route) => [route, 'pairing'] as const),
   ...routesOf(PASSKEY_SIGN_IN).map((route) => [route, 'passkey'] as const),
   ...(Object.entries(BEHIND_SWITCH) as [RemoteSwitch, string][]).flatMap(([name, block]) =>

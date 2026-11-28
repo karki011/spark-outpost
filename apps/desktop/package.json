@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "package": "node --import tsx scripts/package.ts",
     "tmux": "node --import tsx scripts/build-tmux-cli.ts",
+    "cloudflared": "node --import tsx scripts/build-cloudflared-cli.ts",
     "mac-control": "node --import tsx scripts/build-mac-control-cli.ts",
     "calendar": "node --import tsx scripts/build-calendar-cli.ts",
     "voice": "node --import tsx scripts/build-voice-cli.ts",

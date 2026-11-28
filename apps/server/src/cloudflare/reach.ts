@@ -122,6 +122,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
   let signIn: CloudflareSignIn | null = null;
   let generation = 0;
   let graceUntil = 0;
+  let connected: string | null = null;
   let work: Promise<void> = Promise.resolve();
 
   const set = (id: CloudflareReachStepId, change: Partial<CloudflareReachStep>) => {
@@ -186,6 +187,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
         zoneId: need(progress.zone).id,
         tunnelId,
       });
+      connected = hostname;
     },
     async address() {
       const hostname = need(progress.hostname);
@@ -314,6 +316,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
     account: progress.account?.name ?? null,
     signedIn: tokenLive(),
     hostname: progress.hostname,
+    connected,
     tunnel: runner?.state() ?? 'off',
     permissions: CLOUDFLARE_REACH_PERMISSIONS.map((id) => ({
       id,
@@ -339,6 +342,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
   const reconcile = async () => {
     if (!runner) return;
     const row = await reachRow(db, workspaceId);
+    connected = row?.hostname ?? null;
     const access = await remoteAccess(db, workspaceId);
     const serving = row !== null && access.reach === 'custom' && access.hostname === row.hostname;
     if (serving) {
@@ -391,6 +395,7 @@ export function createCloudflareReach(deps: CloudflareReachDeps): CloudflareReac
       runner?.stop();
       await secrets.delete(CLOUDFLARE_TUNNEL_TOKEN_SECRET);
       await deleteReach(db, workspaceId);
+      connected = null;
       return view();
     },
   };

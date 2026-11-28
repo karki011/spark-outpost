@@ -17,6 +17,7 @@ import { microsoftClientFromFile } from '../src/microsoft-client.ts';
 import { cloudflareClientFromFile } from '../src/cloudflare-client.ts';
 import { zoomClientFromFile } from '../src/zoom-client.ts';
 import { checkTmuxBinary } from './tmux-bundle.ts';
+import { checkCloudflaredBinary } from './cloudflared-bundle.ts';
 import { MAC_CONTROL_BINARY, macControlCheck } from './mac-control-bundle.ts';
 import { checkStagedCalendar } from './calendar-bundle.ts';
 import { checkStagedVoice } from './voice-bundle.ts';
@@ -261,6 +262,8 @@ async function copyRuntime(
   }
   await copy(path.join(stageDir, arch, 'tmux'), 'tmux');
   await checkTmuxBinary(path.join(resources, 'tmux/bin/tmux'), arch);
+  await copy(path.join(stageDir, arch, 'cloudflared'), 'cloudflared');
+  await checkCloudflaredBinary(path.join(resources, 'cloudflared/bin/cloudflared'), arch);
   await copy(path.join(stageDir, arch, 'mac-control'), 'mac-control');
   await macControlCheck(path.join(resources, 'mac-control/bin', MAC_CONTROL_BINARY), arch);
   await copy(path.join(stageDir, arch, 'calendar'), 'calendar');

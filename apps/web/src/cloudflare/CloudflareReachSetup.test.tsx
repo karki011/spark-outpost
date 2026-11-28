@@ -20,6 +20,7 @@ const IDLE: CloudflareReach = {
   account: null,
   signedIn: false,
   hostname: null,
+  connected: null,
   tunnel: 'off',
   permissions: (['account', 'domains', 'dns', 'tunnel', 'access'] as const).map((id) => ({
     id,

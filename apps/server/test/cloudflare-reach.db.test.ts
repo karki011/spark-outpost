@@ -217,10 +217,18 @@ describe('reaching this computer through Cloudflare', { timeout: 30_000 }, () =>
     const client = localClient(app());
     await setUp(client);
     await saveRemoteHostname(t.db, t.workspaceId, 'spark.example.com', 'custom');
-    expect((await client.get(REACH).expect(200)).body.tunnel).toBe('running');
+    expect((await client.get(REACH).expect(200)).body).toMatchObject({
+      tunnel: 'running',
+      connected: 'spark.example.com',
+    });
 
     const removed = (await client.send('delete', REACH).expect(200)).body as CloudflareReach;
-    expect(removed).toMatchObject({ status: 'idle', tunnel: 'off', hostname: null });
+    expect(removed).toMatchObject({
+      status: 'idle',
+      tunnel: 'off',
+      hostname: null,
+      connected: null,
+    });
     expect(await secrets.get(CLOUDFLARE_TUNNEL_TOKEN_SECRET)).toBeNull();
     expect((await t.db.query('SELECT 1 FROM cloudflare_reach')).rowCount).toBe(0);
   });

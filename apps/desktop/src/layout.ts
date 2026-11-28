@@ -10,6 +10,7 @@ export interface AppLayout {
   serverDir: string;
   webRoot: string;
   tmuxBin: string;
+  cloudflaredBin: string;
   macControlBin: string;
   calendarBin: string;
   calendarSeedBin: string | null;
@@ -39,6 +40,7 @@ export function appLayout(source: LayoutSource): AppLayout {
       serverDir: path.join(resourcesPath, 'server'),
       webRoot: path.join(resourcesPath, 'web'),
       tmuxBin: path.join(resourcesPath, 'tmux/bin/tmux'),
+      cloudflaredBin: path.join(resourcesPath, 'cloudflared/bin/cloudflared'),
       macControlBin: path.join(resourcesPath, 'mac-control/bin/spark-mac-control'),
       calendarBin: path.join(resourcesPath, 'calendar/bin/spark-calendar'),
       calendarSeedBin: null,
@@ -59,6 +61,7 @@ export function appLayout(source: LayoutSource): AppLayout {
     serverDir: path.join(repoRoot, 'apps/server'),
     webRoot: path.join(repoRoot, 'apps/web/dist'),
     tmuxBin: path.join(repoRoot, '.local/tmux', arch, 'bin/tmux'),
+    cloudflaredBin: path.join(repoRoot, '.local/cloudflared', arch, 'bin/cloudflared'),
     macControlBin: path.join(repoRoot, '.local/mac-control', arch, 'spark-mac-control'),
     calendarBin: path.join(repoRoot, '.local/calendar', arch, 'spark-calendar'),
     calendarSeedBin: path.join(repoRoot, '.local/calendar', arch, 'spark-calendar-seed'),

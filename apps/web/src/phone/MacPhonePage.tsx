@@ -20,6 +20,8 @@ import { PhoneCardAnswering } from './PhoneCardAnswering.tsx';
 import { PushContact } from './PushContact.tsx';
 import { setupSteps } from './setup-steps.ts';
 import { OtherSparks } from '../remote-sparks/OtherSparks.tsx';
+import { cloudflareApi, cloudflareKeys } from '../cloudflare/cloudflare-api.ts';
+import { CloudflareTunnelLine } from '../cloudflare/CloudflareTunnelLine.tsx';
 
 const STATE_POLL_MS = 10_000;
 const LIST_POLL_MS = 5000;
@@ -62,8 +64,13 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
     },
   });
   const turnOffCustom = useMutation({
-    mutationFn: () => phoneApi.setAccess({ hostname: null }),
+    mutationFn: async () => {
+      const next = await phoneApi.setAccess({ hostname: null });
+      await cloudflareApi.removeReach().catch(() => undefined);
+      return next;
+    },
     onSuccess: (next) => {
+      void queryClient.invalidateQueries({ queryKey: cloudflareKeys.reach });
       setPicked('custom');
       queryClient.setQueryData(phoneKeys.access, next);
       void queryClient.invalidateQueries({ queryKey: phoneKeys.all });
@@ -146,7 +153,12 @@ export function MacPhonePage({ session }: { session: RemoteSession }) {
           lastRequest={audit.data?.[0]?.at ?? null}
           turning={turnOffCustom.isPending}
           failure={turnOffCustom.error?.message ?? null}
-          choice={choice}
+          choice={
+            <>
+              {choice}
+              {customHost && <CloudflareTunnelLine hostname={customHost} />}
+            </>
+          }
           custom
           onTurn={() => turnOffCustom.mutate()}
         />

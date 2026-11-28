@@ -51,5 +51,7 @@ export const cloudflareApi = {
     request(cloudflareReachSchema, '/cloudflare/reach/resume', { method: 'POST', body: '{}' }),
   cancelReach: (): Promise<CloudflareReach> =>
     request(cloudflareReachSchema, '/cloudflare/reach/setup', { method: 'DELETE' }),
+  removeReach: (): Promise<CloudflareReach> =>
+    request(cloudflareReachSchema, '/cloudflare/reach', { method: 'DELETE' }),
   disconnect: (): Promise<null> => request(z.null(), '/cloudflare', { method: 'DELETE' }),
 };

@@ -22,6 +22,7 @@ import { settingsFile } from './companion-settings.ts';
 import { startCompanionHost, type CompanionHost } from './desktop-companion.ts';
 import { detectGit, GIT_MISSING } from './git.ts';
 import { appLayout } from './layout.ts';
+import { bundledCloudflared } from './cloudflared.ts';
 import { focusingLinks, setLinkOpening } from './link-opening.ts';
 import { freePort, LOOPBACK, portIsFree } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
@@ -299,6 +300,7 @@ async function launch(): Promise<void> {
     version: app.getVersion(),
     webRoot: layout.webRoot,
     tmuxBin: (!app.isPackaged && process.env.SPARK_TMUX_BIN) || layout.tmuxBin,
+    cloudflaredBin: bundledCloudflared(layout.cloudflaredBin, app.isPackaged),
     baseEnv: { ...(await bakedServerEnv(app.getAppPath(), layout)), ...process.env },
   };
   if (!existingRuntime.api && !(await migrateBeforeStart(launchInfo, databaseOptions))) return;

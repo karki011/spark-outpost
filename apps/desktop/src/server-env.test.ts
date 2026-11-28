@@ -16,6 +16,7 @@ const launch: ServerLaunch = {
   version: '0.1.0-beta.1',
   webRoot: '/repo/apps/web/dist',
   tmuxBin: '/repo/.local/tmux/arm64/bin/tmux',
+  cloudflaredBin: '/repo/.local/cloudflared/arm64/bin/cloudflared',
   baseEnv: {
     PATH: '/usr/bin',
     HOME: '/Users/me',
